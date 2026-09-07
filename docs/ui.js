@@ -86,7 +86,8 @@ function renderOverview(rows){
   const webDomains = new Set();
 
   for (const r of rows){
-    for (const p of splitDestParts(r['Destination'])){
+    const parts = splitDestParts(r['Destination']);
+    for (const p of parts){
       const lower = String(p).toLowerCase();
       const base = getBaseDomain(lower);
       if (!base) continue;
@@ -99,14 +100,14 @@ function renderOverview(rows){
   }
 
   const blocks = rows.filter(r=>{
-    const a = txt(r['Action']).toLowerCase();
+    const a = r.actionLower;
     return a.includes('block') || a.includes('quarantine');
   }).length;
 
   const channels = new Set(
     rows
       .filter(r=>{
-        const a = txt(r['Action']).toLowerCase();
+        const a = r.actionLower;
         return !(a.includes('block') || a.includes('quarantine'));
       })
       .map(r => txt(r['Channel']).trim())
@@ -128,7 +129,7 @@ function renderOverview(rows){
   const rowsEmailDest  = rows.filter(r => splitDestParts(r['Destination']).some(p => isEmailLike(p)));
   const rowsWebDest    = rows.filter(r => splitDestParts(r['Destination']).some(p => !isEmailLike(p) && getBaseDomain(p)));
   const rowsWithChan   = rows.filter(r => txt(r['Channel']).trim());
-  const rowsBlocks     = rows.filter(r => { const a = txt(r['Action']).toLowerCase(); return a.includes('block') || a.includes('quarantine'); });
+  const rowsBlocks     = rows.filter(r => r.actionLower.includes('block') || r.actionLower.includes('quarantine'));
 
   const metricData = {
     labels: {
@@ -149,20 +150,16 @@ function renderOverview(rows){
     }
   };
 
-  const senderDomCounts = buildSenderDomainCounts(rows);
-  const seqIdx = buildSequentialIndex(rows);
-  const hotBySrc = getHotStemsBySource(seqIdx, 5);
-
   const ruleDefs = [
-    {key:'self',       label:'Email Sent to Self',       fn:ruleSelfToSelf},
-    {key:'freemail',   label:'Recipient Free Mail',      fn:ruleRecipientFreeMail},
-    {key:'shortsubj',  label:'Short Subject',            fn:(r)=>ruleShortOrEmptySubject(r,15)},
-    {key:'noext',      label:'Attachment No Ext',        fn:ruleAttachmentNoExtension},
-    {key:'seqfiles',   label:'Sequential Attachments',   fn:(r)=>ruleSequentialAttachments(r, hotBySrc)},
-    {key:'sensitive',  label:'Sensitive Keywords',       fn:ruleSensitiveKeywords},
-    {key:'repeatdom',  label:'Repeated Domains',         fn:(r)=>ruleRepeatedDomainBySender(r, senderDomCounts)},
-    {key:'weirdtld',   label:'Weird TLD Dest',           fn:ruleWeirdTLD},
-    {key:'outofhours', label:'Out-of-Hours',             fn:ruleOutOfHours}
+    {key:'self',       label:'Email Sent to Self'},
+    {key:'freemail',   label:'Recipient Free Mail'},
+    {key:'shortsubj',  label:'Short Subject'},
+    {key:'noext',      label:'Attachment No Ext'},
+    {key:'seqfiles',   label:'Sequential Attachments'},
+    {key:'sensitive',  label:'Sensitive Keywords'},
+    {key:'repeatdom',  label:'Repeated Domains'},
+    {key:'weirdtld',   label:'Weird TLD Dest'},
+    {key:'outofhours', label:'Out-of-Hours'}
   ];
 
   let ruleHtml = '';
@@ -215,13 +212,16 @@ function renderOverview(rows){
       console.error('Rule worker failed:', error);
       indicesByRule = null;
     }
+    const fallbackMatches = indicesByRule
+      ? null
+      : await computeBuiltInRuleMatchesChunked(rows);
     for (const def of ruleDefs) {
       const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
       if (!a) continue;
 
       const matches = indicesByRule
         ? (indicesByRule[def.key] || []).map(index => rows[index])
-        : await computeRuleMatchesChunked(rows, def.fn);
+        : fallbackMatches[def.key];
       const ids = matches.map(getRowId);
 
       idsByRule[def.key] = ids;
@@ -609,42 +609,6 @@ function renderCustomTab(tab){
     resultMount.innerHTML = '';
     resultMount.appendChild(section);
   });
-
-  const PREPROMPT = `Write a JavaScript predicate for the “Custom JS” tab. The code runs for each data row and must return a boolean. Execution context: the full dataset is rows (Array<Row>); the current row is row (Object), with index i (Number). Constraints: use plain JavaScript ("use strict"). Do not use fetch, the DOM, window, globalThis, Function, eval, storage APIs, or external libraries. You may use rows and i for cross-row logic, but the final result must still be a boolean for the current row. Available fields (camelCase and case-sensitive), with examples: row.ID → "70100001"; row.IncidentTime → "25 Aug. 2025, 09:01:00 AM GMT+0800"; row.EventTime → "25 Aug. 2025, 08:59:12 AM GMT+0800"; row.FileName → "contract_2025.pdf; image.png"; row.Source → "SRC-USER-001"; row.Policies → "Customer / Prospective Customer PII"; row.Channel → "Network email"; row.Destination → "alice@example.org"; row.Details → "sample row …" (Details is the email subject); row.Status → "New". Safe date parsing example for extracting the day: const s = row.IncidentTime || row.EventTime || ""; const m = /^\s*(\d{1,2})\s+[A-Za-z]{3,}.?/.exec(s); const day = m ? parseInt(m[1], 10) : NaN; Output format: return JavaScript code only (a regular anonymous function or a statement block) whose final result is boolean. Multiple statements are allowed; end with return ...;. Task:`
-
-  function extractJS(text){
-    if (!text) return '';
-    const m = text.match(/```(?:javascript|js)?\s*([\s\S]*?)```/i);
-    return (m ? m[1] : text).trim();
-  }
-
-  async function runChatbot(task){
-    const apiKey = openAiApiKey;
-    if (!apiKey) throw new Error('An OpenAI API Key has not been saved.');
-
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({
-        model: 'gpt-5-mini',
-        temperature: 1,
-        messages: [
-          { role: 'system', content: PREPROMPT },
-          { role: 'user', content: task }
-        ]
-      })
-    });
-
-    if (!resp.ok) {
-      let msg = `HTTP ${resp.status}`;
-      try { const err = await resp.json(); if (err?.error?.message) msg += `: ${err.error.message}`; } catch(_) {}
-      throw new Error(msg);
-    }
-
-    const data = await resp.json();
-    const content = data?.choices?.[0]?.message?.content || '';
-    return extractJS(content);
-  }
 
   chatbotRunBtn.addEventListener('click', async ()=>{
     const task = String(chatbotTA.value || '').trim();
@@ -1107,4 +1071,3 @@ document.addEventListener('click', e=>{
     }
   }
 });
-

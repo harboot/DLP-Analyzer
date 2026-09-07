@@ -71,8 +71,17 @@ Task instruction:
     })
   });
 
-  const data = await resp.json();
-  return data.choices[0].message.content.trim();
-}
+  if (!resp.ok) {
+    let message = `HTTP ${resp.status}`;
+    try {
+      const error = await resp.json();
+      if (error?.error?.message) message += `: ${error.error.message}`;
+    } catch (_) {}
+    throw new Error(message);
+  }
 
-// Runs a predicate over rows in chunks to keep the UI responsive.
+  const data = await resp.json();
+  const content = data?.choices?.[0]?.message?.content || '';
+  const fenced = content.match(/```(?:javascript|js)?\s*([\s\S]*?)```/i);
+  return (fenced ? fenced[1] : content).trim();
+}

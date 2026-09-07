@@ -1,20 +1,45 @@
 /* Alert Analyzer: rules */
 
-async function computeRuleMatchesChunked(rows, predicate, onProgress, CHUNK_SIZE = 600){
-  const matches = [];
-  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-    const slice = rows.slice(i, i + CHUNK_SIZE);
-
-    for (const r of slice) {
-      try {
-        if (predicate(r)) matches.push(r);
-      } catch (e) {
-        console.error('Rule eval error:', e);
-      }
+// Evaluates every built-in rule in one row pass (after one shared index pass).
+async function computeBuiltInRuleMatchesChunked(rows, onProgress, CHUNK_SIZE = 600){
+  const senderDomains = new Map();
+  const sequential = new Map();
+  for (const row of rows) {
+    for (const domain of row.destinationDomains) {
+      const key = `${row.sourceLower}|${domain}`;
+      senderDomains.set(key, (senderDomains.get(key) || 0) + 1);
     }
-
-    if (onProgress) onProgress(matches.length, Math.min(i + CHUNK_SIZE, rows.length), rows.length);
-    await new Promise(r => setTimeout(r, 0));
+    for (const token of row.fileTokens) {
+      const part = extractStemTail(token);
+      if (!part || part.tail == null) continue;
+      const key = `${row.sourceLower}|${part.stem}`;
+      if (!sequential.has(key)) sequential.set(key, new Set());
+      sequential.get(key).add(part.tail);
+    }
+  }
+  const hotStems = new Set(
+    Array.from(sequential).filter(([, tails]) => tails.size >= 5).map(([key]) => key)
+  );
+  const matches = Object.fromEntries(
+    ['self','freemail','shortsubj','noext','seqfiles','sensitive','repeatdom','weirdtld','outofhours']
+      .map(key => [key, []])
+  );
+  for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
+    const end = Math.min(start + CHUNK_SIZE, rows.length);
+    for (let i = start; i < end; i++) {
+      const row = rows[i];
+      if (ruleSelfToSelf(row)) matches.self.push(row);
+      if (ruleRecipientFreeMail(row)) matches.freemail.push(row);
+      if (ruleShortOrEmptySubject(row, 15)) matches.shortsubj.push(row);
+      if (ruleAttachmentNoExtension(row)) matches.noext.push(row);
+      if (ruleSequentialAttachments(row, hotStems)) matches.seqfiles.push(row);
+      if (ruleSensitiveKeywords(row)) matches.sensitive.push(row);
+      if (ruleRepeatedDomainBySender(row, senderDomains)) matches.repeatdom.push(row);
+      if (ruleWeirdTLD(row)) matches.weirdtld.push(row);
+      if (ruleOutOfHours(row)) matches.outofhours.push(row);
+    }
+    if (onProgress) onProgress(end, rows.length);
+    await new Promise(resolve => setTimeout(resolve, 0));
   }
   return matches;
 }
@@ -58,10 +83,9 @@ function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
       if (!def) return;
 
       if (!a.__matches) {
-        const b = a.closest('b');
-        const old = a.innerHTML;
         a.innerHTML = `<span class="spin" aria-label="Loading"></span>`;
-        const matches = await computeRuleMatchesChunked(rows, def.fn);
+        const matchesByRule = await computeBuiltInRuleMatchesChunked(rows);
+        const matches = matchesByRule[rkey] || [];
         a.__matches = matches;
         a.textContent = matches.length;
       }
@@ -229,54 +253,21 @@ function ruleSelfToSelf(r){
 
 // Rule: true when a recipient domain is a free email provider.
 function ruleRecipientFreeMail(r){
-  return splitDestParts(r['Destination']).some(d=>{
-    const dom = getBaseDomain(d);
-    return ['gmail.com','yahoo.com','protonmail.com','proton.me','icloud.com'].includes(dom);
-  });
+  return r.destinationDomains.some(domain =>
+    ['gmail.com','yahoo.com','protonmail.com','proton.me','icloud.com'].includes(domain)
+  );
 }
 
 // Rule: true when the email subject is empty or below the minimum length.
 function ruleShortOrEmptySubject(r, minLen = 10){
-  const ch = txt(r['Channel']).toLowerCase();
-  if (!ch.includes('email')) return false;
+  if (!r.channelLower.includes('email')) return false;
   const s = txt(r['Details']).trim();
   return s.length === 0 || s.length < minLen;
 }
 
 // Rule: true when an attachment has no extension.
 function ruleAttachmentNoExtension(r){
-  return txt(r['File Name']).split(';').some(f=>{
-    const fn = f.trim();
-    return fn && !fn.includes('.');
-  });
-}
-
-// Extracts a normalized filename core for sequence detection.
-function filenameCoreStrict(s){
-  let t = stripSizeSuffix(s || '').trim();
-  if (!t) return '';
-  const dot = t.lastIndexOf('.');
-  t = (dot > 0 ? t.slice(0, dot) : t).toLowerCase();
-  if (shouldIgnoreCore(t)) return '';
-  t = t
-    .replace(/[_\-\s]*\((?:copy|\d+)\)\s*$/i, '')
-    .replace(/[_\-\s]*v\d{1,3}\s*$/i, '')
-    .replace(/[_\-\s]*(?:copy|final|signed)\s*$/i, '')
-    .replace(/[_\-\s]*\d{1,4}\s*$/i, '');
-  t = t.replace(/[^a-z0-9]+/g, ' ').trim();
-  if (t.length < 3) return '';
-  return t;
-}
-
-// Derives a list of unique filename cores from a cell.
-function fileCoresFromCell(cell){
-  const cores = String(cell || '')
-    .split(/[;,]/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .map(filenameCoreStrict)
-    .filter(Boolean);
-  return Array.from(new Set(cores));
+  return r.fileTokens.some(fileName => !fileName.includes('.'));
 }
 
 // Extracts the stem and trailing number from a filename.
@@ -297,61 +288,15 @@ function extractStemTail(name){
   return { stem, tail };
 }
 
-// Builds a stem-to-numeric-tail-set index for each source.
-function buildSequentialIndex(rows){
-  // Support ;, newline, and , separators for multiple filenames
-  const idx = new Map();
-  for (const r of rows){
-    const src = txt(r['Source']).trim().toLowerCase();
-    if (!src) continue;
-
-    const tokens = txt(r['File Name'])
-      .split(/;|\n|,/)    // ← tambahan dukung koma
-      .map(t => t.trim())
-      .filter(Boolean);
-
-    for (const t of tokens){
-      const part = extractStemTail(t);
-      if (!part || part.tail == null) continue;
-
-      if (!idx.has(src)) idx.set(src, new Map());
-      const m = idx.get(src);
-      if (!m.has(part.stem)) m.set(part.stem, new Set());
-      m.get(part.stem).add(part.tail);
-    }
-  }
-  return idx;
-}
-
-// Gets hot stems (unique tails ≥ threshold) for each source.
-function getHotStemsBySource(idx, threshold = 5){
-  const hot = new Map();
-  for (const [src, mapStem] of idx){
-    for (const [stem, tails] of mapStem){
-      if (tails.size >= threshold){
-        if (!hot.has(src)) hot.set(src, new Set());
-        hot.get(src).add(stem);
-      }
-    }
-  }
-  return hot;
-}
-
 // Rule: true when a row has an attachment with a hot stem for its source.
-function ruleSequentialAttachments(r, hotBySrc){
-  const src = txt(r['Source']).trim().toLowerCase();
+function ruleSequentialAttachments(r, hotStems){
+  const src = r.sourceLower;
   if (!src) return false;
-  const hot = hotBySrc.get(src);
-  if (!hot || hot.size === 0) return false;
-  const tokens = txt(r['File Name'])
-    .split(/;|\n|,/)
-    .map(t => t.trim())
-    .filter(Boolean);
-  for (const t of tokens){
+  for (const t of r.fileTokens){
     const part = extractStemTail(t);
     if (!part) continue;
     const stem = (part.stem || '').toLowerCase();
-    if (stem && hot.has(stem)) return true;
+    if (stem && hotStems.has(`${src}|${stem}`)) return true;
   }
   return false;
 }
@@ -375,32 +320,12 @@ function ruleSensitiveKeywords(r){
          sensitiveRegex.test(txt(r['Policies']));
 }
 
-// Calculates destination-domain frequency per sender.
-function buildSenderDomainCounts(rows){
-  const m = new Map();
-  for(const r of rows){
-    const src = txt(r['Source']).trim().toLowerCase();
-    if(!src) continue;
-    const parts = splitDestParts(r['Destination']);
-    for(const p of parts){
-      const dom = getBaseDomain(p);
-      if(!dom) continue;
-      const key = `${src}|${dom.toLowerCase()}`;
-      m.set(key, (m.get(key) || 0) + 1);
-    }
-  }
-  return m;
-}
-
 // Rule: true when a sender repeatedly sends to the same domain above the threshold.
 function ruleRepeatedDomainBySender(r, countsMap, threshold = 5){
-  const src = txt(r['Source']).trim().toLowerCase();
+  const src = r.sourceLower;
   if(!src) return false;
-  const parts = splitDestParts(r['Destination']);
-  for(const p of parts){
-    const dom = getBaseDomain(p);
-    if(!dom) continue;
-    const key = `${src}|${dom.toLowerCase()}`;
+  for(const domain of r.destinationDomains){
+    const key = `${src}|${domain}`;
     if((countsMap.get(key) || 0) > threshold) return true;
   }
   return false;
@@ -408,15 +333,10 @@ function ruleRepeatedDomainBySender(r, countsMap, threshold = 5){
 
 // Rule: true when the destination domain uses an unusual TLD (xyz/top/icu).
 function ruleWeirdTLD(r){
-  const dom = getBaseDomain(txt(r['Destination']));
-  return dom && /\.(xyz|top|icu)$/i.test(dom);
+  return r.destinationDomains.some(domain => /\.(xyz|top|icu)$/i.test(domain));
 }
 
 // Rule: true when an incident occurs between 00:00 and 04:59.
 function ruleOutOfHours(r){
-  const d = parseIncidentTime(r['Incident Time']);
-  if(!d) return false;
-  const h = d.getHours();
-  return h>=0 && h<5;
+  return r.incidentHour != null && r.incidentHour >= 0 && r.incidentHour < 5;
 }
-
