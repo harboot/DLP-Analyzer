@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DLP Alerts ↔ Policies Matcher</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="csv-utils.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="page-rule-identifier tool-page">
@@ -90,42 +92,6 @@ function logLine(s){
   // ensure newline is a real newline (fix for "\n" showing literally)
   logEl.textContent += s + '\n';
   logEl.scrollTop = logEl.scrollHeight;
-}
-
-/* ---------------------------- CSV parser ---------------------------- */
-function parseCSV(text){
-  const rows = [];
-  let i = 0, field = '', row = [], inQuotes = false;
-  const len = text.length;
-
-  while (i < len) {
-    const ch = text[i];
-
-    if (inQuotes) {
-      if (ch === '"') {
-        if (i + 1 < len && text[i + 1] === '"') { field += '"'; i += 2; continue; } // escaped quote
-        inQuotes = false; i++; continue;
-      } else { field += ch; i++; continue; }
-    } else {
-      if (ch === '"') { inQuotes = true; i++; continue; }
-      if (ch === ',') { row.push(field); field = ''; i++; continue; }
-
-      // ✅ NEW: treat CRLF or CR as newline
-      if (ch === '\r') {
-        row.push(field); field = ''; rows.push(row); row = [];
-        if (i + 1 < len && text[i + 1] === '\n') i += 2; else i += 1; // consume CRLF or CR
-        continue;
-      }
-      if (ch === '\n') {
-        row.push(field); field = ''; rows.push(row); row = []; i++; continue;
-      }
-
-      field += ch; i++;
-    }
-  }
-  row.push(field);
-  rows.push(row);
-  return rows;
 }
 
 function rowsToObjects(rows){
@@ -304,7 +270,7 @@ async function handleFiles(files){
 	  let kind = detectKindFromHeaderLine(firstLine);
 
 	  // 2) Parse CSV and also compute parsed header/rows
-	  const rows = parseCSV(textNoBom);
+	  const rows = await CSVUtils.parseText(textNoBom);
 	  const { header, rows: objs } = rowsToObjects(rows);
 
 	  // 3) If raw-line detection couldn't decide, fall back to parsed header

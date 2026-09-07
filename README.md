@@ -1,6 +1,18 @@
 # DLP Analyzer
 
-A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. The application runs entirely on the client side and does not require a build step.
+A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. It is a companion analysis utility, not an official Forcepoint product.
+
+Processing happens in the browser: uploaded CSV contents are not sent to an application server. The three CSV-based tools use one shared Papa Parse integration (`csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface.
+
+## Forcepoint DLP compatibility
+
+DLP Analyzer expects the column names present in Forcepoint DLP exports. In particular:
+
+- **Alert Analyzer** works with incident exports containing fields such as `ID`, `Incident Time`, `Source`, `Policies`, `Destination`, `File Name`, `Details`, `Channel`, `Action`, and `Severity`.
+- **Rule Identifier** combines an alert export (including `Violation Triggers` and `Policies`) with a policy/rule export (including `Rule Name`, `Relation`, and `Classifiers`) to add the matching rule name to each alert.
+- **Card Manager** runs reusable JavaScript predicates against the same alert CSV rows, which is useful for organization-specific Forcepoint DLP triage rules.
+
+Export labels can vary between Forcepoint versions and configured report templates. If a required column was renamed or omitted, export it again with the expected field names before processing it. All analysis is local and does not modify data in Forcepoint.
 
 ## Open the application
 
@@ -20,6 +32,7 @@ docs/
 ├── DocViewer.html        # Document viewer
 ├── KeywordGenerator.html # Keyword generator
 ├── KG_script.js          # Keyword Generator logic
+├── csv-utils.js          # Shared Papa Parse wrapper (worker-enabled)
 └── styles.css            # Shared stylesheet for all pages
 ```
 
