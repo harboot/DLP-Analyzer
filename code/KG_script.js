@@ -48,11 +48,11 @@ function initApp() {
 function setupEventListeners() {
     genBtn.addEventListener('click', handleGenerate);
     clearBtn.addEventListener('click', handleClear);
-    
+
     // Debounced input for large text processing
     subjectsEl.addEventListener('input', () => debounce(handleInputChange, CONFIG.DEBOUNCE_DELAY));
     rulesEl.addEventListener('input', () => debounce(handleInputChange, CONFIG.DEBOUNCE_DELAY));
-    
+
     // Mode switch
     document.querySelectorAll('input[name="mode"]').forEach(radio => {
         radio.addEventListener('change', handleModeChange);
@@ -77,12 +77,12 @@ function handleModeChange() {
 
 function handleGenerate() {
     if (processing) return;
-    
+
     try {
         processing = true;
         showLoading();
         hideError();
-        
+
         // Use setTimeout to allow UI to update before processing
         setTimeout(() => {
             run();
@@ -152,32 +152,32 @@ function parseRules(text) {
     const exceptionPhrases = new Set();
     const forced = new Set();
     const containBans = new Set();
-    
+
     for (const raw of lines) {
         if (!raw) continue;
-        
+
         if (raw.startsWith('+')) {
             const phrase = raw.slice(1).trim().replace(/\s+/g, ' ');
             if (phrase) forced.add(phrase);
             continue;
         }
-        
+
         if (raw.startsWith('-')) {
             const ban = raw.slice(1).trim().replace(/\s+/g, ' ');
             if (ban) containBans.add(ban);
             continue;
         }
-        
+
         const trimmed = raw.trim();
         if (!trimmed) continue;
-        
+
         if (/\s/.test(trimmed)) {
             exceptionPhrases.add(trimmed); // Exact phrase exception
         } else {
             exceptionWords.add(trimmed); // Single-word exception
         }
     }
-    
+
     return { exceptionWords, exceptionPhrases, forced, containBans };
 }
 
@@ -191,22 +191,22 @@ function extractWordTokensWithPos(text) {
     const tokens = [];
     let i = 0;
     const n = text.length;
-    
+
     while (i < n) {
         while (i < n && !/[A-Za-z0-9]/.test(text[i])) i++;
         if (i >= n) break;
-        
+
         const start = i;
         while (i < n && /[A-Za-z0-9]/.test(text[i])) i++;
         const end = i;
-        
-        tokens.push({ 
-            text: text.slice(start, end).toLowerCase(), 
-            start, 
-            end 
+
+        tokens.push({
+            text: text.slice(start, end).toLowerCase(),
+            start,
+            end
         });
     }
-    
+
     return tokens;
 }
 
@@ -258,20 +258,20 @@ function extractContext(text, keyword, windowSize = 80) {
     const lowerText = text.toLowerCase();
     const lowerKeyword = keyword.toLowerCase();
     const index = lowerText.indexOf(lowerKeyword);
-    
+
     if (index === -1) {
-        return text.length > 2 * windowSize + 20 ? 
-            escapeHtml(text.substring(0, 2 * windowSize + 20) + '...') : 
+        return text.length > 2 * windowSize + 20 ?
+            escapeHtml(text.substring(0, 2 * windowSize + 20) + '...') :
             escapeHtml(text);
     }
-    
+
     const start = Math.max(0, index - windowSize);
     const end = Math.min(text.length, index + lowerKeyword.length + windowSize);
     let snippet = text.substring(start, end);
-    
+
     if (start > 0) snippet = '...' + snippet;
     if (end < text.length) snippet = snippet + '...';
-    
+
     return escapeHtml(snippet);
 }
 
@@ -580,7 +580,7 @@ function buildCandidatesContent(subjects, rules) {
 function greedySetCover(candidates, totalLines) {
     const uncovered = new Set(Array.from({ length: totalLines }, (_, i) => i));
     const selected = [];
-    
+
     // Score function for candidates
     function scoreCandidate(token, metadata) {
         const newCoverage = [...metadata.covers].filter(i => uncovered.has(i)).length;
@@ -592,45 +592,45 @@ function greedySetCover(candidates, totalLines) {
     while (uncovered.size > 0) {
         let bestCandidate = null;
         let bestScore = 0;
-        
+
         for (const [token, metadata] of candidates.entries()) {
             // Skip tokens with numbers
             if (containsNumbers(token)) continue;
-            
+
             const currentScore = scoreCandidate(token, metadata);
-            
+
             if (currentScore > bestScore) {
                 bestCandidate = [token, metadata];
                 bestScore = currentScore;
             } else if (currentScore === bestScore && bestCandidate) {
                 const newCoverageA = [...metadata.covers].filter(i => uncovered.has(i)).length;
                 const newCoverageB = [...bestCandidate[1].covers].filter(i => uncovered.has(i)).length;
-                
-                if (newCoverageA > newCoverageB || 
-                    (newCoverageA === newCoverageB && 
-                     (token.length > bestCandidate[0].length || 
+
+                if (newCoverageA > newCoverageB ||
+                    (newCoverageA === newCoverageB &&
+                     (token.length > bestCandidate[0].length ||
                       (token.length === bestCandidate[0].length && token < bestCandidate[0])))) {
                     bestCandidate = [token, metadata];
                 }
             }
         }
-        
+
         if (!bestCandidate || bestScore === 0) break;
-        
+
         const [token, metadata] = bestCandidate;
-        selected.push({ 
-            token, 
-            isPhrase: metadata.isPhrase, 
-            covers: new Set([...metadata.covers]) 
+        selected.push({
+            token,
+            isPhrase: metadata.isPhrase,
+            covers: new Set([...metadata.covers])
         });
-        
+
         for (const coveredLine of metadata.covers) {
             uncovered.delete(coveredLine);
         }
-        
+
         candidates.delete(token);
     }
-    
+
     return { selected, uncovered: [...uncovered] };
 }
 
@@ -639,16 +639,16 @@ function mergeForcedKeywords(selectedKeywords, candidates, forcedKeywords) {
     for (const forced of forcedKeywords) {
         const lowerForced = forced.toLowerCase();
         const candidateData = candidates.get(lowerForced);
-        
+
         if (candidateData && !selectedKeywords.some(s => s.token === lowerForced)) {
-            selectedKeywords.push({ 
-                token: lowerForced, 
-                isPhrase: candidateData.isPhrase, 
-                covers: new Set([...candidateData.covers]) 
+            selectedKeywords.push({
+                token: lowerForced,
+                isPhrase: candidateData.isPhrase,
+                covers: new Set([...candidateData.covers])
             });
         }
     }
-    
+
     return selectedKeywords;
 }
 
@@ -658,51 +658,51 @@ function assignSubjectsToKeywords(subjects, selectedKeywords, forcedKeywords) {
     const coverageCount = new Map(selectedKeywords.map(s => [s.token, s.covers.size]));
     const isPhraseMap = new Map(selectedKeywords.map(s => [s.token, s.isPhrase]));
     const assignment = new Map();
-    
+
     subjects.forEach((subject, index) => {
         const matches = [];
         const lowerSubject = subject.toLowerCase();
-        
+
         for (const keyword of selectedKeywords) {
-            const matchesSubject = keyword.isPhrase ? 
-                lowerSubject.includes(keyword.token) : 
+            const matchesSubject = keyword.isPhrase ?
+                lowerSubject.includes(keyword.token) :
                 isWordInOriginal(lowerSubject, keyword.token);
-                
+
             if (matchesSubject) {
                 matches.push(keyword.token);
             }
         }
-        
+
         if (matches.length === 0) return;
-        
+
         // Sort matches by priority
         matches.sort((a, b) => {
             const aForced = forcedSet.has(a);
             const bForced = forcedSet.has(b);
-            
+
             if (aForced !== bForced) return bForced - aForced;
-            
+
             const aCoverage = coverageCount.get(a) || 0;
             const bCoverage = coverageCount.get(b) || 0;
-            
+
             if (aCoverage !== bCoverage) return bCoverage - aCoverage;
             if (b.length !== a.length) return b.length - a.length;
-            
+
             return a.localeCompare(b);
         });
-        
+
         assignment.set(index, matches[0]);
     });
-    
+
     // Ensure forced keywords have at least one assignment
     const coverageMap = new Map(selectedKeywords.map(s => [s.token, new Set([...s.covers])]));
-    
+
     for (const keyword of selectedKeywords) {
         if (!forcedSet.has(keyword.token)) continue;
-        
+
         const coverage = coverageMap.get(keyword.token) || new Set();
         if (coverage.size === 0) continue;
-        
+
         let hasAssignment = false;
         for (const line of coverage) {
             if (assignment.get(line) === keyword.token) {
@@ -710,9 +710,9 @@ function assignSubjectsToKeywords(subjects, selectedKeywords, forcedKeywords) {
                 break;
             }
         }
-        
+
         if (hasAssignment) continue;
-        
+
         // Find a line to assign to this keyword
         let targetLine = [...coverage].find(i => !assignment.has(i));
         if (targetLine === undefined) {
@@ -721,10 +721,10 @@ function assignSubjectsToKeywords(subjects, selectedKeywords, forcedKeywords) {
         if (targetLine === undefined) {
             targetLine = [...coverage][0];
         }
-        
+
         assignment.set(targetLine, keyword.token);
     }
-    
+
     return { assignment, isPhraseMap, coverageCount };
 }
 
@@ -859,25 +859,25 @@ function scoreContentKeywords(candidates, rules, subjects) {
 function detectExceptionReasons(subject, rules) {
     const reasons = [];
     const lowerSubject = subject.toLowerCase();
-    
+
     for (const word of rules.exceptionWords) {
         if (isWordInOriginal(lowerSubject, word)) {
             reasons.push(word);
         }
     }
-    
+
     for (const phrase of rules.exceptionPhrases) {
         if (lowerSubject.includes(phrase)) {
             reasons.push(phrase);
         }
     }
-    
+
     for (const ban of rules.containBans) {
         if (lowerSubject.includes(ban)) {
             reasons.push(`-${ban}`);
         }
     }
-    
+
     return reasons;
 }
 
@@ -887,18 +887,18 @@ function renderSubjectMode(subjects, selectedKeywords, rules, assignment, uncove
     selectedKeywords.sort((a, b) => {
         const aForced = rules.forced.has(a.token);
         const bForced = rules.forced.has(b.token);
-        
+
         if (aForced !== bForced) return bForced - aForced;
-        
+
         const aAssignments = [...assignment].filter(([_, token]) => token === a.token).length;
         const bAssignments = [...assignment].filter(([_, token]) => token === b.token).length;
-        
+
         if (aAssignments !== bAssignments) return bAssignments - aAssignments;
         if (b.covers.size !== a.covers.size) return b.covers.size - a.covers.size;
-        
+
         return a.token.localeCompare(b.token);
     });
-    
+
     // Prepare display data - limit to max 20 keywords (kept as before)
     const displayKeywords = selectedKeywords
         .map(keyword => ({
@@ -910,32 +910,32 @@ function renderSubjectMode(subjects, selectedKeywords, rules, assignment, uncove
         }))
         .filter(kw => kw.assignedCount > 0 || (kw.isForced && kw.totalCoverage > 0))
         .slice(0, 20); // Limit to 20 keywords
-    
+
     // Update counters
     lineCountEl.textContent = subjects.length;
     kwCountEl.textContent = displayKeywords.length;
-    
+
     // Render keyword chips
     kwChipsEl.innerHTML = displayKeywords
         .map(kw => `<span class="chip mono">${escapeHtml(kw.token.toUpperCase())}</span>`)
         .join('');
-    
+
     // Render keyword groups
     groupsEl.innerHTML = '';
     displayKeywords.forEach((keyword, index) => {
         const groupElement = document.createElement('div');
         groupElement.className = 'group fade-in';
-        
-        const forcedBadge = keyword.isForced ? 
+
+        const forcedBadge = keyword.isForced ?
             `<span class="badge ok">must-use</span>` : '';
-            
+
         const countBadge = `<span class="badge">${keyword.assignedCount} / ${keyword.totalCoverage}</span>`;
-        
+
         // Get all assigned lines for this keyword (original subjects)
         const allAssignedLines = [...assignment]
             .filter(([_, token]) => token === keyword.token)
             .map(([lineIndex]) => subjects[lineIndex]);
-        
+
         const totalAssigned = allAssignedLines.length;
         const displayedAssigned = allAssignedLines.slice(0, 10); // limit to 10 per group
 
@@ -945,11 +945,11 @@ function renderSubjectMode(subjects, selectedKeywords, rules, assignment, uncove
                 ${highlightText(line, keyword.token, keyword.isPhrase)}
             </div>
         `).join('');
-        
+
         // If there are more than 10, show small indicator
-        const moreHtml = (totalAssigned > 10) ? 
+        const moreHtml = (totalAssigned > 10) ?
             `<div class="rowline tiny muted">... and ${totalAssigned - 10} more</div>` : '';
-        
+
         groupElement.innerHTML = `
             <header>
                 <div class="title">
@@ -964,31 +964,31 @@ function renderSubjectMode(subjects, selectedKeywords, rules, assignment, uncove
                 ${moreHtml}
             </div>
         `;
-        
+
         groupsEl.appendChild(groupElement);
     });
-    
+
     // Render uncovered subjects
     uncoveredListEl.innerHTML = '';
     if (uncoveredIndices.size > 0) {
         uncovSection.style.display = '';
-        
+
         const sortedUncovered = [...uncoveredIndices].sort((a, b) => a - b);
         sortedUncovered.forEach(index => {
             const line = subjects[index];
             const reasons = detectExceptionReasons(line, rules);
-            
-            const reasonsHtml = reasons.length > 0 ? 
-                `<span class="tiny muted">Blocked by: ${reasons.map(r => `<code>${escapeHtml(r)}</code>`).join(', ')}</span>` : 
+
+            const reasonsHtml = reasons.length > 0 ?
+                `<span class="tiny muted">Blocked by: ${reasons.map(r => `<code>${escapeHtml(r)}</code>`).join(', ')}</span>` :
                 '';
-            
+
             const rowElement = document.createElement('div');
             rowElement.className = 'un-row fade-in';
             rowElement.innerHTML = `
                 <div>${escapeHtml(line)}</div>
                 ${reasonsHtml}
             `;
-            
+
             uncoveredListEl.appendChild(rowElement);
         });
     } else {
@@ -1000,36 +1000,36 @@ function renderSubjectMode(subjects, selectedKeywords, rules, assignment, uncove
 function renderContentMode(subjects, scoredKeywords) {
     // Limit to max 20 keywords
     const topKeywords = scoredKeywords.slice(0, 20);
-    
+
     // Update counters
     lineCountEl.textContent = subjects.length;
     kwCountEl.textContent = topKeywords.length;
-    
+
     // Render keyword chips
     kwChipsEl.innerHTML = topKeywords
         .map(kw => `<span class="chip mono">${escapeHtml(kw.token.toUpperCase())}</span>`)
         .join('');
-    
+
     // Render keyword groups
     groupsEl.innerHTML = '';
     topKeywords.forEach((keyword, index) => {
         const groupElement = document.createElement('div');
         groupElement.className = 'group fade-in';
-        
+
         // Prepare covers - sort and limit to 10 items
         const sortedCovers = [...keyword.covers].sort((a, b) => a - b);
         const totalCovers = sortedCovers.length;
         const displayedCovers = sortedCovers.slice(0, 10); // limit to 10 per group
-        
+
         const coversHtml = displayedCovers.map(i => {
             const context = extractContext(subjects[i], keyword.token);
             const highlighted = highlightText(context, keyword.token, keyword.isPhrase);
             return `<div class="rowline">${highlighted}</div>`;
         }).join('');
-        
-        const moreHtml = (totalCovers > 10) ? 
+
+        const moreHtml = (totalCovers > 10) ?
             `<div class="rowline tiny muted">... and ${totalCovers - 10} more</div>` : '';
-        
+
         groupElement.innerHTML = `
             <header>
                 <div class="title">
@@ -1043,10 +1043,10 @@ function renderContentMode(subjects, scoredKeywords) {
                 ${moreHtml}
             </div>
         `;
-        
+
         groupsEl.appendChild(groupElement);
     });
-    
+
     // Hide uncovered section in content mode
     uncovSection.style.display = 'none';
 }
@@ -1079,7 +1079,7 @@ function mergePluralForms(keywords, rules) {
     const mergedKeywords = [];
     const keywordMap = new Map();
     const toRemove = new Set();
-    
+
     // First pass: add all keywords to map and list
     for (const keyword of keywords) {
         if (rules.forced.has(keyword.token) || keyword.isPhrase) {
@@ -1087,7 +1087,7 @@ function mergePluralForms(keywords, rules) {
             mergedKeywords.push(keyword);
             continue;
         }
-        
+
         const stemmed = stemWord(keyword.token);
         if (stemmed === keyword.token) {
             // Not a plural form, add directly
@@ -1109,7 +1109,7 @@ function mergePluralForms(keywords, rules) {
             }
         }
     }
-    
+
     // Remove merged plural forms
     return mergedKeywords.filter(kw => !toRemove.has(kw.token));
 }

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FP Tools — Host</title>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-dlp-tools tool-page">
+  <div class="host">
+    <header id="topbar" class="topbar" role="navigation" aria-label="Main menu">
+      <div class="brand" aria-label="App title">DLP Tools 25.9 <small class="by">- by hendryadrian.com</small></div>
+      <nav class="menu" role="tablist" aria-label="Pages">
+        <button class="tab" data-key="AlertAnalyzer" role="tab" aria-selected="false" title="Open AlertAnalyzer.html">Alert Analyzer</button>
+        <button class="tab" data-key="CardManager" role="tab" aria-selected="false" title="Open CardManager.html">Card Manager</button>
+        <button class="tab" data-key="RuleIdentifier" role="tab" aria-selected="false" title="Open RuleIdentifier.html">Rule Identifier</button>
+        <button class="tab" data-key="PolicyViewer" role="tab" aria-selected="false" title="Open PolicyViewer.html">Policy Viewer</button>
+        <button class="tab" data-key="DocViewer" role="tab" aria-selected="false" title="Open DocViewer.html">Document Viewer</button>
+		<button class="tab" data-key="KeywordGenerator" role="tab" aria-selected="false" title="Open KeywordGenerator.html">Keyword Generator</button>
+      </nav>
+      <div id="spinner" class="spinner" aria-hidden="true"><span class="spin" aria-label="Loading" title="Loading..."></span></div>
+    </header>
+
+    <main id="content" class="content">
+      <iframe id="appFrame" class="frame" title="FP Tools Content" loading="eager" referrerpolicy="no-referrer"></iframe>
+      <div id="overlay" class="overlay" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <script>
+    const BASE_PATH = './';
+    const PAGES = ['AlertAnalyzer','CardManager','RuleIdentifier','PolicyViewer','DocViewer','KeywordGenerator'];
+    const DEFAULT_KEY = 'AlertAnalyzer';
+
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const frame = document.getElementById('appFrame');
+    const spinner = document.getElementById('spinner');
+    const overlay = document.getElementById('overlay');
+
+    let currentKey = null;
+    const frameCache = {}; // cache DOM iframes to avoid reloads
+
+    const pathFor = key => BASE_PATH + key + '.html';
+
+    function keyFromHash(){
+      const raw = (location.hash || '').replace(/^#+/,'').trim();
+      if (!raw) return DEFAULT_KEY;
+      return PAGES.includes(raw) ? raw : DEFAULT_KEY;
+    }
+
+    function setActiveTab(key){
+      tabs.forEach(btn => btn.setAttribute('aria-selected', String(btn.dataset.key === key)));
+    }
+
+    const showSpinner = (show) => {
+      spinner.style.display = show ? 'inline-block' : 'none';
+      spinner.setAttribute('aria-hidden', String(!show));
+    };
+
+    function showOverlay(message, key){
+      overlay.innerHTML = `
+        <div class="row">
+          <div>${message}</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn" type="button" data-act="retry" data-key="${key}">Retry</button>
+            <a class="btn" href="${pathFor(key)}" target="_blank" rel="noopener">Open in new tab</a>
+          </div>
+        </div>`;
+      overlay.style.display = 'block';
+    }
+    function hideOverlay(){ overlay.style.display = 'none'; overlay.innerHTML = ''; }
+
+    function navigateTo(key){
+      if (key === currentKey) return;
+      currentKey = key;
+      setActiveTab(key);
+      hideOverlay();
+      showSpinner(true);
+
+      // Use cache: if iframe for this key exists, show it; otherwise create new
+      Object.entries(frameCache).forEach(([k, el]) => {
+        el.style.display = (k === key) ? 'block' : 'none';
+      });
+
+      if (frameCache[key]){
+        showSpinner(false);
+      } else {
+        const newFrame = document.createElement('iframe');
+        newFrame.className = 'frame';
+        newFrame.title = key;
+        newFrame.src = pathFor(key);
+        newFrame.onload = () => { showSpinner(false); };
+        newFrame.onerror = () => { showSpinner(false); showOverlay(`An error occurred while loading <b>${key}.html</b>.`, key); };
+        document.getElementById('content').appendChild(newFrame);
+        frameCache[key] = newFrame;
+        showSpinner(false);
+      }
+    }
+
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (location.hash.replace(/^#+/,'') !== key){
+          location.hash = key;
+        } else {
+          navigateTo(key);
+        }
+      });
+    });
+
+    window.addEventListener('hashchange', () => navigateTo(keyFromHash()));
+
+    (function init(){
+      PAGES.forEach(key => {
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = pathFor(key);
+        link.as = 'document';
+        document.head.appendChild(link);
+      });
+      const key = keyFromHash();
+      if (!location.hash) location.hash = key;
+      setActiveTab(key);
+      navigateTo(key);
+      overlay.addEventListener('click', (e) => {
+        const t = e.target.closest('[data-act="retry"][data-key]');
+        if (t){
+          hideOverlay();
+          navigateTo(String(t.getAttribute('data-key')));
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

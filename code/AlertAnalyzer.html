@@ -7,132 +7,10 @@
   <!-- Papa Parse for CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-	<style>
-	  :root{--bg:#0b0f14;--panel:#121823;--muted:#5b6b7f;--text:#e8eef6;--accent:#4cc9f0;--accent2:#80ed99;--warn:#ffd166;--danger:#ef476f;--line:#1d2633}
-
-	  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;width:100%}
-
-	  *{scrollbar-width:thin;scrollbar-color:#2a3b52 transparent}
-	  *::-webkit-scrollbar{width:8px;height:8px}
-	  *::-webkit-scrollbar-track{background:transparent}
-	  *::-webkit-scrollbar-thumb{background:#253346;border-radius:8px}
-	  *::-webkit-scrollbar-thumb:hover{background:#2f4561}
-
-	  .wrap{max-width:96vw;margin:24px auto;padding:0 8px}
-	  h1{font-size:22px;margin:0 0 8px}
-	  .sub{color:var(--muted);margin:0 0 16px}
-	  .row-dark{color:var(--muted)}
-
-	  .preline{white-space:pre-line}
-	  .timecell small{color:var(--muted)}
-	  .count-col{width:50px;min-width:50px;max-width:50px;text-align:left}
-
-	  .filter-pop{position:absolute;background:#0e141e;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);z-index:1000;box-shadow:0 6px 18px rgba(0,0,0,.35);min-width:160px}
-
-	  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px 14px}
-	  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
-	  .row-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-	  .row-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-	  .drop{border:1.5px dashed #2a3b52;border-radius:12px;padding:4px 14px;text-align:center;cursor:pointer;background:#0e141e}
-	  .drop:hover{border-color:var(--accent)}
-	  input[type="file"]{display:none}
-
-	  .btn{background:linear-gradient(180deg,#1f2a3b,#172233);border:1px solid #2b3d55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .05s ease,box-shadow .05s ease}
-	  .btn:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15) inset}
-	  .btn:active{transform:translateY(1px);box-shadow:0 0 0 3px rgba(0,0,0,.25) inset}
-	  
-	  .filter-icon{cursor:pointer;opacity:.65;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;border-radius:6px}
-	  .filter-icon.is-active{opacity:1}
-	  .filter-icon:focus{outline:2px solid #79f;outline-offset:2px}
-
-	  .tab-btn{position:relative;display:inline-flex;align-items:center;gap:8px;background:#0e141e;border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
-	  .tab-btn:focus,.tab-btn:focus-visible{outline:none}
-	  .tab-btn:hover{border-color:#2b3d55}
-	  .tab-btn[aria-selected="true"]{border-color:var(--accent)}
-	  .tab-btn[aria-selected="true"]::after{content:"";position:absolute;inset:-2px;border-radius:12px;pointer-events:none;box-shadow:0 0 0 1px rgba(76,201,240,.35),inset 0 0 0 2px rgba(76,201,240,.18)}
-	  .tab-close{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;border:1px solid #274058;opacity:.85;font-weight:700;cursor:pointer;line-height:1}
-	  .tab-close:hover{background:#122133}
-	  .tab-btn[aria-selected="true"] .tab-close{border-color:rgba(76,201,240,.45)}
-
-	  .section{border:1px solid var(--line);border-radius:14px;overflow:hidden}
-	  .section>header{display:flex;justify-content:space-between;align-items:center;background:#0f1521;padding:10px 12px;border-bottom:1px solid var(--line)}
-	  .muted{color:var(--muted)}
-	  .tiny{font-size:12px}
-	  .section .tablewrap{overflow:auto;max-height:42vh}
-	  .sectionx{display:flex;flex-direction:column;height:calc(100vh - 150px)}
-	  .sectionx .tablewrap{flex:1 1 auto;overflow:auto}
-
-	  table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
-	  thead th{position:sticky;top:0;background:#0f1521;border-bottom:1px solid var(--line);z-index:1}
-	  th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word;min-width:50px}
-	  td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-	  td[title],a[title]{cursor:help}
-	  tbody tr:hover{background:#0c121c}
-	  .right{display:flex;gap:8px;align-items:center}
-
-	  button.icon-copy{all:unset;cursor:pointer;line-height:1}
-	  button.icon-copy:focus{outline:2px solid #79f;outline-offset:2px}
-
-	  table.cols-10 th:nth-child(1),table.cols-10 td:nth-child(1){width:16px}
-	  table.cols-10 th:nth-child(2),table.cols-10 td:nth-child(2){width:7%}
-	  table.cols-10 th:nth-child(3),table.cols-10 td:nth-child(3){width:15%}
-	  table.cols-10 th:nth-child(4),table.cols-10 td:nth-child(4){width:12%}
-	  table.cols-10 th:nth-child(5),table.cols-10 td:nth-child(5){width:9%}
-	  table.cols-10 th:nth-child(6),table.cols-10 td:nth-child(6){width:16%}
-	  table.cols-10 th:nth-child(7),table.cols-10 td:nth-child(7){width:16%}
-	  table.cols-10 th:nth-child(8),table.cols-10 td:nth-child(8){width:5%}
-	  table.cols-10 th:nth-child(9),table.cols-10 td:nth-child(9){width:14%}
-	  table.cols-10 th:nth-child(10),table.cols-10 td:nth-child(10){width:6%}
-
-	  .grid{display:grid;gap:12px}
-	  .grid.cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-	  .card{background:#0e141e;border:1px solid #1f2a3b;padding:10px 12px;border-radius:12px}
-	  .card h3{margin:0 0 6px;font-size:13px;color:#b9c7da}
-	  .card b{font-size:18px}
-	  .grid.cols-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-	  .grid.cols-3{grid-template-columns:repeat(3,minmax(320px,1fr))}
-	  @media (max-width:1400px){.grid.cols-3{grid-template-columns:repeat(2,minmax(320px,1fr))}}
-	  @media (max-width:800px){.grid.cols-3{grid-template-columns:1fr}}
-
-	  .table-actions{display:flex;justify-content:space-between;align-items:center;padding:10px;border-top:1px solid var(--line);background:#0f1521}
-	  .pager{display:flex;gap:6px;align-items:center}
-	  .pager .btn{padding:6px 10px}
-
-	  a.link{color:var(--accent);text-decoration:none}
-	  a.link:hover{outline:none;text-decoration:underline}
-
-	  .chart-wrap{padding:10px}
-	  .tooltip{position:absolute;pointer-events:none;background:#0e141e;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;box-shadow:0 10px 24px rgba(0,0,0,.35);display:none}
-
-	  .spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:var(--accent);animation:sp .8s linear infinite;vertical-align:middle}
-	  @keyframes sp{to{transform:rotate(360deg)}}
-	  .muted-num{opacity:.7}
-
-	  a.metric .temp-count{margin-right:4px}
-	  
-	  .cjs-wrap header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-
-	  .cjs-stack{display:flex;flex-direction:column;gap:12px;padding:12px}
-
-	  .cjs-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
-	  .cjs-card>*+*{margin-top:10px}
-
-	  .cjs-chatrow{display:flex;gap:8px;align-items:center}
-
-	  .cjs-textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif;min-height:180px;resize:vertical}
-	  .cjs-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
-
-	  .cjs-status{font-size:12px;color:var(--muted)}
-
-	  .cjs-result{margin-top:12px}
-	  .cjs-result>.section{border-radius:12px;overflow:hidden}
-
-	  .cjs-textinput{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif}
-	  .cjs-textinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
-	</style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
-<body>
+<body class="page-alert-analyzer tool-page">
 <div class="wrap">
   <div class="panel">
     <div class="row">
@@ -1103,7 +981,7 @@ function renderOverview(rows){
   bindCardsClickOnce(cards, metricData, ruleDefs, rows);
   wrap.appendChild(cards);
 
-  const by = (key)=>{ 
+  const by = (key)=>{
     const m=freqMap(rows,key);
     return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]);
   };
@@ -2019,7 +1897,7 @@ function openFilterPopover(anchor, tab, col){
       <button class="btn btn-sort" title="Most" data-type="most" ${currentSort==='most'?'style="outline:1px solid var(--accent)"':''}>M</button>
       <button class="btn btn-sort" title="Less" data-type="less" ${currentSort==='less'?'style="outline:1px solid var(--accent)"':''}>L</button>
     </div>
-    <div><input type="text" placeholder="contains... (kosongkan untuk clear)" 
+    <div><input type="text" placeholder="contains... (kosongkan untuk clear)"
       value="${escapeHtml(currentFilter)}" style="width:100%" /></div>
     <div class="tiny muted" style="margin-top:4px">Enter untuk apply filter • Esc untuk tutup</div>
   `;

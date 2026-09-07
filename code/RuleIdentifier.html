@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DLP Alerts ↔ Policies Matcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-rule-identifier tool-page">
+  <div class="wrap">
+    <h1>DLP Alerts ↔ Policies Matcher</h1>
+    <p class="sub">Upload CSV files for <b>DLP Alerts</b> and <b>DLP Policies</b> with a single uploader. We’ll validate structure, process in batches, add <i>Rule Name</i> after <i>Policies</i> for output, render a bar chart, and keep a live log.</p>
+
+    <div class="panel">
+      <div class="row">
+        <div class="drop" id="drop-zone">
+          <div style="font-size:16px;margin-bottom:8px"><b>Upload CSV (Alerts & Policies)</b></div>
+          <div class="muted" style="font-size:13.5px;margin-bottom:10px">Select files or folders, or drag & drop here</div>
+          <button class="btn" id="btn-select">Select files / folder</button>
+          <input id="file-all" type="file" accept=".csv,text/csv" multiple webkitdirectory />
+        </div>
+        <div class="row" style="gap:10px">
+          <button class="btn" id="btn-process" disabled>Process (Batch + AJAX)</button>
+          <button class="btn" id="btn-reset">Reset</button>
+          <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
+        </div>
+      </div>
+
+      <!-- KPI cards: 6 items, big numbers -->
+      <div class="kpis">
+        <div class="kpi"><div class="num" id="kpi-total-alerts">0</div><div class="label">Total Alerts</div></div>
+        <div class="kpi"><div class="num" id="kpi-total-rules">0</div><div class="label">Total Rules</div></div>
+        <div class="kpi"><div class="num" id="kpi-processed">0</div><div class="label">Processed</div></div>
+        <div class="kpi"><div class="num" id="kpi-pending">0</div><div class="label">No Classifier</div></div>
+        <div class="kpi"><div class="num" id="kpi-identified">0</div><div class="label">Identified</div></div>
+        <div class="kpi"><div class="num" id="kpi-unidentified">0</div><div class="label">Unidentified</div></div>
+      </div>
+
+      <div class="progress"><div class="bar" id="bar"></div></div>
+
+      <div class="section">
+        <header>
+          <div style="font-weight:700">Alerts per Rule Name</div>
+          <div class="muted">sorted by count (descending)</div>
+        </header>
+        <div class="pad">
+          <canvas id="ruleChart" height="460"></canvas>
+        </div>
+      </div>
+
+      <div class="section">
+        <header><div style="font-weight:700">Log</div><div class="muted">live updates</div></header>
+        <div class="pad">
+          <div id="log" class="log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------------------------- DOM helpers ---------------------------- */
+const $ = s => document.querySelector(s);
+const logEl = $('#log');
+const barEl = $('#bar');
+const chartCanvas = $('#ruleChart');
+const ctx = chartCanvas.getContext('2d');
+
+/* ----------------------------- State -------------------------------- */
+let alertsHeader = [];
+let alertsRows = [];
+let policiesRows = [];
+let totalRules = 0;
+
+const stat = { total: 0, processed: 0, identified: 0, unidentified: 0, noClassifiers: 0 };
+
+// REPLACE isi fungsi refreshKPIs
+function refreshKPIs(){
+  $('#kpi-total-alerts').textContent = stat.total;
+  $('#kpi-total-rules').textContent  = totalRules;
+  $('#kpi-processed').textContent    = stat.processed;
+  $('#kpi-pending').textContent      = stat.noClassifiers;
+  $('#kpi-identified').textContent   = stat.identified;
+  $('#kpi-unidentified').textContent = stat.unidentified;
+}
+
+function setBar(p){ barEl.style.width = Math.max(0,Math.min(100,p)) + '%'; }
+
+/* ------------------------------ Log --------------------------------- */
+function logLine(s){
+  // ensure newline is a real newline (fix for "\n" showing literally)
+  logEl.textContent += s + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ---------------------------- CSV parser ---------------------------- */
+function parseCSV(text){
+  const rows = [];
+  let i = 0, field = '', row = [], inQuotes = false;
+  const len = text.length;
+
+  while (i < len) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < len && text[i + 1] === '"') { field += '"'; i += 2; continue; } // escaped quote
+        inQuotes = false; i++; continue;
+      } else { field += ch; i++; continue; }
+    } else {
+      if (ch === '"') { inQuotes = true; i++; continue; }
+      if (ch === ',') { row.push(field); field = ''; i++; continue; }
+
+      // ✅ NEW: treat CRLF or CR as newline
+      if (ch === '\r') {
+        row.push(field); field = ''; rows.push(row); row = [];
+        if (i + 1 < len && text[i + 1] === '\n') i += 2; else i += 1; // consume CRLF or CR
+        continue;
+      }
+      if (ch === '\n') {
+        row.push(field); field = ''; rows.push(row); row = []; i++; continue;
+      }
+
+      field += ch; i++;
+    }
+  }
+  row.push(field);
+  rows.push(row);
+  return rows;
+}
+
+function rowsToObjects(rows){
+  if (!rows.length) return { header: [], rows: [] };
+
+  // 1) Ambil header mentah
+  let header = rows[0].map(h => (h ?? '').trim());
+
+  // 2) Buang kolom kosong di ekor (header kosong DAN semua data kosong)
+  let end = header.length - 1;
+  while (end >= 0) {
+    const headEmpty = (header[end] || '').trim() === '';
+    const allEmpty = rows.slice(1).every(r => !r || ((r[end] ?? '').trim() === ''));
+    if (headEmpty && allEmpty) {
+      header.pop();
+      rows.forEach(r => { if (r) r.splice(end, 1); });
+      end = header.length - 1;
+    } else {
+      break;
+    }
+  }
+
+  // 3) Normalisasi panjang setiap row ke panjang header
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const rw = rows[r] ?? [];
+    if (rw.every(c => (c ?? '').trim() === '')) continue; // skip baris kosong
+    const o = {};
+    for (let c = 0; c < header.length; c++) {
+      const key = header[c] || `col_${c}`;
+      o[key] = rw[c] ?? '';
+    }
+    out.push(o);
+  }
+  return { header, rows: out };
+}
+
+const norm = s => (s||'').toString().toLowerCase();
+const splitClassifiers = s => (s || '').split(/[;|]/g).map(x => x.trim()).filter(Boolean);
+const hasNonEmptyClassifiers = (p) => splitClassifiers(p['Classifiers']).length > 0;
+
+/* ------------------------ Dataset detection ------------------------- */
+function normalizeKey(name){
+  return (name ?? '')
+    .toString()
+    .replace(/\uFEFF/g, '')      // strip BOM anywhere
+    .replace(/\u00A0/g, ' ')     // NBSP -> space
+    .trim()
+    .toLowerCase()
+    .replace(/["'`]/g, '')       // quotes
+    .replace(/\s+/g, ' ')        // collapse spaces
+    .replace(/[^a-z0-9]+/g, ''); // keep only a-z0-9
+}
+
+// Look ONLY at the first row (raw line), per your requirement.
+// This is resilient to trailing commas/quotes because we normalize heavily.
+function detectKindFromHeaderLine(rawLine){
+  const s = normalizeKey(rawLine);
+  const has = (phrase) => s.includes(normalizeKey(phrase));
+
+  const looksAlerts   = has('Violation Triggers') && has('Policies');
+  const looksPolicies = has('Rule Name') && has('Relation') && has('Classifiers');
+
+  if (looksPolicies && !looksAlerts) return 'policies';
+  if (looksAlerts && !looksPolicies) return 'alerts';
+  if (looksPolicies && looksAlerts)  return 'policies'; // prefer policies if ambiguous
+  return 'unknown';
+}
+
+// Fallback checker on parsed header if raw-line check is inconclusive
+function hasHeadersLoose(header, required){
+  const set = new Set((header || []).map(normalizeKey));
+  return required.every(key => set.has(normalizeKey(key)));
+}
+
+function classifySetFromParsedHeader(header, rows){
+  const isAlerts  = hasHeadersLoose(header, ['Violation Triggers','Policies']) && rows.length > 0;
+  const isPolicy  = hasHeadersLoose(header, ['Rule Name','Relation','Classifiers']) && rows.length > 0;
+
+  if (isPolicy && !isAlerts) return 'policies';
+  if (isAlerts && !isPolicy) return 'alerts';
+  if (isPolicy && isAlerts)  return 'policies';
+  return 'unknown';
+}
+
+/* -------------------------- Upload handling ------------------------- */
+/* Single uploader with drag & drop and folder selection */
+const drop = $('#drop-zone');
+const btnSelect = $('#btn-select');
+const fileAll = $('#file-all');
+let reading = false;
+
+btnSelect.addEventListener('click', () => {
+  // ensure folder selection is enabled
+  fileAll.setAttribute('webkitdirectory', '');
+  fileAll.click();
+});
+
+drop.addEventListener('dragover', e => {
+  e.preventDefault();
+  drop.classList.add('drag');
+});
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+
+drop.addEventListener('drop', async e => {
+  e.preventDefault();
+  drop.classList.remove('drag');
+  const files = await collectDroppedCSVFiles(e.dataTransfer); // supports folders
+  await handleFiles(files);  // <-- fungsi kamu yang sudah ada
+  fileAll.value = '';        // reset input so next selection always fires
+});
+
+fileAll.addEventListener('change', async e => {
+  const files = [...e.target.files].filter(isCSVFile); // works with folder picker
+  await handleFiles(files);  // <-- fungsi kamu yang sudah ada
+  fileAll.value = '';        // avoid stale value blocking next change
+});
+
+// ---- Helpers for robust CSV detection & folder DnD traversal ----
+function isCSVFile(f){
+  const name = (f && f.name) || '';
+  const type = (f && f.type || '').toLowerCase();
+  // Some browsers set empty type for dropped files — rely on extension too
+  return /\.csv$/i.test(name) || type.includes('csv');
+}
+
+async function collectDroppedCSVFiles(dt){
+  // If directory items are present, use webkitGetAsEntry() to traverse
+  if (dt.items && dt.items.length && dt.items[0].webkitGetAsEntry) {
+    const entries = [...dt.items].map(it => it.webkitGetAsEntry()).filter(Boolean);
+    const files = [];
+    for (const entry of entries) {
+      const got = await traverseEntry(entry);
+      files.push(...got);
+    }
+    return files.filter(isCSVFile);
+  }
+  // Fallback: plain files (no folders)
+  return [...dt.files].filter(isCSVFile);
+}
+
+function traverseEntry(entry){
+  // Recursively read FileSystemEntry (files & directories)
+  return new Promise((resolve, reject) => {
+    if (entry.isFile) {
+      entry.file(f => resolve([f]), reject);
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const all = [];
+      const readBatch = () => reader.readEntries(async results => {
+        if (!results.length) return resolve(all);
+        for (const ent of results) {
+          all.push(...await traverseEntry(ent));
+        }
+        readBatch();
+      }, reject);
+      readBatch();
+    } else {
+      resolve([]);
+    }
+  });
+}
+
+async function handleFiles(files){
+  if(reading){ logLine('[Uploader] ignoring duplicate trigger while reading…'); return; }
+  if(!files.length){ logLine('[Uploader] no CSV files detected.'); return; }
+  reading=true;
+  try{
+    let newAlerts=0, newRules=0;
+	for (const f of files){
+	  const text = await f.text();
+	  const textNoBom = text.replace(/\uFEFF/g, '');
+	  const firstLine = (textNoBom.split(/\r\n|\n|\r/)[0] || '').trim();
+
+	  // 1) Classify using raw header line (row #1 only)
+	  let kind = detectKindFromHeaderLine(firstLine);
+
+	  // 2) Parse CSV and also compute parsed header/rows
+	  const rows = parseCSV(textNoBom);
+	  const { header, rows: objs } = rowsToObjects(rows);
+
+	  // 3) If raw-line detection couldn't decide, fall back to parsed header
+	  if (kind === 'unknown') {
+		kind = classifySetFromParsedHeader(header, objs);
+	  }
+
+	  // Optional debug when still unknown
+	  if (kind === 'unknown') {
+		logLine(`[Skipped] ${f.name} — missing required headers.`);
+		logLine(`          Need Alerts: "Violation Triggers", "Policies" — or Policies: "Rule Name", "Relation", "Classifiers"`);
+		logLine('[Debug] header line: ' + firstLine);
+		logLine('[Debug] parsed header: ' + header.join(' | '));
+		logLine('[Debug] normalized: ' + header.map(normalizeKey).join(', '));
+		continue;
+	  }
+
+	  // 4) Commit datasets
+	  if (kind === 'alerts') {
+		if (!alertsHeader.length) alertsHeader = header;
+		alertsRows.push(...objs);
+		logLine(`[Alerts] ${f.name} OK (${objs.length} rows)`);
+	  } else if (kind === 'policies') {
+		policiesRows.push(...objs);
+		logLine(`[Policies] ${f.name} OK (${objs.length} rows)`);
+	  }
+	}
+    totalRules = policiesRows.length;
+    stat.total = alertsRows.length;
+	stat.noClassifiers = policiesRows.filter(p => !hasNonEmptyClassifiers(p)).length;
+    refreshKPIs();
+    $('#btn-process').disabled = !(alertsRows.length && policiesRows.length);
+    logLine(`Total Alerts ready: ${alertsRows.length}`);
+    logLine(`Total Rules ready: ${policiesRows.length}`);
+  } catch(err){
+    console.error(err);
+    logLine('Error while reading files: ' + (err && err.message ? err.message : err));
+  } finally { reading=false; }
+}
+
+/* ------------------------ Relation evaluation ----------------------- */
+function evalRelationExpr(expr, hits){
+  const tokens = expr.trim().split(/\\s+/).filter(Boolean);
+  if(!tokens.length) return false;
+  const out=[], ops=[]; const prec={AND:2, OR:1};
+  tokens.forEach(t=>{
+    if(/^\\d+$/.test(t)) out.push(t);
+    else if(/^(AND|OR)$/i.test(t)){
+      const op=t.toUpperCase();
+      while(ops.length && prec[ops[ops.length-1]]>=prec[op]) out.push(ops.pop());
+      ops.push(op);
+    }
+  });
+  while(ops.length) out.push(ops.pop());
+  const st=[];
+  out.forEach(tok=>{
+    if(/^\\d+$/.test(tok)){ st.push(!!hits[parseInt(tok,10)]); }
+    else if(tok==='AND'){ const b=st.pop(), a=st.pop(); st.push(a&&b); }
+    else if(tok==='OR'){ const b=st.pop(), a=st.pop(); st.push(a||b); }
+  });
+  return !!st.pop();
+}
+
+/* ----------------------------- Matcher ------------------------------ */
+function buildPolicyIndex(policies){
+  return policies
+    .filter(hasNonEmptyClassifiers) // ← skip kosong
+    .map(p => {
+      const relation = (p['Relation']||'').toString().trim() || 'AND';
+      const classifiers = splitClassifiers(p['Classifiers']);
+      return {
+        policyName: p['Policy Name'] ?? '',
+        ruleName:   p['Rule Name'] ?? '',
+        relation,
+        classifiers
+      };
+    });
+}
+
+function matchAlert(alert, policyIndex){
+  const vt = alert['Violation Triggers'] ?? alert['Violation Triggers '] ?? '';
+  const vtNorm = norm(vt);
+  const matched=[];
+  for(const pol of policyIndex){
+    const hits={};
+    pol.classifiers.forEach((kw,i)=>{ hits[i+1] = kw ? vtNorm.includes(norm(kw)) : false; });
+    const rel = pol.relation.toUpperCase();
+    let ok=false;
+    if(/^\\d+(\\s+(AND|OR)\\s+\\d+)*$/.test(rel)) ok = evalRelationExpr(rel, hits);
+    else if(rel==='AND') ok = pol.classifiers.every((_,i)=>hits[i+1]);
+    else if(rel==='OR') ok = pol.classifiers.some((_,i)=>hits[i+1]);
+    else {
+      const nums=(rel.match(/\\d+/g)||[]).map(n=>parseInt(n,10));
+      ok = nums.length ? nums.every(idx=>!!hits[idx]) : pol.classifiers.every((_,i)=>hits[i+1]);
+    }
+    if(ok) matched.push(pol.ruleName);
+  }
+  return matched;
+}
+
+/* --------------------------- CSV builder ---------------------------- */
+function insertRuleHeader(alertHeader){
+  const idx = alertHeader.findIndex(h => h.trim().toLowerCase()==='policies');
+  const out=[...alertHeader]; const pos = idx===-1 ? out.length : idx+1;
+  out.splice(pos,0,'Rule Name');
+  return out;
+}
+function createRowWithRule(rowObj, alertHeader, ruleJoined){
+  const newHeader = insertRuleHeader(alertHeader);
+  const result = {};
+  newHeader.forEach(h => { result[h] = (h==='Rule Name') ? ruleJoined : (rowObj[h] ?? ''); });
+  return {finalRow: result, newHeader};
+}
+
+function buildCSV(header, rows){
+  // Escape nilai jika mengandung koma, kutip, atau newline (CR/LF)
+  const esc = v => {
+    const s = (v ?? '').toString();
+    if (/[",\r\n]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+
+  const lines = [];
+  lines.push(header.map(esc).join(','));          // header
+  for (const r of rows) {
+    lines.push(header.map(h => esc(r[h])).join(',')); // rows mengikuti urutan header
+  }
+
+  // ⚠️ CRLF agar friendly di Excel + BOM supaya encoding terbaca UTF-8
+  const csv = '\uFEFF' + lines.join('\r\n');
+  return csv;
+}
+
+/* --------------------------- Bar chart ------------------------------ */
+function renderRuleChart(countMap){
+  const entries = Object.entries(countMap)
+    .filter(([k,v]) => k && k.trim() !== '' && v > 0)
+    .sort((a,b) => b[1] - a[1]); // largest first
+
+  // ---- Canvas sizing: full container width ----
+  const container = chartCanvas.closest('.pad') || chartCanvas.parentElement || document.body;
+  const cssW = Math.max(320, Math.floor(container.getBoundingClientRect().width || container.clientWidth || window.innerWidth));
+  chartCanvas.style.width = '100%';                 // CSS width (for layout)
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  const barH = 16, gap = 6;
+  const cssH = Math.max(120, 28 + entries.length * (barH + gap));
+
+  chartCanvas.width  = cssW * dpr;                  // internal bitmap
+  chartCanvas.height = cssH * dpr;
+
+  const c = ctx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // ---- Theme ----
+  const panelCol = getComputedStyle(document.documentElement).getPropertyValue('--panel') || '#121823';
+  const textCol  = getComputedStyle(document.documentElement).getPropertyValue('--text')  || '#e8eef6';
+  c.fillStyle = panelCol; c.fillRect(0,0,cssW,cssH);
+
+  // ---- Layout paddings (dynamic) ----
+  c.font = '11px system-ui';
+  const maxVal = Math.max(1, ...entries.map(e => e[1]));
+  const maxValW = c.measureText(String(maxVal)).width;
+  const leftGutter = Math.min( Math.max(Math.floor(cssW * 0.40), 260), 460); // 28% width, min 260, max 460
+  const pad = { t: 6, r: 18 + Math.ceil(maxValW) + 10, b: 26, l: leftGutter };
+  const x0 = pad.l, x1 = cssW - pad.r, y0 = pad.t, y1 = cssH - pad.b;
+
+  // ---- Grid ----
+  c.strokeStyle = '#2b3d55';
+  c.fillStyle = '#9fb1c9';
+  c.font = '11px system-ui';
+  for (let i = 0; i <= 4; i++) {
+    const x = x0 + (i / 4) * (x1 - x0);
+    c.globalAlpha = 0.28;
+    c.beginPath(); c.moveTo(x, y0); c.lineTo(x, y1); c.stroke();
+    c.globalAlpha = 1;
+    const val = String(Math.round((i / 4) * maxVal));
+    const tw = c.measureText(val).width;
+    c.fillText(val, Math.min(x - tw / 2, x1 - tw), y1 + 16); // clamp to right edge
+  }
+
+  // ---- Helpers ----
+  function ellipsize(text, maxW){
+    c.font = '11px system-ui';
+    if (c.measureText(text).width <= maxW) return text;
+    const ell = '…', ellW = c.measureText(ell).width;
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      const slice = text.slice(0, mid);
+      if (c.measureText(slice).width + ellW <= maxW) lo = mid; else hi = mid - 1;
+    }
+    return text.slice(0, lo) + ell;
+  }
+
+  // ---- Bars + labels (no overlap) ----
+  entries.forEach((d, i) => {
+    const [rule, count] = d;
+    const y = y0 + i * (barH + gap);
+    const w = Math.max(0, (count / maxVal) * (x1 - x0));
+
+    // bar
+    c.fillStyle = '#4cc9f0';
+    c.fillRect(x0, y, w, barH);
+
+    // left label (Rule Name) — stays left in gutter
+    const leftMax = x0 - 12;
+    const txt = ellipsize(rule, leftMax - 10);
+    c.fillStyle = textCol;
+    c.font = '14px system-ui';
+    c.textAlign = 'left';
+    c.fillText(txt, 8, y + barH - 3);
+
+    // value label — inside if possible, else outside but clamped
+    const valTxt = String(count);
+    const valW  = c.measureText(valTxt).width;
+    const inside = w >= (valW + 10);                // 10px breathing room
+    if (inside) {
+      c.textAlign = 'right';
+      c.fillStyle = textCol;
+      c.fillText(valTxt, x0 + w - 4, y + barH - 3);
+    } else {
+      c.textAlign = 'left';
+      c.fillStyle = textCol;
+      const lx = Math.min(x0 + w + 6, x1 - valW - 2); // do not overflow right
+      c.fillText(valTxt, lx, y + barH - 3);
+    }
+  });
+
+  // reset default align
+  c.textAlign = 'left';
+}
+
+/* ----------------------------- Process ------------------------------ */
+// helper
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function processAll(){
+  if(!(alertsRows.length && policiesRows.length)){
+    logLine('Nothing to process. Please upload both Alerts and Policies CSV.');
+    return;
+  }
+  $('#btn-process').disabled = true;
+  $('#download-link').style.display='none';
+  setBar(0);
+  logLine('Processing…');
+
+  const policyIndex = buildPolicyIndex(policiesRows);
+  const outHeader = insertRuleHeader(alertsHeader);
+  const outRows = [];
+
+  // 🔧 Tuning di sini
+  const BATCH = 50;                // lebih kecil = UI lebih halus
+  const DELAY_BETWEEN_BATCH_MS = 60;// jeda antar-batch
+  const YIELD_EVERY = 50;           // optional: yield di tengah batch
+  const YIELD_MS = 0;               // 0 = hanya menyerahkan kontrol ke UI
+
+  const countMap = {};
+	stat.processed = 0;
+	stat.identified = 0;
+	stat.unidentified = 0;
+	refreshKPIs();
+
+  const bumpCounts = (rules) => rules.forEach(r => { if(!r) return; countMap[r] = (countMap[r] || 0) + 1; });
+
+  for (let i = 0; i < alertsRows.length; i += BATCH) {
+    const chunk = alertsRows.slice(i, i + BATCH);
+
+    // beri jeda antar-batch (bisa 0 kalau tidak perlu)
+    if (DELAY_BETWEEN_BATCH_MS > 0) await sleep(DELAY_BETWEEN_BATCH_MS);
+
+    for (let j = 0; j < chunk.length; j++) {
+      const alert = chunk[j];
+      const matched = matchAlert(alert, policyIndex);
+      const ruleJoined = matched.join('; ');
+      const { finalRow } = createRowWithRule(alert, alertsHeader, ruleJoined);
+      outRows.push(finalRow);
+
+      if (matched.length) { stat.identified++; bumpCounts(matched); }
+      else { stat.unidentified++; }
+
+      stat.processed++;
+
+      // optional: serahkan kontrol ke UI tiap N item
+      if (YIELD_EVERY > 0 && ((j + 1) % YIELD_EVERY === 0)) {
+        await sleep(YIELD_MS);
+      }
+    }
+
+    const prog = Math.round((stat.processed / stat.total) * 100);
+    setBar(prog); refreshKPIs();
+    logLine(`Batch done: ${Math.min(i + BATCH, alertsRows.length)} / ${alertsRows.length}`);
+  }
+
+  // CSV output
+  const csv = buildCSV(outHeader, outRows);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const dl = $('#download-link'); dl.href = url; dl.style.display = 'inline-block';
+
+  // Chart
+  renderRuleChart(countMap);
+
+  logLine('Finished. CSV is ready to download.');
+  $('#btn-process').disabled = false;
+}
+
+/* ------------------------------ Reset ------------------------------- */
+function hardReset(){
+  alertsHeader=[]; alertsRows=[]; policiesRows=[]; totalRules=0;
+  stat.total=0; stat.processed=0; stat.pending=0; stat.identified=0; stat.unidentified=0; stat.noClassifiers=0;
+  refreshKPIs(); setBar(0);
+  $('#download-link').style.display='none';
+  fileAll.value='';
+  // clear chart
+  ctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
+  chartCanvas.width = chartCanvas.clientWidth; chartCanvas.height = 460;
+  logLine('Reset done.');
+}
+
+/* ----------------------------- Bindings ----------------------------- */
+$('#btn-process').addEventListener('click', processAll);
+$('#btn-reset').addEventListener('click', hardReset);
+
+/* ------------------------------ Init -------------------------------- */
+refreshKPIs();
+logLine('Ready. Upload your CSV files to begin.');
+</script>
+</body>
+</html>
