@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>JS Snippet Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+    :root{
+      --bg:#0b0f14;--panel:#121823;--muted:#5b6b7f;--text:#e8eef6;
+      --accent:#4cc9f0;--accent2:#80ed99;--warn:#ffd166;--danger:#ef476f;--line:#1d2633
+    }
+    html,body{margin:0;margin-bottom: 20px;padding:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    *{scrollbar-width:thin;scrollbar-color:#2a3b52 transparent}
+    *::-webkit-scrollbar{width:8px;height:8px}
+    *::-webkit-scrollbar-track{background:transparent}
+    *::-webkit-scrollbar-thumb{background:#253346;border-radius:8px}
+    *::-webkit-scrollbar-thumb:hover{background:#2f4561}
+    .wrap{max-width:1280px;margin:24px auto;padding:0 12px}
+    h1{font-size:22px;margin:0 0 4px}
+    .sub{color:var(--muted);margin:0 0 16px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 12px;margin-bottom:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+    .row-left,.row-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:linear-gradient(180deg,#1f2a3b,#172233);border:1px solid #2b3d55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .05s ease,box-shadow .05s ease}
+    .btn:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15) inset}
+    .btn:active{transform:translateY(1px);box-shadow:0 0 0 3px rgba(0,0,0,.25) inset}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .drop{border:1.5px dashed #2a3b52;border-radius:12px;padding:6px 14px;text-align:center;cursor:pointer;background:#0e141e}
+    .drop:hover{border-color:var(--accent)}
+    input[type="file"]{display:none}
+
+	.layout {
+	  display: grid;
+	  grid-template-columns: 50% 50%;
+	  gap: 12px;
+	  align-items: start;
+	}
+
+    @media (max-width: 900px){.layout{grid-template-columns:1fr}}
+    .section{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+    .section>header{display:flex;justify-content:space-between;align-items:center;background:#0f1521;padding:10px 12px;border-bottom:1px solid var(--line)}
+    .muted{color:var(--muted)}
+    .list{overflow:auto;max-height:52vh}
+    table{border-collapse:separate;border-spacing:0;width:100%;table-layout:auto}
+    thead th{position:sticky;top:0;background:#0f1521;border-bottom:1px solid var(--line);z-index:1}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    tbody tr:hover{background:#0c121c}
+    #tbl{width:100%;table-layout:fixed;border-collapse:collapse}
+
+	#tbl th.name, 
+	#tbl td.name {
+	  width: 84%;
+	  white-space: nowrap;
+	  overflow: hidden;
+	  text-overflow: ellipsis; /* hanya kolom name yang pakai ellipsis */
+	}
+
+	#tbl th.matches, 
+	#tbl td.matches {
+	  width: 10%;
+	  text-align: right; /* tanpa ellipsis */
+	}
+
+	#tbl th.actions, 
+	#tbl td.actions {
+	  width: 6%;
+	  min-width: 50px;
+	  text-align: right; /* tanpa ellipsis */
+	}
+
+    .name{font-weight:600}
+    .muted-sm{color:var(--muted);font-size:12px}
+    .right{display:flex;gap:8px;align-items:center}
+    .status{font-size:12px;color:var(--muted)}
+    .icon-btn{all:unset;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+    .icon-btn:hover{border-color:var(--accent)}
+    #tbl tbody tr.file{cursor:pointer}
+    .editor{padding:12px;display:flex;flex-direction:column;gap:10px}
+    .cjs-textarea{
+      width:98%;
+      height:20vh;
+      min-height:260px;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--bg);
+      color:var(--text);
+      font:13px/20px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      tab-size:2;
+      white-space:pre;
+      overflow:auto;
+      resize:vertical
+    }
+    .cjs-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
+    .textinput{
+      padding:6px 8px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--bg);
+      color:var(--text);
+      font:14px system-ui,sans-serif;
+      width:100%
+    }
+    .textinput:focus{
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 2px rgba(76,201,240,.15)
+    }
+    #onNames{
+      display:block;margin:18px auto 24px;max-width:1280px;padding:10px 12px;
+      border:1px solid var(--line);border-radius:12px;background:#0f1521;color:var(--text);
+      font-size:13px;white-space:pre-wrap
+    }
+    .toggle{display:inline-flex;align-items:center;gap:8px}
+    .toggle .label{font-size:12px;color:var(--muted);min-width:28px;text-align:right}
+    .switch{
+      position:relative;width:48px;height:26px;border:1px solid #2b3d55;border-radius:999px;
+      background:#0e141e;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease
+    }
+    .switch::after{
+      content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:999px;
+      background:#2b3d55;transition:left .15s ease,background .15s ease
+    }
+    .switch[data-on="true"]{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(128,237,153,.12) inset}
+    .switch[data-on="true"]::after{left:26px;background:var(--accent2)}
+	
+    table.cols-10 th:nth-child(1),table.cols-10 td:nth-child(1){width:20px}
+    table.cols-10 th:nth-child(2),table.cols-10 td:nth-child(2){width:7%}
+    table.cols-10 th:nth-child(3),table.cols-10 td:nth-child(3){width:15%}
+    table.cols-10 th:nth-child(4),table.cols-10 td:nth-child(4){width:12%}
+    table.cols-10 th:nth-child(5),table.cols-10 td:nth-child(5){width:9%}
+    table.cols-10 th:nth-child(6),table.cols-10 td:nth-child(6){width:16%}
+    table.cols-10 th:nth-child(7),table.cols-10 td:nth-child(7){width:16%}
+    table.cols-10 th:nth-child(8),table.cols-10 td:nth-child(8){width:14%}
+    table.cols-10 th:nth-child(9),table.cols-10 td:nth-child(9){width:5%}
+    table.cols-10 th:nth-child(10),table.cols-10 td:nth-child(10){width:6%}
+	  
+    table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
+    thead th{position:sticky;top:0;background:#0f1521;border-bottom:1px solid var(--line);z-index:1}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word;min-width:50px}
+    td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    td[title],a[title]{cursor:help}
+    tbody tr:hover{background:#0c121c}
+    .table-actions{display:flex;justify-content:space-between;align-items:center;padding:10px;border-top:1px solid var(--line);background:#0f1521}
+    .pager{display:flex;gap:6px;align-items:center}
+    .pager .btn{padding:6px 10px}
+    a.link{color:var(--accent);text-decoration:none}
+    a.link:hover{outline:none;text-decoration:underline}
+    .spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:var(--accent);animation:sp .8s linear infinite;vertical-align:middle}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;background:#0e141e;border:1px solid #2b3d55;color:var(--text);font-variant-numeric:tabular-nums}
+    .badge.clickable{cursor:pointer}
+    .badge.clickable:hover{border-color:var(--accent)}
+</style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>JS Snippet Manager</h1>
+    <p class="sub">Store JavaScript snippets. Create files, edit, rename, delete, import/export JSON, and run filters on CSV.</p>
+
+    <div class="panel">
+      <div class="row">
+        <div class="row-left">
+          <button class="btn" id="btnNewFile" title="New file">➕📄 New File</button>
+          <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
+          <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
+          <input id="fileImport" type="file" accept="application/json" />
+          <button class="btn" id="btnUpload" title="Upload CSV">📤 Upload</button>
+          <button class="btn" id="btnRunAll" title="Run enabled snippets on loaded CSV">✅ RUN ALL</button>
+          <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
+        </div>
+        <div class="row-right">
+		  <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
+          <span id="csvName" class="muted-sm"></span>     
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="section" aria-label="Items">
+        <header>
+          <strong>Items</strong>
+          <div class="right"><span class="muted-sm">Total: <span id="count">0</span></span></div>
+        </header>
+        <div class="list">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th class="name"></th>
+                <th class="matches"></th>
+                <th class="actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Editor">
+        <header>
+          <strong id="editorTitle">Edit File</strong>
+          <div class="right"><span id="currentPath" class="muted-sm"></span></div>
+        </header>
+        <div class="editor">
+          <label>
+            <div class="muted-sm">File name</div>
+            <input id="inpName" class="textinput" placeholder="e.g. util-formatDate.js" />
+          </label>
+
+          <label>
+            <div class="muted-sm">JavaScript code</div>
+            <textarea id="inpCode" class="cjs-textarea" spellcheck="false" placeholder="// Boolean predicate per row.
+// Example:
+// return (row.Status||'') === 'New';
+"></textarea>
+          </label>
+
+          <div class="right" style="justify-content:space-between">
+            <div class="status" id="meta">&nbsp;</div>
+            <div class="right">
+              <button class="btn" id="btnRunThis" title="Run this snippet on loaded CSV">▶️ RUN</button>
+              <div class="toggle" id="editorToggle" title="Toggle ON/OFF">
+                <span class="label" id="toggleLabel">OFF</span>
+                <div class="switch" id="toggleSwitch" data-on="false" aria-pressed="false" role="button"></div>
+              </div>
+              <button class="icon-btn" id="btnSave" title="Save">💾</button>
+              <button class="icon-btn" id="btnDelete" title="Delete file">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="resultWrap">
+    <output id="onNames" class="muted-sm">Upload the CSV first, then press RUN ALL or RUN on a specific file…</output>
+  </div>
+
+<script>
+
+const LS_KEY = 'jsSnippetItems:v3';
+
+/* Memilih elemen pertama yang cocok dengan selector. */
+const $ = (s) => document.querySelector(s);
+
+/* Menghasilkan array dari semua elemen yang cocok dengan selector. */
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+/* Membuat ID acak pendek untuk item file. */
+const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
+
+/* Mengonversi karakter khusus menjadi entitas HTML aman. */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (m) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
+  );
+}
+
+/* Mengubah nilai menjadi string aman untuk ditampilkan. */
+function safe(v) {
+  return v == null ? '' : String(v);
+}
+
+
+/* =================================================================== */
+/* == BAGIAN FUNGSI UNTUK COPY KE CLIPBOARD (DITAMBAHKAN/DIMODIFIKASI) == */
+/* =================================================================== */
+
+// Mengambil sel dari objek baris dan mengubahnya menjadi array [key, value]
+function getRowCells(row) {
+  return Object.entries(row).map(([k, v]) => [String(k), String(v ?? '')]);
+}
+
+// Membersihkan string untuk format TSV (Tab-Separated Values)
+function sanitizeForTSV(v) {
+  return String(v ?? '').replace(/\t/g, ' ').replace(/[\r\n]/g, ' ');
+}
+
+// Membuat HTML tabel untuk clipboard (Excel/Office)
+function buildRowClipboardHTML(row) {
+  const cells = getRowCells(row);
+  const head = `
+  <style>
+    table.dlp-copy { border-collapse: collapse; font-family: system-ui, Arial, sans-serif; font-size: 13px; }
+    .dlp-copy th, .dlp-copy td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+    .dlp-copy th { background:#f6f6f6; width:220px; }
+  </style>`;
+  const rows = cells.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
+  return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
+}
+
+// Membuat TSV vertikal (key<TAB>value) untuk clipboard
+function buildRowClipboardTSV(row) {
+  const cells = getRowCells(row);
+  const lines = cells.map(([k, v]) => `${sanitizeForTSV(k)}\t${sanitizeForTSV(v)}`);
+  return lines.join('\n') + '\n';
+}
+
+// Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback)
+async function copyRowToClipboard(row, targetButton) {
+  const html = buildRowClipboardHTML(row);
+  const tsvText = buildRowClipboardTSV(row);
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([tsvText], { type: 'text/plain' })
+      });
+      await navigator.clipboard.write([item]);
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(tsvText);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = tsvText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    // Memberikan feedback visual pada tombol yang di-klik
+    if (targetButton) {
+        targetButton.textContent = '✅';
+        setTimeout(() => { targetButton.textContent = '📋'; }, 1500);
+    }
+  } catch (e) {
+    console.error('Copy failed:', e);
+    if (targetButton) {
+        targetButton.textContent = '❌';
+        setTimeout(() => { targetButton.textContent = '📋'; }, 1500);
+    }
+  }
+}
+
+/* =================================================================== */
+/* ================ AKHIR BAGIAN FUNGSI CLIPBOARD ==================== */
+/* =================================================================== */
+
+
+/* Memuat daftar item dari localStorage. */
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_KEY));
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+/* Menyimpan daftar item ke localStorage. */
+function save(items) {
+  localStorage.setItem(LS_KEY, JSON.stringify(items));
+}
+
+/* Memigrasikan data lama (v2) ke format baru jika kunci v3 belum ada. */
+(function migrate() {
+  try {
+    if (localStorage.getItem(LS_KEY)) return;
+    const v2 = JSON.parse(localStorage.getItem('jsSnippetItems:v2') || '[]');
+    const onlyFiles = (Array.isArray(v2) ? v2 : [])
+      .filter((x) => x && x.type === 'file')
+      .map((x) => ({ id: x.id || uid(), type: 'file', name: x.name, code: x.code || '' }));
+    if (onlyFiles.length) localStorage.setItem(LS_KEY, JSON.stringify(onlyFiles));
+  } catch {}
+})();
+
+let items = load();
+if (items.length === 0) {
+  items.push({
+    id: uid(),
+    type: 'file',
+    name: 'example.js',
+    code: "// contoh: terima baris dengan Status=New\nreturn (row.Status||'')==='New';",
+    enabled: false
+  });
+  save(items);
+}
+
+let currentFileId = null;
+let filter = '';
+const elTbody = $('#tbody');
+const elCount = $('#count');
+const elSearch = $('#search');
+const elTitle = $('#editorTitle');
+const elPath = $('#currentPath');
+const elName = $('#inpName');
+const elCode = $('#inpCode');
+const elMeta = $('#meta');
+const elRunThis = $('#btnRunThis');
+
+/* Mengembalikan semua item bertipe 'file'. */
+function files() {
+  return items.filter((x) => x.type === 'file');
+}
+
+/* Mencari file berdasarkan ID, atau null jika tidak ada. */
+function fileById(id) {
+  return items.find((x) => x.type === 'file' && x.id === id) || null;
+}
+
+/* Menerapkan pencarian teks pada nama dan isi kode file. */
+function applyFilter(list) {
+  if (!filter) return list;
+  const q = filter.toLowerCase();
+  return list.filter(
+    (x) => x.name.toLowerCase().includes(q) || (x.code || '').toLowerCase().includes(q)
+  );
+}
+
+/* Mengambil sel pada baris file tertentu untuk kolom kelas tertentu. */
+function getRowCell(fileId, cls) {
+  return elTbody.querySelector(`tr[data-id="${fileId}"] .${cls}`);
+}
+
+/* Membaca satu file CSV (File) lalu mengembalikan rows sebagai array objek. */
+function parseCSVFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read CSV.'));
+    reader.onload = () => {
+      try {
+        let text = String(reader.result || '');
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        resolve(parseCSV(text));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
+/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
+/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
+function parseCSV(text) {
+  const s = text.replace(/\r\n?/g, '\n');
+
+  // --- LOGIKA BARU DIMULAI: Menggabungkan baris yang terpotong (multiline fields) ---
+  const physicalLines = s.split('\n');
+  const logicalLines = [];
+  let currentLineBuffer = '';
+  
+  for (const line of physicalLines) {
+    // Tambahkan baris fisik saat ini ke buffer, plus karakter newline yang dihilangkan oleh .split()
+    // jika buffer sudah berisi sesuatu sebelumnya.
+    if (currentLineBuffer) {
+        currentLineBuffer += '\n';
+    }
+    currentLineBuffer += line;
+
+    // Hitung jumlah kutipan (") yang tidak di-escape (bukan "") di dalam buffer
+    const quoteCount = (currentLineBuffer.match(/(?<!")"(?!")/g) || []).length;
+
+    // Jika jumlah kutipan genap, berarti semua kutipan terbuka sudah ditutup.
+    // Baris logis ini dianggap selesai.
+    if (quoteCount % 2 === 0) {
+      logicalLines.push(currentLineBuffer);
+      currentLineBuffer = ''; // Reset buffer untuk baris logis berikutnya
+    }
+  }
+
+  // Jika setelah loop selesai masih ada sisa di buffer (misalnya file berakhir di tengah kutipan),
+  // tambahkan sisa tersebut sebagai baris terakhir.
+  if (currentLineBuffer) {
+    logicalLines.push(currentLineBuffer);
+  }
+  // --- LOGIKA BARU SELESAI ---
+
+  // Proses selanjutnya menggunakan 'logicalLines' yang sudah benar
+  const finalLines = logicalLines;
+  while (finalLines.length && !finalLines[0].trim()) finalLines.shift();
+  while (finalLines.length && !finalLines[finalLines.length - 1].trim()) finalLines.pop();
+  if (!finalLines.length) return [];
+  
+  const delim = detectDelimiter(finalLines);
+  const headers = splitCSVLine(finalLines[0], delim);
+  const rows = [];
+
+  for (let r = 1; r < finalLines.length; r++) {
+    let line = finalLines[r];
+    if (!line.trim()) continue;
+
+    // Patch untuk trailing comma dari sebelumnya tetap dipertahankan
+    if (line.endsWith(delim)) {
+      line = line.slice(0, -1);
+    }
+
+    const cells = splitCSVLine(line, delim);
+    if (cells.every((x) => !String(x || '').trim())) continue;
+    
+    const obj = {};
+    headers.forEach((h, idx) => (obj[h] = cells[idx] !== undefined ? cells[idx] : ''));
+    rows.push(obj);
+  }
+  
+  return rows;
+}
+
+/* Mendeteksi delimiter CSV terbaik dari sampel baris (koma, titik-koma, atau tab). */
+function detectDelimiter(lines) {
+  const CAND = [',', ';', '\t'];
+  const sample = lines.slice(0, Math.min(25, lines.length));
+  let best = ',';
+  let bestScore = -Infinity;
+  for (const d of CAND) {
+    const headerCells = splitCSVLine(sample[0] || '', d);
+    const target = headerCells.length;
+    let consistent = 0;
+    for (let i = 0; i < sample.length; i++) {
+      const n = splitCSVLine(sample[i], d).length;
+      if (n === target) consistent++;
+    }
+    const score = (target > 1 ? 1000 : 0) + consistent * 10 + target;
+    if (score > bestScore) {
+      bestScore = score;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/* Memecah satu baris CSV menjadi sel-sel dengan menghormati tanda kutip. */
+function splitCSVLine(line, delim) {
+  const out = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQ = !inQ;
+      }
+    } else if (c === delim && !inQ) {
+      out.push(cur);
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/* Mengompilasi predicate JS secara aman (membatasi akses global berbahaya). */
+function secureCompilePredicate(code) {
+  const PRELUDE = `
+    const window=undefined, document=undefined, globalThis=undefined,
+          Function=undefined, eval=undefined, fetch=undefined,
+          XMLHttpRequest=undefined, localStorage=undefined,
+          sessionStorage=undefined, indexedDB=undefined, WebSocket=undefined;
+  `;
+  let fn;
+  try {
+    fn = new Function('row', 'rows', 'i', `${PRELUDE}\n${code}`);
+  } catch (e) {
+    throw e;
+  }
+  return (row, rows, i) => {
+    try {
+      return !!fn(row, rows, i);
+    } catch (_) {
+      return false;
+    }
+  };
+}
+
+/* Menormalkan daftar nama file menjadi format '; ' terpisah. */
+function normalizeFileList(v) {
+  const s = String(v == null ? '' : v);
+  if (!s.trim()) return '';
+  const parts = s.split(/[;\n,]/).map((x) => x.trim()).filter(Boolean);
+  return parts.join('; ');
+}
+
+/* Mengubah satu row menjadi versi camelCase yang konsisten untuk pemrosesan. */
+function ensureCamelRow(r) {
+  const IncidentTime = r['Incident Time'] ?? r.IncidentTime ?? '';
+  const EventTime = r['Event Time'] ?? r.EventTime ?? '';
+  const FileNameRaw = r['File Name'] ?? r.FileName ?? '';
+  const SizeRaw = r['Transaction Size (KB)'] ?? r['Size'] ?? r.Size ?? '';
+  return {
+    ID: r['ID'] ?? r.ID ?? '',
+    IncidentTime: IncidentTime,
+    EventTime: EventTime,
+    FileName: normalizeFileList(FileNameRaw),
+    Size: String(SizeRaw),
+    Source: r['Source'] ?? r.Source ?? '',
+    Policies: normalizeFileList(r['Policies'] ?? r.Policies ?? ''),
+    Channel: r['Channel'] ?? r.Channel ?? '',
+    Destination: normalizeFileList(r['Destination'] ?? r.Destination ?? ''),
+    Details: r['Details'] ?? r.Details ?? '',
+    Status: r['Status'] ?? r.Status ?? ''
+  };
+}
+
+/* Mengevaluasi predicate per-batch agar UI tetap responsif; mengembalikan baris yang match. */
+async function computeMatches(rawRows, predicate, { chunk = 800, onProgress } = {}) {
+  const rows = rawRows.map(ensureCamelRow);
+  const out = [];
+  for (let start = 0; start < rows.length; start += chunk) {
+    const end = Math.min(rows.length, start + chunk);
+    for (let i = start; i < end; i++) {
+      let ok = false;
+      try {
+        ok = !!predicate(rows[i], rows, i);
+      } catch (_) {
+        ok = false;
+      }
+      if (ok) out.push(rawRows[i]);
+    }
+    onProgress && onProgress(out.length, end, rows.length);
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  return out;
+}
+
+/* Merender daftar file ke tabel kiri dan memasang event handler baris. */
+function render() {
+  const fileList = applyFilter(files()).sort((a, b) => a.name.localeCompare(b.name));
+  const rows = [];
+  fileList.forEach((fl) => {
+    if (typeof fl.enabled !== 'boolean') fl.enabled = false;
+    const tr = document.createElement('tr');
+    tr.className = 'file';
+    tr.setAttribute('data-id', fl.id);
+    tr.innerHTML = `
+      <td class="name" title="${fl.name}">${fl.enabled ? '✅ ' : '📄 '}${fl.name}</td>
+      <td class="matches" data-role="matches"><span class="badge" title="RUN to compute">—</span></td>
+      <td class="actions">
+        <button class="icon-btn" title="Delete" data-act="del" data-id="${fl.id}">🗑️</button>
+      </td>`;
+    rows.push(tr);
+  });
+  elTbody.replaceChildren(...rows);
+  elCount.textContent = fileList.length;
+  $$('#tbody [data-act="del"]').forEach((btn) => {
+    const id = btn.getAttribute('data-id');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteFile(id);
+    });
+  });
+  $$('#tbody tr.file').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="del"]')) return;
+      const id = tr.getAttribute('data-id');
+      if (id) openEditor(id);
+    });
+  });
+}
+
+/* Membuat file baru kosong dan membukanya di editor. */
+function newFile() {
+  let name = 'untitled.js';
+  let i = 1;
+  while (items.some((x) => x.type === 'file' && x.name === name)) name = `untitled-${i++}.js`;
+  const f = { id: uid(), type: 'file', name, code: '', enabled: false };
+  items.push(f);
+  save(items);
+  render();
+  openEditor(f.id);
+}
+
+/* Membuka editor untuk file ID tertentu dan mengisi field editor. */
+function openEditor(id) {
+  const file = fileById(id);
+  if (!file) return;
+  currentFileId = id;
+  if (typeof file.enabled !== 'boolean') file.enabled = false;
+  elTitle.textContent = 'Edit File';
+  elName.value = file.name;
+  elCode.value = file.code || '';
+  elPath.textContent = file.name;
+  elMeta.textContent = 'Ready';
+  elName.focus();
+  setToggle(!!file.enabled, { persist: false });
+}
+
+/* Menyimpan perubahan pada file yang sedang dibuka. */
+function saveCurrent() {
+  if (!currentFileId) {
+    alert('No file selected.');
+    return;
+  }
+  const file = fileById(currentFileId);
+  if (!file) return;
+  const newName = elName.value.trim();
+  if (!newName) {
+    alert('File name is required.');
+    elName.focus();
+    return;
+  }
+  if (items.find((x) => x.type === 'file' && x.id !== file.id && x.name === newName)) {
+    alert('A file with the same name already exists.');
+    return;
+  }
+  file.name = newName;
+  file.code = elCode.value;
+  save(items);
+  render();
+  elPath.textContent = file.name;
+  elMeta.textContent = 'Saved';
+}
+
+/* Menghapus file berdasarkan ID dengan konfirmasi, lalu merender ulang. */
+function deleteFile(id) {
+  const file = fileById(id);
+  if (!file) return;
+  if (!confirm(`Delete file "${file.name}"?`)) return;
+  items = items.filter((x) => !(x.type === 'file' && x.id === id));
+  if (currentFileId === id) {
+    currentFileId = null;
+    clearEditor();
+  }
+  save(items);
+  render();
+}
+
+/* Mereset tampilan editor ke keadaan kosong. */
+function clearEditor() {
+  elTitle.textContent = 'Editor';
+  elName.value = '';
+  elCode.value = '';
+  elPath.textContent = '';
+  elMeta.textContent = '';
+}
+
+/* Mengekspor semua file ke berkas JSON dan mengunduhnya. */
+function exportJSON() {
+  const data = JSON.stringify({
+    version: 3,
+    items: files().map((f) => ({
+      id: f.id,
+      name: f.name,
+      code: f.code,
+      type: 'file',
+      enabled: !!f.enabled
+    }))
+  }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `snippets-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* Mengimpor file dari JSON (gabung/replace menurut nama), lalu render. */
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      const incoming = Array.isArray(obj) ? obj : obj.items || [];
+      let added = 0;
+      let updated = 0;
+      incoming.forEach((it) => {
+        if (!it || it.type !== 'file' || !it.name) return;
+        const m = items.find((x) => x.type === 'file' && x.name === it.name);
+        if (m) {
+          m.code = it.code || '';
+          m.enabled = !!it.enabled;
+          updated++;
+        } else {
+          items.push({
+            id: it.id || uid(),
+            type: 'file',
+            name: it.name,
+            code: it.code || '',
+            enabled: !!it.enabled
+          });
+          added++;
+        }
+      });
+      save(items);
+      render();
+      alert(`Import done. Added: ${added}, Updated: ${updated}.`);
+    } catch (e) {
+      alert('Invalid JSON.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+$('#btnNewFile').addEventListener('click', newFile);
+$('#btnExport').addEventListener('click', exportJSON);
+$('#fileImport').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (f) importJSON(f);
+  e.target.value = '';
+});
+$('#btnSave').addEventListener('click', saveCurrent);
+$('#btnDelete').addEventListener('click', () => {
+  if (currentFileId) deleteFile(currentFileId);
+});
+$('#search').addEventListener('input', () => {
+  filter = $('#search').value;
+  render();
+});
+elName.addEventListener('input', () => {
+  elMeta.textContent = 'Unsaved changes';
+});
+elCode.addEventListener('input', () => {
+  elMeta.textContent = 'Unsaved changes';
+});
+
+const elToggleSwitch = document.getElementById('toggleSwitch');
+const elToggleLabel = document.getElementById('toggleLabel');
+
+/* Menyetel status toggle ON/OFF dan (opsional) menyimpannya ke item aktif. */
+function setToggle(on, { persist = true } = {}) {
+  const val = !!on;
+  elToggleSwitch.dataset.on = String(val);
+  elToggleSwitch.setAttribute('data-on', String(val));
+  elToggleSwitch.setAttribute('aria-pressed', String(val));
+  elToggleLabel.textContent = val ? 'ON' : 'OFF';
+  if (persist && currentFileId) {
+    const f = fileById(currentFileId);
+    if (f) {
+      f.enabled = val;
+      save(items);
+      render();
+    }
+  }
+}
+
+/* Mengembalikan nilai boolean dari status toggle. */
+function getToggleBoolean() {
+  return elToggleSwitch?.dataset.on === 'true';
+}
+
+elToggleSwitch.addEventListener('click', () => {
+  setToggle(!getToggleBoolean());
+  const toggleName = getToggleBoolean() ? 'ON' : 'OFF';
+  elMeta.textContent = `Toggle: ${toggleName} (${getToggleBoolean()})`;
+});
+
+/* ===== RUN FLOW (Upload & Run All & Run This) ===== */
+const csvInput = $('#csvInput');
+const btnUpload = $('#btnUpload');
+const btnRunAll = $('#btnRunAll');
+const csvNameEl = $('#csvName');
+if (csvInput) csvInput.style.display = 'none';
+
+let lastCSVRows = null;
+const matchesCache = new Map();
+
+btnUpload.addEventListener('click', () => {
+  csvInput.value = '';
+  csvInput.click();
+});
+
+csvInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  const out = document.getElementById('onNames');
+  if (!files.length) return;
+  matchesCache.clear();
+  $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
+  try {
+    out.textContent = 'Loading CSV…';
+    const merged = [];
+    let totalRows = 0;
+    for (const f of files) {
+      const rows = await parseCSVFile(f);
+      merged.push(...rows);
+      totalRows += rows.length;
+    }
+    lastCSVRows = merged;
+    const names = files.map((f) => f.name).join(', ');
+    csvNameEl.textContent = `${names} (${totalRows} rows total)`;
+    matchesCache.clear();
+    $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
+    out.textContent = totalRows ?
+      'CSV loaded. Press RUN ALL or open a file and press RUN for that file.' :
+      'CSV loaded with 0 parsed data rows.';
+  } catch (err) {
+    csvNameEl.textContent = '';
+    out.textContent = 'CSV error: ' + (err?.message || String(err));
+  } finally {
+    csvInput.value = '';
+  }
+});
+
+btnRunAll.addEventListener('click', async () => {
+  const out = document.getElementById('onNames');
+  if (!lastCSVRows) {
+    out.textContent = 'No CSV yet. Click Upload first.';
+    return;
+  }
+  matchesCache.clear();
+  $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
+  const enabledFiles = files().filter((f) => !!f.enabled).sort((a, b) => a.name.localeCompare(b.name));
+  if (enabledFiles.length === 0) {
+    out.textContent = 'No items are ON. Toggle ON first, then RUN ALL.';
+    return;
+  }
+  for (const fl of enabledFiles) {
+    const cell = getRowCell(fl.id, 'matches');
+    if (cell) {
+      cell.innerHTML =
+        `<span class="badge" data-role="count" data-id="${fl.id}">0</span><span class="spin" aria-label="Loading"></span>`;
+    }
+  }
+  for (const fl of enabledFiles) {
+    await runOneFileInternal(fl.id, { updateUI: true });
+  }
+  bindOpenMatches();
+  out.textContent = 'Done. Click the Matches number to see the results.';
+});
+
+if (elRunThis)
+  elRunThis.addEventListener('click', async () => {
+    const out = document.getElementById('onNames');
+    if (!currentFileId) {
+      out.textContent = 'Select a file first.';
+      return;
+    }
+    if (!lastCSVRows || !lastCSVRows.length) {
+      out.textContent = 'No CSV yet. Click Upload first.';
+      return;
+    }
+    await runOneFileInternal(currentFileId, { updateUI: true, openTable: true });
+    bindOpenMatches();
+  });
+
+/* Menjalankan satu file snippet pada dataset CSV, memperbarui UI, dan opsional membuka tabel hasil. */
+async function runOneFileInternal(fileId, { updateUI = false, openTable = false } = {}) {
+  const f = fileById(fileId);
+  if (!f) return;
+  const cell = getRowCell(fileId, 'matches');
+  if (updateUI && cell) {
+    cell.innerHTML =
+      `<span class="badge" data-role="count" data-id="${fileId}">0</span><span class="spin" aria-label="Loading"></span>`;
+  }
+  let predicate;
+  try {
+    predicate = secureCompilePredicate(f.code || '');
+  } catch (err) {
+    if (updateUI && cell) cell.innerHTML = `<span class="badge" title="Compile error">ERR</span>`;
+    console.error('Compile error for', f.name, err);
+    return;
+  }
+  const badge = cell && cell.querySelector('.badge');
+  const matches = await computeMatches(lastCSVRows, predicate, {
+    chunk: 800,
+    onProgress: (count) => {
+      if (badge) badge.textContent = String(count);
+    }
+  });
+  matchesCache.set(f.id, { count: matches.length, rows: matches });
+  if (updateUI && cell) {
+    cell.innerHTML = '';
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'badge clickable';
+    a.setAttribute('data-role', 'open-matches');
+    a.setAttribute('data-id', f.id);
+    a.textContent = String(matches.length);
+    a.title = 'Click to view results';
+    cell.appendChild(a);
+  }
+  if (openTable) {
+    openResultTable(f.id);
+  }
+}
+
+/* Memasang handler klik untuk membuka hasil match dari setiap file. */
+function bindOpenMatches() {
+  $$('#tbody [data-role="open-matches"]').forEach((a) => {
+    // Hapus listener lama untuk mencegah duplikasi
+    a.replaceWith(a.cloneNode(true));
+  });
+  // Pasang listener baru ke elemen yang telah di-clone
+  $$('#tbody [data-role="open-matches"]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = a.getAttribute('data-id');
+      openResultTable(id);
+    });
+  });
+}
+
+/* Membuka tabel hasil di area bawah berdasarkan file yang dipilih. (DIMODIFIKASI) */
+function openResultTable(fileId) {
+  const rec = matchesCache.get(fileId);
+  const f = fileById(fileId);
+  const wrap = document.getElementById('resultWrap');
+  if (!rec || !f) {
+    wrap.innerHTML = `<output id="onNames" class="muted-sm">No results.</output>`;
+    return;
+  }
+  const rows = rec.rows || [];
+  const cols = [ // Menambahkan kolom kosong untuk ikon salin
+    '', 
+    'Time', 'Source', 'Policies', 'Channel', 'Destination',
+    'File Name', 'Details', 'Size', 'Status'
+  ];
+  const headerHTML = cols.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
+  const bodyHTML = rows
+    .map((rRaw) => {
+      const rc = ensureCamelRow(rRaw);
+      const timeText = `ID ${safe(rc.ID)} | Incident ${safe(rc.IncidentTime)} | Event ${safe(rc.EventTime)}`;
+      // Menambahkan `data-row-json` pada <tr> untuk menyimpan data mentah
+      // Menambahkan <td> dengan tombol salin
+      return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
+        <td><button class="icon-btn" title="Copy row data" data-act="copy-row">📋</button></td>
+        <td title="${timeText}">${escapeHtml(timeText)}</td>
+        <td title="${safe(rc.Source)}">${escapeHtml(safe(rc.Source))}</td>
+        <td title="${safe(rc.Policies)}">${escapeHtml(safe(rc.Policies))}</td>
+        <td title="${safe(rc.Channel)}">${escapeHtml(safe(rc.Channel))}</td>
+        <td title="${safe(rc.Destination)}">${escapeHtml(safe(rc.Destination))}</td>
+        <td title="${safe(rc.FileName)}">${escapeHtml(safe(rc.FileName))}</td>
+        <td title="${safe(rc.Details)}">${escapeHtml(safe(rc.Details))}</td>
+        <td title="${safe(rRaw['Transaction Size (KB)'] ?? rc.Size)}">${escapeHtml(safe(rRaw['Transaction Size (KB)'] ?? rc.Size))}</td>
+        <td title="${safe(rc.Status)}">${escapeHtml(safe(rc.Status))}</td>
+      </tr>`;
+    })
+    .join('');
+
+  wrap.innerHTML = `
+    <section class="section">
+      <header>
+        <strong>Results • ${escapeHtml(f.name)}</strong>
+        <div class="right"><span class="muted-sm">${rows.length} matched rows</span></div>
+      </header>
+      <div style="overflow:auto">
+        <table class="cols-10">
+          <thead><tr>${headerHTML}</tr></thead>
+          <tbody>${bodyHTML || `<tr><td colspan="${cols.length}" class="muted-sm">No rows matched.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>`;
+    
+  // (DITAMBAHKAN) Event listener untuk menangani klik pada tombol salin menggunakan event delegation
+  const table = wrap.querySelector('table');
+  if (table) {
+      table.addEventListener('click', (e) => {
+          const button = e.target.closest('[data-act="copy-row"]');
+          if (!button) return;
+
+          const tr = button.closest('tr');
+          if (!tr || !tr.dataset.rowJson) return;
+
+          try {
+              const rowData = JSON.parse(tr.dataset.rowJson);
+              copyRowToClipboard(rowData, button);
+          } catch (err) {
+              console.error('Failed to parse row data for copying:', err);
+          }
+      });
+  }
+}
+
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    saveCurrent();
+  }
+});
+
+render();
+const firstFile = files().sort((a, b) => a.name.localeCompare(b.name))[0];
+if (firstFile) openEditor(firstFile.id);
+
+
+
+/* =======================================================================================
+$: Memilih elemen pertama yang cocok dengan selector.
+uid: Membuat ID acak pendek untuk item file.
+load: Memuat daftar item dari localStorage.
+save: Menyimpan daftar item ke localStorage.
+migrate: Memigrasikan data lama (v2) ke format baru jika kunci v3 belum ada.
+files: Mengembalikan semua item bertipe 'file'.
+fileById: Mencari file berdasarkan ID, atau null jika tidak ada
+applyFilter: Menerapkan pencarian teks pada nama dan isi kode file.
+getRowCell: Mengambil sel pada baris file tertentu untuk kolom kelas tertentu.
+parseCSVFile: Membaca satu file CSV (File) lalu mengembalikan rows sebagai array objek.
+parseCSV: Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis).
+detectDelimiter: Mendeteksi delimiter CSV terbaik dari sampel baris (koma, titik-koma, atau tab).
+countDelimOutsideQuotes: Menghitung jumlah delimiter di luar tanda kutip pada satu baris.
+splitCSVLine: Memecah satu baris CSV menjadi sel-sel dengan menghormati tanda kutip.
+secureCompilePredicate: Mengompilasi predicate JS secara aman (membatasi akses global berbahaya).
+normalizeFileList: Menormalkan daftar nama file menjadi format '; ' terpisah.
+ensureCamelRow: Mengubah satu row menjadi versi camelCase yang konsisten untuk pemrosesan.
+computeMatches: Mengevaluasi predicate per-batch agar UI tetap responsif; mengembalikan baris yang match.
+render: Merender daftar file ke tabel kiri dan memasang event handler baris.
+newFile: Membuat file baru kosong dan membukanya di editor.
+openEditor: Membuka editor untuk file ID tertentu dan mengisi field editor.
+saveCurrent: Menyimpan perubahan pada file yang sedang dibuka.
+deleteFile: Menghapus file berdasarkan ID dengan konfirmasi, lalu merender ulang.
+clearEditor: Mereset tampilan editor ke keadaan kosong.
+exportJSON: Mengekspor semua file ke berkas JSON dan mengunduhnya.
+importJSON: Mengimpor file dari JSON (gabung/replace menurut nama), lalu render.
+setToggle: Menyetel status toggle ON/OFF dan (opsional) menyimpannya ke item aktif.
+getToggleBoolean: Mengembalikan nilai boolean dari status toggle.
+getToggleName: Mengembalikan string nama status toggle ('ON'|'OFF').
+runOneFileInternal: Menjalankan satu file snippet pada dataset CSV, memperbarui UI, dan opsional membuka tabel hasil.
+bindOpenMatches: Memasang handler klik untuk membuka hasil match dari setiap file.
+openResultTable: Membuka tabel hasil di area bawah berdasarkan file yang dipilih.
+escapeHtml: Mengonversi karakter khusus menjadi entitas HTML aman. (terdefinisi dua kali pada snippet ini)
+safe: Mengubah nilai menjadi string aman untuk ditampilkan. (terdefinisi dua kali pada snippet ini)
+======================================================================================= */
+
+</script>
+
+</body>
+</html>

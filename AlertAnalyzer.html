@@ -1,0 +1,2496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forcepoint DLP Alerts Analyzer v2.2</title>
+  <!-- Papa Parse for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+	<style>
+	  :root{--bg:#0b0f14;--panel:#121823;--muted:#5b6b7f;--text:#e8eef6;--accent:#4cc9f0;--accent2:#80ed99;--warn:#ffd166;--danger:#ef476f;--line:#1d2633}
+
+	  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;width:100%}
+
+	  *{scrollbar-width:thin;scrollbar-color:#2a3b52 transparent}
+	  *::-webkit-scrollbar{width:8px;height:8px}
+	  *::-webkit-scrollbar-track{background:transparent}
+	  *::-webkit-scrollbar-thumb{background:#253346;border-radius:8px}
+	  *::-webkit-scrollbar-thumb:hover{background:#2f4561}
+
+	  .wrap{max-width:96vw;margin:24px auto;padding:0 8px}
+	  h1{font-size:22px;margin:0 0 8px}
+	  .sub{color:var(--muted);margin:0 0 16px}
+	  .row-dark{color:var(--muted)}
+
+	  .preline{white-space:pre-line}
+	  .timecell small{color:var(--muted)}
+	  .count-col{width:50px;min-width:50px;max-width:50px;text-align:left}
+
+	  .filter-pop{position:absolute;background:#0e141e;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);z-index:1000;box-shadow:0 6px 18px rgba(0,0,0,.35);min-width:160px}
+
+	  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px 14px}
+	  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+	  .row-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+	  .row-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+	  .drop{border:1.5px dashed #2a3b52;border-radius:12px;padding:4px 14px;text-align:center;cursor:pointer;background:#0e141e}
+	  .drop:hover{border-color:var(--accent)}
+	  input[type="file"]{display:none}
+
+	  .btn{background:linear-gradient(180deg,#1f2a3b,#172233);border:1px solid #2b3d55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;transition:transform .05s ease,box-shadow .05s ease}
+	  .btn:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15) inset}
+	  .btn:active{transform:translateY(1px);box-shadow:0 0 0 3px rgba(0,0,0,.25) inset}
+	  
+	  .filter-icon{cursor:pointer;opacity:.65;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;border-radius:6px}
+	  .filter-icon.is-active{opacity:1}
+	  .filter-icon:focus{outline:2px solid #79f;outline-offset:2px}
+
+	  .tab-btn{position:relative;display:inline-flex;align-items:center;gap:8px;background:#0e141e;border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+	  .tab-btn:focus,.tab-btn:focus-visible{outline:none}
+	  .tab-btn:hover{border-color:#2b3d55}
+	  .tab-btn[aria-selected="true"]{border-color:var(--accent)}
+	  .tab-btn[aria-selected="true"]::after{content:"";position:absolute;inset:-2px;border-radius:12px;pointer-events:none;box-shadow:0 0 0 1px rgba(76,201,240,.35),inset 0 0 0 2px rgba(76,201,240,.18)}
+	  .tab-close{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;border:1px solid #274058;opacity:.85;font-weight:700;cursor:pointer;line-height:1}
+	  .tab-close:hover{background:#122133}
+	  .tab-btn[aria-selected="true"] .tab-close{border-color:rgba(76,201,240,.45)}
+
+	  .section{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+	  .section>header{display:flex;justify-content:space-between;align-items:center;background:#0f1521;padding:10px 12px;border-bottom:1px solid var(--line)}
+	  .muted{color:var(--muted)}
+	  .tiny{font-size:12px}
+	  .section .tablewrap{overflow:auto;max-height:42vh}
+	  .sectionx{display:flex;flex-direction:column;height:calc(100vh - 150px)}
+	  .sectionx .tablewrap{flex:1 1 auto;overflow:auto}
+
+	  table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
+	  thead th{position:sticky;top:0;background:#0f1521;border-bottom:1px solid var(--line);z-index:1}
+	  th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word;min-width:50px}
+	  td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	  td[title],a[title]{cursor:help}
+	  tbody tr:hover{background:#0c121c}
+	  .right{display:flex;gap:8px;align-items:center}
+
+	  button.icon-copy{all:unset;cursor:pointer;line-height:1}
+	  button.icon-copy:focus{outline:2px solid #79f;outline-offset:2px}
+
+	  table.cols-10 th:nth-child(1),table.cols-10 td:nth-child(1){width:16px}
+	  table.cols-10 th:nth-child(2),table.cols-10 td:nth-child(2){width:7%}
+	  table.cols-10 th:nth-child(3),table.cols-10 td:nth-child(3){width:15%}
+	  table.cols-10 th:nth-child(4),table.cols-10 td:nth-child(4){width:12%}
+	  table.cols-10 th:nth-child(5),table.cols-10 td:nth-child(5){width:9%}
+	  table.cols-10 th:nth-child(6),table.cols-10 td:nth-child(6){width:16%}
+	  table.cols-10 th:nth-child(7),table.cols-10 td:nth-child(7){width:16%}
+	  table.cols-10 th:nth-child(8),table.cols-10 td:nth-child(8){width:5%}
+	  table.cols-10 th:nth-child(9),table.cols-10 td:nth-child(9){width:14%}
+	  table.cols-10 th:nth-child(10),table.cols-10 td:nth-child(10){width:6%}
+
+	  .grid{display:grid;gap:12px}
+	  .grid.cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+	  .card{background:#0e141e;border:1px solid #1f2a3b;padding:10px 12px;border-radius:12px}
+	  .card h3{margin:0 0 6px;font-size:13px;color:#b9c7da}
+	  .card b{font-size:18px}
+	  .grid.cols-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+	  .grid.cols-3{grid-template-columns:repeat(3,minmax(320px,1fr))}
+	  @media (max-width:1400px){.grid.cols-3{grid-template-columns:repeat(2,minmax(320px,1fr))}}
+	  @media (max-width:800px){.grid.cols-3{grid-template-columns:1fr}}
+
+	  .table-actions{display:flex;justify-content:space-between;align-items:center;padding:10px;border-top:1px solid var(--line);background:#0f1521}
+	  .pager{display:flex;gap:6px;align-items:center}
+	  .pager .btn{padding:6px 10px}
+
+	  a.link{color:var(--accent);text-decoration:none}
+	  a.link:hover{outline:none;text-decoration:underline}
+
+	  .chart-wrap{padding:10px}
+	  .tooltip{position:absolute;pointer-events:none;background:#0e141e;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;box-shadow:0 10px 24px rgba(0,0,0,.35);display:none}
+
+	  .spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:var(--accent);animation:sp .8s linear infinite;vertical-align:middle}
+	  @keyframes sp{to{transform:rotate(360deg)}}
+	  .muted-num{opacity:.7}
+
+	  a.metric .temp-count{margin-right:4px}
+	  
+	  .cjs-wrap header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+	  .cjs-stack{display:flex;flex-direction:column;gap:12px;padding:12px}
+
+	  .cjs-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+	  .cjs-card>*+*{margin-top:10px}
+
+	  .cjs-chatrow{display:flex;gap:8px;align-items:center}
+
+	  .cjs-textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif;min-height:180px;resize:vertical}
+	  .cjs-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
+
+	  .cjs-status{font-size:12px;color:var(--muted)}
+
+	  .cjs-result{margin-top:12px}
+	  .cjs-result>.section{border-radius:12px;overflow:hidden}
+
+	  .cjs-textinput{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif}
+	  .cjs-textinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
+	</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="row">
+      <div class="row-left">
+        <h1 style="margin:0">Forcepoint DLP Alerts Analyzer</h1>
+        <span class="row-dark"> - v25.8 | hendryadrian.com </span>
+      </div>
+      <div class="row-right">
+        <span id="rangeLabel" class=""><span id="rangeVal">–</span></span>
+        <label class="drop" id="drop">
+          <input id="file" type="file" multiple accept=".csv,text/csv" />
+          <strong>Drop</strong> a CSV here or click to select
+        </label>
+        <button id="demoBtn" class="btn">Load sample</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs" style="margin-top:12px"></nav>
+  <div id="panels" class="grid" style="margin-top:12px"></div>
+</div>
+
+<script>
+  const ICON_COL = '__Copy';
+  const VISIBLE_COLS = [ICON_COL, 'Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Size', 'Details', 'Status'];
+  const ALL_COLS = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
+  const FILTERABLE_COLS = ['Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Details', 'Status'];
+
+  const HEADER_LABELS = {
+    [ICON_COL]: '',
+    Time: 'Time',
+    Source: 'Source',
+    Policies: 'Policies',
+    Channel: 'Channel',
+    Destination: 'Destination',
+    'File Name': 'File Name',
+    Size: 'Size (KB)',
+    Details: 'Details',
+    Status: 'Status'
+  };
+
+  const cardTooltips = {
+    total: 'Total number of alerts detected',
+    sources: 'Unique source accounts/devices observed',
+    emaildest: 'Unique email destination domains',
+    webdest: 'Unique web destination domains',
+    channels: 'Communication channels where alerts were triggered',
+    blocks: 'Alerts where action was Block/Quarantine',
+    self: 'Suspicious: email sent to self (sender and recipient look similar)',
+    freemail: 'Suspicious: recipient uses free mail provider (gmail, yahoo, protonmail, icloud)',
+    shortsubj: 'Suspicious: email subject is too short or empty',
+    noext: 'Suspicious: attachment has no file extension',
+    seqfiles: 'Suspicious: multiple attachments with similar sequential names (e.g. file1, file2, file3)',
+    sensitive: 'Suspicious: attachment or subject contains sensitive keywords (confidential, salary, password, etc.)',
+    repeatdom: 'Suspicious: same user repeatedly sends to the same destination domain',
+    weirdtld: 'Suspicious: destination domain with unusual TLD (.xyz, .top, .icu)',
+    outofhours: 'Suspicious: email sent outside normal working hours (12AM–5AM)'
+  };
+
+  const state = { raw: [], tabs: [], activeTab: null, tabState: new Map() };
+  let currentFilename = '';
+
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+
+  // Menyetel cookie dengan max-age dan expires (kompatibel Safari)
+  function setCookie(name, value, days = 7) {
+    const maxAge = days * 24 * 60 * 60;
+    const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+    document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; expires=${expires}; SameSite=Lax`;
+  }
+
+  // Mengambil nilai cookie berdasarkan nama
+  function getCookie(name) {
+    const pattern = new RegExp('(?:^|; )' + encodeURIComponent(name) + '=([^;]*)');
+    const match = document.cookie.match(pattern);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  // Menyimpan nilai ke cookie dan localStorage sebagai fallback
+  function setSecret(name, value, days = 7) {
+    try { setCookie(name, value, days); } catch (_) {}
+    try { localStorage.setItem(name, value); } catch (_) {}
+  }
+
+  // Mengambil nilai dari cookie atau localStorage sebagai fallback
+  function getSecret(name) {
+    return getCookie(name) ?? (() => {
+      try { return localStorage.getItem(name); } catch (_) { return null; }
+    })();
+  }
+
+  // Menghasilkan kunci aman untuk id DOM
+  function safeKey(s) {
+    try {
+      return btoa(unescape(encodeURIComponent(String(s)))).replace(/=+$/, '');
+    } catch {
+      return String(s).replace(/[^\w-]+/g, '_');
+    }
+  }
+
+  // Mem-parse waktu insiden Forcepoint ke objek Date
+  function parseIncidentTime(s) {
+    if (!s) return null;
+    try {
+      let t = String(s);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      months.forEach(m => { t = t.replaceAll(m + '.', m); });
+      if (t.includes(' GMT')) t = t.split(' GMT')[0];
+      const d = new Date(t);
+      return isNaN(d) ? null : d;
+    } catch { return null; }
+  }
+
+  // Memformat objek Date menjadi yyyy-mm-dd
+  function formatDateShort(d) {
+    try { return d.toISOString().slice(0, 10); } catch { return ''; }
+  }
+
+  // Menormalkan teks menjadi satu baris aman (tanpa newline/tab)
+  function sanitizeForPlain(v) {
+    return String(v ?? '')
+      .replace(/`/g, '\u200B`')
+      .replace(/\r?\n|\t/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  // Meng-escape karakter khusus HTML
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  // Menormalkan nilai untuk TSV (hapus tab/newline)
+  function sanitizeForTSV(v) {
+    return String(v ?? '')
+      .replace(/\r?\n/g, ' ')
+      .replace(/\t/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  // Menghasilkan pasangan [key,value] untuk satu baris data
+  function getRowCells(row) {
+    return [
+      ['ID', txt(row['ID'])],
+      ['Event Time', stripGMT(txt(row['Event Time']))],
+      ['Channel', txt(row['Channel'])],
+      ['Source/Sender', txt(row['Source'])],
+      ['Destination/Recipient', txt(row['Destination'])],
+      ['Document information', txt(row['File Name'])],
+      ['Details', txt(row['Details'])]
+    ];
+  }
+
+  // Membuat HTML tabel untuk clipboard (Excel/Office)
+  function buildRowClipboardHTML(row) {
+    const cells = getRowCells(row);
+    const head = `
+    <style>
+      table.dlp-copy { border-collapse: collapse; font-family: system-ui, Arial, sans-serif; font-size: 13px; }
+      .dlp-copy th, .dlp-copy td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+      .dlp-copy th { background:#f6f6f6; width:220px; }
+    </style>`;
+    const rows = cells.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
+    return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
+  }
+
+  // Membuat TSV vertikal (key<TAB>value) untuk clipboard
+  function buildRowClipboardTSV(row) {
+    const cells = getRowCells(row);
+    const lines = cells.map(([k, v]) => `${sanitizeForTSV(k)}\t${sanitizeForTSV(v)}`);
+    return lines.join('\n') + '\n';
+  }
+
+  // Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback)
+  async function copyRowToClipboard(row) {
+    const html = buildRowClipboardHTML(row);
+    const tsvText = buildRowClipboardTSV(row);
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([tsvText], { type: 'text/plain' })
+        });
+        await navigator.clipboard.write([item]);
+        console.log('Copied: HTML table + TSV (vertical).');
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(tsvText);
+        console.log('Copied (fallback): TSV (vertical) as plaintext.');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = tsvText;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand('copy');
+          console.log('Copied via execCommand (legacy).');
+        } finally {
+          ta.remove();
+        }
+      }
+    } catch (e) {
+      console.error('Copy failed:', e);
+    }
+  }
+
+  // Mengonversi nilai ke string sederhana
+  function txt(v) { return v == null ? '' : String(v); }
+
+  // Menghapus bagian " GMT..." dari waktu
+  function stripGMT(s) {
+    if (!s) return '';
+    const t = String(s);
+    return t.includes(' GMT') ? t.split(' GMT')[0] : t;
+  }
+
+  // Mengambil bagian tanggal saja dari "date, time"
+  function justDate(s) {
+    if (!s) return '';
+    return s.split(',')[0];
+  }
+
+  // Menghasilkan HTML sel waktu dengan tooltip dan data-id
+  function timeCellHTML(row) {
+    const id = txt(row['ID']);
+    const incD = escapeHtml(justDate(stripGMT(txt(row['Incident Time']))));
+    const tooltip = timeCellPlainText(row);
+    return `<a href="#" class="link copy-id" data-id="${id}" title="${escapeHtml(tooltip)}">${incD}</a>`;
+  }
+
+  // Memotong string ke panjang maksimum dengan elipsis
+  function clip(str, lim = 120) {
+    const s = String(str ?? '');
+    return s.length > lim ? s.slice(0, lim - 3) + '...' : s;
+  }
+
+  // Membuat tooltip teks sederhana untuk informasi waktu
+  function timeCellPlainText(row) {
+    const id = txt(row['ID']);
+    const incF = stripGMT(txt(row['Incident Time']));
+    const evtF = stripGMT(txt(row['Event Time']));
+    return `ID: ${id}\nIncident: ${incF}\nEvent: ${evtF}`;
+  }
+
+  // Menghasilkan peta frekuensi nilai dari array objek pada key tertentu
+  function freqMap(arr, key) {
+    const m = new Map();
+    for (const r of arr) {
+      const k = txt(r[key]).trim();
+      if (!k) continue;
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    return m;
+  }
+
+  // Memastikan semua kolom penting tersedia pada satu baris data
+  function ensureCols(row) {
+    const o = {};
+    for (const c of ALL_COLS) o[c] = row[c] ?? '';
+    return o;
+  }
+
+  // Menormalkan header objek (trim nama key)
+  function sanitizeHeaders(row) {
+    const clean = {};
+    for (const k in row) {
+      if (!Object.prototype.hasOwnProperty.call(row, k)) continue;
+      if (!k) continue;
+      clean[k.trim()] = row[k];
+    }
+    return clean;
+  }
+
+  const IGNORE_FILE_PREFIXES = ['image', 'img_', 'img-', 'image0', 'outlook-', 'signature', 'sign_', 'logo', 'scan', 'screenshot'];
+  const IGNORE_PATTERNS = [
+    /^att\d{2,}\.(?:png|jpe?g|gif|bmp|tiff?)$/i,
+    /^cid:.+/i,
+    /^noname(?:\.\w{1,6})?$/i,
+    /^image\d*\.(?:png|jpe?g|gif|bmp|tiff?)$/i,
+    /^screenshot ?\d*\.(?:png|jpe?g)$/i
+  ];
+
+  // Menormalkan spasi/whitespace umum pada string
+  function normalizeSpaces(s) {
+    return String(s || '')
+      .replace(/\u00A0/g, ' ')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Memecah daftar pada titik koma secara cerdas (abaikan dalam () atau [])
+  function smartSplit(listStr) {
+    const s = String(listStr || '');
+    const out = [];
+    let buf = '';
+    let paren = 0, bracket = 0;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '(') paren++;
+      else if (ch === ')') paren = Math.max(0, paren - 1);
+      else if (ch === '[') bracket++;
+      else if (ch === ']') bracket = Math.max(0, bracket - 1);
+      if (ch === ';' && paren === 0 && bracket === 0) {
+        out.push(buf);
+        buf = '';
+      } else {
+        buf += ch;
+      }
+    }
+    if (buf) out.push(buf);
+    return out.flatMap(t => String(t).split(/\r?\n/));
+  }
+
+  // Menghapus akhiran ukuran file dari token
+  function stripSizeSuffix(s) {
+    return normalizeSpaces(s)
+      .replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[\.,]\d+)?\s*(?:[KMGT]B)\s*\]?\s*\)?\s*$/i, '')
+      .trim();
+  }
+
+  // Mengecek apakah token memiliki ekstensi file
+  function hasExtension(token) {
+    return /\.[A-Za-z0-9]{1,8}$/.test(token);
+  }
+
+  // Mengambil nama inti (tanpa ekstensi)
+  function coreName(token) {
+    const dot = token.lastIndexOf('.');
+    return dot > 0 ? token.slice(0, dot) : token;
+  }
+
+  // Menentukan apakah nama inti sebaiknya diabaikan (prefix noise umum)
+  function shouldIgnoreCore(core) {
+    const lc = core.toLowerCase();
+    return IGNORE_FILE_PREFIXES.some(p => lc.startsWith(p));
+  }
+
+  // Menentukan apakah token nama file harus diabaikan (noise)
+  function shouldIgnoreToken(token) {
+    const t = normalizeSpaces(token);
+    if (!t) return true;
+    if (!hasExtension(t) && t.length <= 2) return true;
+    if (IGNORE_PATTERNS.some(rx => rx.test(t))) return true;
+    if (/^(?:attachment|attached|lampiran)$/i.test(t)) return true;
+    const core = coreName(t);
+    if (shouldIgnoreCore(core)) return true;
+    return false;
+  }
+
+  // Menormalkan daftar nama file: split, bersihkan, filter noise, dedup, gabungkan
+  function normalizeFileList(fileNameCell) {
+    const seen = new Set();
+    const cleaned = smartSplit(fileNameCell)
+      .map(t => normalizeSpaces(t.replace(/^["']|["']$/g, '')))
+      .filter(Boolean)
+      .map(stripSizeSuffix)
+      .map(t => t.replace(/\s+\.\s+/g, '.'))
+      .filter(Boolean)
+      .filter(t => !shouldIgnoreToken(t))
+      .filter(t => {
+        const key = t.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    return cleaned.join('; ');
+  }
+
+  const COMMON_PSL = new Set([
+    'co.uk', 'org.uk', 'gov.uk', 'ac.uk',
+    'co.jp', 'ne.jp', 'or.jp',
+    'com.au', 'net.au', 'org.au',
+    'com.sg', 'com.my',
+    'co.id', 'or.id',
+    'com.ph', 'net.ph', 'org.ph', 'gov.ph', 'edu.ph',
+    'com.hk', 'net.hk', 'org.hk', 'edu.hk', 'gov.hk'
+  ]);
+
+// Mengambil base domain dari input email atau host, memperhitungkan public suffix umum.
+function getBaseDomain(emailOrHost){
+  if(!emailOrHost) return '';
+  let host = String(emailOrHost);
+  const atIx = host.lastIndexOf('@');
+  if(atIx>=0) host = host.slice(atIx+1);
+  if(host.includes(':')) host = host.split(':')[0];
+  if(host.includes('?')) host = host.split('?')[0];
+  const parts = host.split('.').filter(Boolean);
+  if(parts.length <= 2) return host.toLowerCase();
+  const last2 = parts.slice(-2).join('.').toLowerCase();
+  if (COMMON_PSL.has(last2)) return parts.slice(-3).join('.').toLowerCase();
+  return last2;
+}
+
+// Memecah string destinasi menjadi array token bersih (pisah ; dan ,).
+function splitDestParts(dest){
+  return String(dest || '')
+    .split(';').map(x => x.split(','))
+    .flat()
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+// Memeriksa apakah string menyerupai alamat email sederhana.
+function isEmailLike(s){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s));
+}
+
+// Membekukan objek (hingga kedalaman tertentu) untuk mencegah modifikasi.
+function deepFreeze(obj, maxDepth = 3, _seen = new WeakSet()) {
+  if (!obj || typeof obj !== 'object' || _seen.has(obj)) return obj;
+  _seen.add(obj);
+  Object.freeze(obj);
+  if (maxDepth <= 0) return obj;
+  for (const k of Object.keys(obj)) {
+    try { deepFreeze(obj[k], maxDepth - 1, _seen); } catch {}
+  }
+  return obj;
+}
+
+// Mengompilasi kode pengguna menjadi predicate aman dengan sandbox dan whitelist API.
+function secureCompilePredicate(userCode, asExpressionFirst = true) {
+  const SAFE_GLOBALS = {
+    Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
+    isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI,
+    encodeURIComponent, decodeURIComponent
+  };
+
+  const FORBIDDEN_TOKENS =
+    /(^|[^\w$])(window|document|eval|arguments|Function|fetch|XMLHttpRequest|WebSocket|EventSource|postMessage|localStorage|sessionStorage|indexedDB|location|navigator|history|top|parent|opener)([^\w$]|$)/;
+
+  const bad = userCode.match(FORBIDDEN_TOKENS);
+  if (bad) {
+    console.error("❌ Forbidden token detected:", bad[2], "in user code:", userCode);
+    throw new Error("Forbidden token found: " + bad[2]);
+  }
+
+  try {
+    for (const k of Object.keys(SAFE_GLOBALS)) Object.freeze(SAFE_GLOBALS[k]);
+  } catch {}
+
+  const KILL_GLOBALS = `
+    const globalThis = undefined, window = undefined, self = undefined, frames = undefined, parent = undefined, top = undefined, opener = undefined;
+    const document = undefined, alert = undefined, confirm = undefined, prompt = undefined;
+    const Function = undefined, fetch = undefined, XMLHttpRequest = undefined, WebSocket = undefined, EventSource = undefined, postMessage = undefined;
+    const requestAnimationFrame = undefined, setTimeout = undefined, setInterval = undefined, setImmediate = undefined, queueMicrotask = undefined;
+    const localStorage = undefined, sessionStorage = undefined, indexedDB = undefined, location = undefined, navigator = undefined, history = undefined;
+  `;
+
+  const build = (body) => {
+    const src = `"use strict";
+      ${KILL_GLOBALS}
+      const { Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
+              isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI,
+              encodeURIComponent, decodeURIComponent } = SAFE;
+      ${body}`;
+    return new Function('row', 'rows', 'i', 'SAFE', src);
+  };
+
+  if (asExpressionFirst) {
+    try {
+      return build('return !!(' + userCode + ');');
+    } catch (e) {
+      console.warn("⚠️ Expression compile failed, fallback to statement mode:", e);
+    }
+  }
+
+  return build(String(userCode || 'return false;'));
+}
+
+// Mengonversi dan menambahkan baris data ke state, lalu memperbarui tab dan rentang insiden.
+function ingest(rows){
+  // Append rows agar beberapa file dalam satu aksi upload tergabung
+  const mapped = rows.map(r => {
+    const row = ensureCols(sanitizeHeaders(r));
+    row['File Name'] = normalizeFileList(row['File Name']);
+    row.IncidentTime = row['Incident Time'];
+    row.EventTime    = row['Event Time'];
+    row.FileName     = row['File Name'];
+    row.Size         = row['Transaction Size (KB)'];
+    return row;
+  });
+
+  if (!Array.isArray(state.raw)) state.raw = [];
+  state.raw.push(...mapped);
+
+  buildTabs();
+  updateIncidentRange();
+}
+
+// Membangun definisi tab berdasarkan dataset (overview, custom, block, per channel, dan tab tersimpan).
+function buildTabs(){
+  const all = state.raw;
+
+  const isBlocked = r => {
+    const a = txt(r['Action']).toLowerCase();
+    return a.includes('block') || a.includes('quarantine');
+  };
+
+  const blocks  = all.filter(isBlocked);
+  const normals = all.filter(r => !isBlocked(r));
+
+  const byCh = new Map();
+  for(const r of normals){
+    const ch = txt(r['Channel']).trim() || '(Empty Channel)';
+    if(!byCh.has(ch)) byCh.set(ch, []);
+    byCh.get(ch).push(r);
+  }
+
+  const closables = state.tabs.filter(t=> t.closable);
+  state.tabs = [];
+  state.tabs.push({key:'overview', label:'Overview', type:'overview', rows: all});
+  state.tabs.push({key:'custom', label:'Custom JS', type:'custom', rows: all});
+
+  if(blocks.length) state.tabs.push({key:'block', label:`Action: Block (${blocks.length})`, type:'block', rows: blocks});
+
+  Array.from(byCh.entries()).sort((a,b)=> b[1].length - a[1].length).forEach(([ch,rows])=>{
+    state.tabs.push({key:`ch::${ch}`, label:`${ch} (${rows.length})`, type:'channel', rows});
+  });
+
+  for (const t of closables){
+    const refiltered = t.filter ? applyDrillFilter(all, t.filter) : t.rows;
+    state.tabs.push({ ...t, rows: refiltered });
+  }
+
+  if(!state.activeTab) state.activeTab = 'overview';
+  renderTabs();
+}
+
+// Merender tombol tab dan menghubungkan handler klik, lalu merender tab aktif dan ikon filter.
+function renderTabs(){
+  const tabsEl = $('#tabs'); tabsEl.innerHTML = '';
+  for(const t of state.tabs){
+    const b = document.createElement('button');
+    b.className = 'tab-btn';
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(state.activeTab===t.key));
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = t.label;
+    b.appendChild(labelSpan);
+
+    if(t.closable){
+      const close = document.createElement('span');
+      close.className = 'tab-close';
+      close.textContent = '✕';
+      close.title = 'Close tab';
+      close.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const idx = state.tabs.findIndex(x=>x.key===t.key);
+        if(idx>=0){
+          const wasActive = state.activeTab===t.key;
+          state.tabs.splice(idx,1);
+          state.tabState.delete(t.key);
+          if(wasActive){
+            const prev = state.tabs[Math.max(0, idx-1)];
+            state.activeTab = prev ? prev.key : 'overview';
+          }
+          renderTabs();
+        }
+      });
+      b.appendChild(close);
+    }
+
+    b.addEventListener('click', ()=>{
+      state.activeTab = t.key;
+      renderTabs();
+    });
+
+    tabsEl.appendChild(b);
+  }
+  renderActiveTab();
+  const active = state.tabs.find(t => t.key === state.activeTab);
+  if (active && typeof updateFilterIcons === 'function') {
+    updateFilterIcons(active, $('#panels'));
+  }
+}
+
+// Mengembalikan/menginisialisasi state per tab (filter, pagination, sorting).
+function getTabState(key){
+  if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:50, sort:null});
+  return state.tabState.get(key);
+}
+
+// Merender konten untuk tab aktif dan menyinkronkan ikon filter.
+function renderActiveTab(){
+  const panels = $('#panels'); panels.innerHTML = '';
+  const tab = state.tabs.find(t=> t.key===state.activeTab);
+  if(!tab){
+    panels.innerHTML = '<div class="muted">No data. Upload a CSV to get started.</div>';
+    return;
+  }
+
+  let el;
+  if(tab.type==='overview') el = renderOverview(tab.rows);
+  else if(tab.type==='custom') el = renderCustomTab(tab);
+  else el = renderTableSection(tab);
+
+  if (el && el.setAttribute) el.setAttribute('data-tab', tab.key);
+  panels.appendChild(el);
+
+  if (typeof updateFilterIcons === 'function') {
+    updateFilterIcons(tab, el || panels);
+  }
+}
+
+// Memanggil API OpenAI untuk menghasilkan predicate JavaScript dari prompt pengguna.
+async function runChatbot(prompt){
+  const preprompt = `
+Write a JavaScript predicate for the “Custom JS” tab.
+The code is executed for each data row and must return a boolean.
+
+Execution environment:
+- Full dataset: rows (Array<Row>)
+- Current row: row (Object), its index i (Number)
+
+Constraints:
+- Use pure JavaScript.
+- Do not use fetch, DOM, window, globalThis, Function, eval, storage APIs, or external libraries.
+- You may use rows and i for cross-row logic, but the final result must still be a boolean for the current row.
+- Data separator is semicolon (;), e.g., "contract_2025.pdf; image.png"
+
+Available fields (camelCase, case-sensitive) + examples:
+row.ID → "70100001"
+row.IncidentTime → "25 Aug. 2025, 09:01:00 AM GMT+0800"
+row.EventTime → "25 Aug. 2025, 08:59:12 AM GMT+0800"
+row.FileName → "contract_2025.pdf; image.png" (if more than one, separated by semicolon)
+row.Size → "92.5" (The file size field should be interpreted only as a number or in scientific notation (e.g., 31.2E+3), and the value always represents kilobytes (KB).)
+row.Source → "SRC-USER-001"
+row.Policies → "Customer / Prospective Customer PII" (if more than one, separated by semicolon)
+row.Channel → "Network email"
+row.Destination → "alice@example.org" (if more than one, separated by semicolon)
+row.Details → "sample row …" {This Details field is the Email Subject}
+row.Status → "New"
+
+Rules for row.Size:
+- A number only (e.g., 92.5) or scientific notation with uppercase E (e.g., 3.12E+4).
+- The value always represents kilobytes (KB).
+- No leading +/- sign, no thousands separators, no unit strings. If any unit-like text appears, ignore it as noise.
+- Accept digits with an optional decimal point: \d+(\.\d+)?.
+- Optionally accept scientific notation using uppercase E with an optional + exponent sign (no - expected): E\+?\d+.
+- Parse the matched string as a floating-point number in KB. If row.Size is missing or does not match the pattern, return false.
+Samples:
+row.Size = "92.5" → 92.5 KB → false
+row.Size = "3.12E+4" → 31,200 KB → true
+
+Date parsing (safe example to extract day):
+const s = row.IncidentTime || row.EventTime || "";
+const m = /^\s*(\d{1,2})\s+[A-Za-z]{3,}.?/.exec(s);
+const day = m ? parseInt(m[1], 10) : NaN;
+
+Output format:
+Output only JavaScript code (a plain anonymous function or statement block) whose final result is a boolean.
+Do not include "use strict"; or (function(){...}.
+Multi-statement is allowed; end with return ...;.
+
+Task instruction:
+  `;
+
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + OPENAI_API_KEY
+    },
+    body: JSON.stringify({
+      model: "gpt-5-mini",
+      temperature: 1,
+      messages: [
+        { role: "system", content: preprompt },
+        { role: "user", content: prompt }
+      ]
+    })
+  });
+
+  const data = await resp.json();
+  return data.choices[0].message.content.trim();
+}
+
+// Menjalankan predicate per baris secara bertahap (chunked) untuk menjaga UI tetap responsif.
+async function computeRuleMatchesChunked(rows, predicate, onProgress, CHUNK_SIZE = 600){
+  const matches = [];
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const slice = rows.slice(i, i + CHUNK_SIZE);
+
+    for (const r of slice) {
+      try {
+        if (predicate(r)) matches.push(r);
+      } catch (e) {
+        console.error('Rule eval error:', e);
+      }
+    }
+
+    if (onProgress) onProgress(matches.length, Math.min(i + CHUNK_SIZE, rows.length), rows.length);
+    await new Promise(r => setTimeout(r, 0));
+  }
+  return matches;
+}
+
+// Mengikat handler klik sekali pada kartu metrik/rule untuk membuka tab ad-hoc.
+function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
+  if (cards.__boundClick) return;
+  cards.__boundClick = true;
+
+  cards.addEventListener('click', async (e) => {
+    const a = e.target.closest('a.metric');
+    if (!a) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const mkey = a.getAttribute('data-metric');
+    if (mkey) {
+      const label = metricData.labels[mkey] || 'Items';
+      const dataset = metricData.data[mkey] || [];
+      openAdHocTab(label, dataset);
+      return;
+    }
+
+    const rkey = a.getAttribute('data-rule');
+    if (rkey) {
+      const def = ruleDefs.find(x => x.key === rkey);
+      if (!def) return;
+
+      if (!a.__matches) {
+        const b = a.closest('b');
+        const old = a.innerHTML;
+        a.innerHTML = `<span class="spin" aria-label="Loading"></span>`;
+        const matches = await computeRuleMatchesChunked(rows, def.fn);
+        a.__matches = matches;
+        a.textContent = matches.length;
+      }
+      openAdHocTab(`${def.label} (${a.__matches.length})`, a.__matches);
+    }
+  });
+}
+
+// Membuat hash ringan dataset untuk caching hasil rule.
+function computeDatasetHash(rows){
+  const keysrc = rows.slice(0, 50).map(r => `${txt(r['ID'])}|${txt(r['Incident Time'])}`).join('||');
+  let h = 5381;
+  for (let i = 0; i < keysrc.length; i++) h = ((h << 5) + h) ^ keysrc.charCodeAt(i);
+  h = (h >>> 0).toString(36);
+  return `${rows.length}_${h}`;
+}
+
+const RULE_CACHE_VERSION = 1;
+const CACHE_NS = 'dlp_rules_';
+const STORE   = sessionStorage;
+
+// Memuat cache hasil rule dari sessionStorage.
+function loadRuleCache(hash){
+  try{
+    const raw = STORE.getItem(`${CACHE_NS}${hash}`);
+    return raw ? JSON.parse(raw) : null;
+  }catch{ return null; }
+}
+
+// Menyimpan cache hasil rule ke sessionStorage (dengan fallback pembersihan).
+function saveRuleCache(hash, data){
+  try{
+    STORE.setItem(`${CACHE_NS}${hash}`, JSON.stringify(data));
+  }catch{
+    clearRuleCaches();
+  }
+}
+
+// Menghapus semua entri cache rule di sessionStorage.
+function clearRuleCaches(){
+  try{
+    Object.keys(STORE).forEach(k=>{
+      if (k.startsWith(CACHE_NS)) STORE.removeItem(k);
+    });
+  }catch{}
+}
+
+// Menghasilkan ID komposit stabil untuk sebuah baris (menghindari tabrakan multi-file).
+function getRowId(r){
+  // ID komposit supaya aman saat multi-file
+  const id   = txt(r['ID']).trim();
+  const incT = stripGMT(txt(r['Incident Time'])).trim();
+  const evT  = stripGMT(txt(r['Event Time'])).trim();
+  const src  = txt(r['Source']).trim();
+
+  if (id || incT) return `${id}|${incT}`;
+  if (id || evT)  return `${id}|${evT}`;
+  if (src && incT) return `${src}|${incT}`;
+
+  // Fallback terakhir
+  return JSON.stringify({
+    id, incT, evT, src, fn: txt(r['File Name']).slice(0,80)
+  });
+}
+
+// Membangun indeks Map dari ID baris ke indeks array.
+function indexRowsById(rows){
+  const m = new Map();
+  rows.forEach((r, i) => m.set(getRowId(r), i));
+  return m;
+}
+
+// Merender tampilan Overview: kartu metrik, tabel agregasi, dan chart volume harian.
+function renderOverview(rows){
+  const wrap = document.createElement('div');
+  wrap.className = 'grid';
+
+  const unique = (key)=>
+    new Set(rows.map(r => txt(r[key]).trim()).filter(Boolean)).size;
+
+  const emailDomains = new Set();
+  const webDomains = new Set();
+
+  for (const r of rows){
+    for (const p of splitDestParts(r['Destination'])){
+      const lower = String(p).toLowerCase();
+      const base = getBaseDomain(lower);
+      if (!base) continue;
+      if (isEmailLike(lower)){
+        emailDomains.add(base);
+      } else {
+        webDomains.add(base);
+      }
+    }
+  }
+
+  const blocks = rows.filter(r=>{
+    const a = txt(r['Action']).toLowerCase();
+    return a.includes('block') || a.includes('quarantine');
+  }).length;
+
+  const channels = new Set(
+    rows
+      .filter(r=>{
+        const a = txt(r['Action']).toLowerCase();
+        return !(a.includes('block') || a.includes('quarantine'));
+      })
+      .map(r => txt(r['Channel']).trim())
+      .filter(Boolean)
+  );
+
+  const cards = document.createElement('div');
+  cards.className = 'grid cards';
+
+  cards.innerHTML = `
+    <div class="card" title="${cardTooltips.total}"><h3>Total Alerts</h3><b><a href="#" class="link metric" data-metric="total">${rows.length}</a></b></div>
+    <div class="card" title="${cardTooltips.sources}"><h3>Unique Sources</h3><b><a href="#" class="link metric" data-metric="sources">${unique('Source')}</a></b></div>
+    <div class="card" title="${cardTooltips.emaildest}"><h3>Email Destinations</h3><b><a href="#" class="link metric" data-metric="emaildest">${emailDomains.size}</a></b></div>
+    <div class="card" title="${cardTooltips.webdest}"><h3>Web Destinations</h3><b><a href="#" class="link metric" data-metric="webdest">${webDomains.size}</a></b></div>
+    <div class="card" title="${cardTooltips.channels}"><h3>Channels</h3><b><a href="#" class="link metric" data-metric="channels">${channels.size}</a></b></div>
+  `;
+
+  const rowsWithSource = rows.filter(r => txt(r['Source']).trim());
+  const rowsEmailDest  = rows.filter(r => splitDestParts(r['Destination']).some(p => isEmailLike(p)));
+  const rowsWebDest    = rows.filter(r => splitDestParts(r['Destination']).some(p => !isEmailLike(p) && getBaseDomain(p)));
+  const rowsWithChan   = rows.filter(r => txt(r['Channel']).trim());
+  const rowsBlocks     = rows.filter(r => { const a = txt(r['Action']).toLowerCase(); return a.includes('block') || a.includes('quarantine'); });
+
+  const metricData = {
+    labels: {
+      total:     'All Alerts',
+      sources:   `Rows with Source (${rowsWithSource.length})`,
+      emaildest: `Email Destinations (${rowsEmailDest.length})`,
+      webdest:   `Web Destinations (${rowsWebDest.length})`,
+      channels:  `Rows with Channel (${rowsWithChan.length})`,
+      blocks:    `Action: Block/Quarantine (${rowsBlocks.length})`
+    },
+    data: {
+      total: rows,
+      sources: rowsWithSource,
+      emaildest: rowsEmailDest,
+      webdest: rowsWebDest,
+      channels: rowsWithChan,
+      blocks: rowsBlocks
+    }
+  };
+
+  const senderDomCounts = buildSenderDomainCounts(rows);
+  const seqIdx = buildSequentialIndex(rows);
+  const hotBySrc = getHotStemsBySource(seqIdx, 5);
+
+  const ruleDefs = [
+    {key:'self',       label:'Email Sent to Self',       fn:ruleSelfToSelf},
+    {key:'freemail',   label:'Recipient Free Mail',      fn:ruleRecipientFreeMail},
+    {key:'shortsubj',  label:'Short Subject',            fn:(r)=>ruleShortOrEmptySubject(r,15)},
+    {key:'noext',      label:'Attachment No Ext',        fn:ruleAttachmentNoExtension},
+    {key:'seqfiles',   label:'Sequential Attachments',   fn:(r)=>ruleSequentialAttachments(r, hotBySrc)},
+    {key:'sensitive',  label:'Sensitive Keywords',       fn:ruleSensitiveKeywords},
+    {key:'repeatdom',  label:'Repeated Domains',         fn:(r)=>ruleRepeatedDomainBySender(r, senderDomCounts)},
+    {key:'weirdtld',   label:'Weird TLD Dest',           fn:ruleWeirdTLD},
+    {key:'outofhours', label:'Out-of-Hours',             fn:ruleOutOfHours}
+  ];
+
+  let ruleHtml = '';
+  for (const def of ruleDefs) {
+    ruleHtml += `
+      <div class="card" title="${escapeHtml(cardTooltips[def.key] || def.label)}">
+        <h3>${escapeHtml(def.label)}</h3>
+        <b><a href="#" class="link metric muted-num" data-rule="${def.key}">
+          <span class="temp-count">0</span>
+          <span class="spin" aria-label="Loading"></span>
+        </a></b>
+      </div>`;
+  }
+  cards.insertAdjacentHTML('beforeend', ruleHtml);
+
+  (async () => {
+    const datasetHash = computeDatasetHash(rows);
+    const cached = loadRuleCache(datasetHash);
+    const idIndex = indexRowsById(rows);
+
+    function setAnchorMatches(a, ids){
+      a.__matches = ids.map(id => {
+        const ix = idIndex.get(id);
+        return typeof ix === 'number' ? rows[ix] : null;
+      }).filter(Boolean);
+      a.textContent = a.__matches.length;
+      a.classList.remove('muted-num');
+    }
+
+    if (cached && cached.version === 1) {
+      for (const def of ruleDefs) {
+        const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
+        if (!a) continue;
+        const ids = cached.idsByRule?.[def.key] || [];
+        setAnchorMatches(a, ids);
+      }
+      return;
+    }
+
+    const idsByRule = {};
+    for (const def of ruleDefs) {
+      const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
+      if (!a) continue;
+
+      const ids = [];
+      const matches = await computeRuleMatchesChunked(
+        rows,
+        (r) => {
+          const ok = def.fn(r);
+          if (ok) ids.push(getRowId(r));
+          return ok;
+        },
+        (countSoFar) => {
+          const span = a.querySelector('.temp-count');
+          if (span) span.textContent = countSoFar;
+        }
+      );
+
+      idsByRule[def.key] = ids;
+      a.__matches = matches;
+      const span = a.querySelector('.temp-count');
+      if (span) span.textContent = matches.length;
+      a.classList.remove('muted-num');
+      const sp = a.querySelector('.spin');
+      if (sp) sp.remove();
+    }
+
+    const payload = {
+      version: 1,
+      counts: Object.fromEntries(Object.keys(idsByRule).map(k => [k, idsByRule[k].length])),
+      idsByRule
+    };
+    saveRuleCache(datasetHash, payload);
+  })();
+
+  bindCardsClickOnce(cards, metricData, ruleDefs, rows);
+  wrap.appendChild(cards);
+
+  const by = (key)=>{ 
+    const m=freqMap(rows,key);
+    return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]);
+  };
+  const domains = aggregateDomains(rows);
+
+  const grids = document.createElement('div');
+  grids.className = 'grid cols-3';
+  grids.appendChild(makeClickableTable('Alerts by Policy', ['Policy','Count'], by('Policies'), 'Policies'));
+  grids.appendChild(makeClickableTable('Alerts by Status', ['Status','Count'], by('Status'), 'Status'));
+  grids.appendChild(makeClickableTable('Top Sources', ['Source','Count'], by('Source'), 'Source'));
+  grids.appendChild(makeClickableTable('Top Destinations', ['Destination','Count'], by('Destination'), 'Destination'));
+  grids.appendChild(makeClickableTable('Destination Domains', ['Domain','Count'], domains, 'Domain'));
+  grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], by('File Name').slice(0,50), 'File Name'));
+  wrap.appendChild(grids);
+
+  const byDay = aggregateByDay(rows);
+  const vol = document.createElement('div');
+  vol.className = 'section';
+  vol.innerHTML = `<header><strong>Volume by Day</strong>
+                     <span class="tiny muted">${byDay.length} days</span></header>`;
+  const cw = document.createElement('div');
+  cw.className='chart-wrap';
+  cw.appendChild(makeLineChart(byDay));
+  vol.appendChild(cw);
+  wrap.appendChild(vol);
+
+  return wrap;
+}
+
+// Mengambil email valid pertama dari string.
+function extractFirstEmail(s){
+  const str = String(s || '');
+  if (isEmailLike(str)) return str;
+  const m = str.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return m ? m[0] : '';
+}
+
+// Mengambil dan menormalkan local-part email.
+function extractLocal(email){
+  if (!email) return '';
+  const ix = email.indexOf('@');
+  if (ix < 1) return '';
+  let local = email.slice(0, ix).toLowerCase();
+  const plus = local.indexOf('+');
+  if (plus >= 0) local = local.slice(0, plus);
+  local = local.replace(/[\s._-]+/g, '');
+  return local;
+}
+
+// Menghitung panjang prefix yang sama di dua string.
+function commonPrefixLen(a, b){
+  const n = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < n && a[i] === b[i]) i++;
+  return i;
+}
+
+// Menghitung jarak Levenshtein dengan early-exit threshold.
+function levenshtein(a, b, maxDist = 3){
+  const n = a.length, m = b.length;
+  if (Math.abs(n - m) > maxDist) return maxDist + 1;
+  if (n > m) { const tmp = a; a = b; b = tmp; }
+  const v0 = new Uint16Array(b.length + 1);
+  const v1 = new Uint16Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) v0[j] = j;
+  let minInRow;
+  for (let i = 0; i < a.length; i++){
+    v1[0] = i + 1;
+    minInRow = v1[0];
+    for (let j = 0; j < b.length; j++){
+      const cost = a[i] === b[j] ? 0 : 1;
+      const del  = v0[j + 1] + 1;
+      const ins  = v1[j] + 1;
+      const sub  = v0[j] + cost;
+      const val  = Math.min(del, ins, sub);
+      v1[j + 1] = val;
+      if (val < minInRow) minInRow = val;
+    }
+    if (minInRow > maxDist) return maxDist + 1;
+    for (let j = 0; j <= b.length; j++) v0[j] = v1[j];
+  }
+  return v0[b.length];
+}
+
+// Menghitung skor kemiripan Jaro-Winkler.
+function jaroWinkler(s1, s2){
+  // Menghitung pasangan cocok dan transposisi untuk Jaro.
+  function jaroMatch(a, b){
+    const matchDist = Math.floor(Math.max(a.length, b.length) / 2) - 1;
+    const aFlags = new Array(a.length).fill(false);
+    const bFlags = new Array(b.length).fill(false);
+    let matches = 0;
+    for (let i = 0; i < a.length; i++){
+      const start = Math.max(0, i - matchDist);
+      const end = Math.min(i + matchDist + 1, b.length);
+      for (let j = start; j < end; j++){
+        if (bFlags[j]) continue;
+        if (a[i] !== b[j]) continue;
+        aFlags[i] = true; bFlags[j] = true;
+        matches++;
+        break;
+      }
+    }
+    if (!matches) return { matched: 0, transpositions: 0 };
+    let k = 0, transpositions = 0;
+    for (let i = 0; i < a.length; i++){
+      if (!aFlags[i]) continue;
+      while (!bFlags[k]) k++;
+      if (a[i] !== b[k]) transpositions++;
+      k++;
+    }
+    return { matched: matches, transpositions };
+  }
+
+  const m = jaroMatch(s1, s2);
+  if (m.matched === 0) return 0;
+  const jaro = (m.matched / s1.length + m.matched / s2.length + (m.matched - m.transpositions / 2) / m.matched) / 3;
+  let l = 0;
+  while (l < 4 && l < s1.length && l < s2.length && s1[l] === s2[l]) l++;
+  return jaro + l * 0.1 * (1 - jaro);
+}
+
+// Menilai keserupaan local-part pengirim dan penerima (self-like).
+function isSelfLike(fromEmail, toEmail, {useJaroWinkler = true} = {}){
+  const a = extractLocal(fromEmail);
+  const b = extractLocal(toEmail);
+  if (!a || !b) return false;
+  const pref = commonPrefixLen(a, b);
+  const minLen = Math.min(a.length, b.length);
+  const prefixOK = pref >= 5 || pref >= Math.ceil(minLen * 0.6);
+  const maxLen = Math.max(a.length, b.length);
+  const lev = levenshtein(a, b, 3);
+  const levOK = (maxLen >= 6 && lev <= 2) || (minLen <= 5 && lev <= 1);
+  if (prefixOK || levOK) return true;
+  if (useJaroWinkler){
+    const jw = jaroWinkler(a, b);
+    if (jw >= 0.88) return true;
+  }
+  return false;
+}
+
+// Rule: true jika ada penerima yang mirip dengan pengirim.
+function ruleSelfToSelf(r){
+  const srcEmail = extractFirstEmail(txt(r['Source']));
+  if (!srcEmail) return false;
+  const destParts = splitDestParts(txt(r['Destination']));
+  for (const d of destParts){
+    if (!isEmailLike(d)) continue;
+    if (isSelfLike(srcEmail, d, {useJaroWinkler: true})) return true;
+  }
+  return false;
+}
+
+// Rule: true jika domain penerima termasuk free mail.
+function ruleRecipientFreeMail(r){
+  return splitDestParts(r['Destination']).some(d=>{
+    const dom = getBaseDomain(d);
+    return ['gmail.com','yahoo.com','protonmail.com','proton.me','icloud.com'].includes(dom);
+  });
+}
+
+// Rule: true jika subject email kosong atau di bawah minimal pada channel email.
+function ruleShortOrEmptySubject(r, minLen = 10){
+  const ch = txt(r['Channel']).toLowerCase();
+  if (!ch.includes('email')) return false;
+  const s = txt(r['Details']).trim();
+  return s.length === 0 || s.length < minLen;
+}
+
+// Rule: true jika ada lampiran tanpa ekstensi.
+function ruleAttachmentNoExtension(r){
+  return txt(r['File Name']).split(';').some(f=>{
+    const fn = f.trim();
+    return fn && !fn.includes('.');
+  });
+}
+
+// Ekstraksi core nama file yang dinormalisasi untuk deteksi urutan.
+function filenameCoreStrict(s){
+  let t = stripSizeSuffix(s || '').trim();
+  if (!t) return '';
+  const dot = t.lastIndexOf('.');
+  t = (dot > 0 ? t.slice(0, dot) : t).toLowerCase();
+  if (shouldIgnoreCore(t)) return '';
+  t = t
+    .replace(/[_\-\s]*\((?:copy|\d+)\)\s*$/i, '')
+    .replace(/[_\-\s]*v\d{1,3}\s*$/i, '')
+    .replace(/[_\-\s]*(?:copy|final|signed)\s*$/i, '')
+    .replace(/[_\-\s]*\d{1,4}\s*$/i, '');
+  t = t.replace(/[^a-z0-9]+/g, ' ').trim();
+  if (t.length < 3) return '';
+  return t;
+}
+
+// Menurunkan daftar core nama file unik dari sel.
+function fileCoresFromCell(cell){
+  const cores = String(cell || '')
+    .split(/[;,]/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(filenameCoreStrict)
+    .filter(Boolean);
+  return Array.from(new Set(cores));
+}
+
+// Mengambil stem dan angka ekor (tail) di akhir nama file.
+function extractStemTail(name){
+  const raw = stripSizeSuffix(name || '').trim();
+  if (!raw) return null;
+  const dot = raw.lastIndexOf('.');
+  const base = dot > 0 ? raw.slice(0, dot) : raw;
+  const m = base.match(/^(.*?)[\s._-]*\(?\s*(\d{1,4})\s*\)?\s*$/);
+  if (!m) {
+    const stemOnly = base.trim().toLowerCase();
+    if (!stemOnly || shouldIgnoreCore(stemOnly)) return null;
+    return { stem: stemOnly, tail: null };
+  }
+  let stem = (m[1] || '').trim().toLowerCase();
+  const tail = m[2] ? parseInt(m[2], 10) : null;
+  if (!stem || shouldIgnoreCore(stem)) return null;
+  return { stem, tail };
+}
+
+// Membangun indeks stem→set tail numerik per sumber.
+function buildSequentialIndex(rows){
+  // Dukung pemisah ;, newline, dan , untuk nama file multi
+  const idx = new Map();
+  for (const r of rows){
+    const src = txt(r['Source']).trim().toLowerCase();
+    if (!src) continue;
+
+    const tokens = txt(r['File Name'])
+      .split(/;|\n|,/)    // ← tambahan dukung koma
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    for (const t of tokens){
+      const part = extractStemTail(t);
+      if (!part || part.tail == null) continue;
+
+      if (!idx.has(src)) idx.set(src, new Map());
+      const m = idx.get(src);
+      if (!m.has(part.stem)) m.set(part.stem, new Set());
+      m.get(part.stem).add(part.tail);
+    }
+  }
+  return idx;
+}
+
+// Mengambil stem panas (tail unik ≥ threshold) per sumber.
+function getHotStemsBySource(idx, threshold = 5){
+  const hot = new Map();
+  for (const [src, mapStem] of idx){
+    for (const [stem, tails] of mapStem){
+      if (tails.size >= threshold){
+        if (!hot.has(src)) hot.set(src, new Set());
+        hot.get(src).add(stem);
+      }
+    }
+  }
+  return hot;
+}
+
+// Rule: true jika baris punya attachment dengan stem hot sumbernya.
+function ruleSequentialAttachments(r, hotBySrc){
+  const src = txt(r['Source']).trim().toLowerCase();
+  if (!src) return false;
+  const hot = hotBySrc.get(src);
+  if (!hot || hot.size === 0) return false;
+  const tokens = txt(r['File Name'])
+    .split(/;|\n|,/)
+    .map(t => t.trim())
+    .filter(Boolean);
+  for (const t of tokens){
+    const part = extractStemTail(t);
+    if (!part) continue;
+    const stem = (part.stem || '').toLowerCase();
+    if (stem && hot.has(stem)) return true;
+  }
+  return false;
+}
+
+const SENSITIVE_KEYWORDS = [
+  'confidential',
+  'salary',
+  'client[_\\s-]?list',
+  'password',
+  'secret',
+  'api[_\\s-]?key',
+  'credit[_\\s-]?card'
+];
+
+const sensitiveRegex = new RegExp("\\b(" + SENSITIVE_KEYWORDS.join("|") + ")\\b", "i");
+
+// Rule: true jika ada keyword sensitif di subject, file name, atau policies.
+function ruleSensitiveKeywords(r){
+  return sensitiveRegex.test(txt(r['Details'])) ||
+         sensitiveRegex.test(txt(r['File Name'])) ||
+         sensitiveRegex.test(txt(r['Policies']));
+}
+
+// Menghitung frekuensi domain tujuan per pengirim.
+function buildSenderDomainCounts(rows){
+  const m = new Map();
+  for(const r of rows){
+    const src = txt(r['Source']).trim().toLowerCase();
+    if(!src) continue;
+    const parts = splitDestParts(r['Destination']);
+    for(const p of parts){
+      const dom = getBaseDomain(p);
+      if(!dom) continue;
+      const key = `${src}|${dom.toLowerCase()}`;
+      m.set(key, (m.get(key) || 0) + 1);
+    }
+  }
+  return m;
+}
+
+// Rule: true jika pengirim berulang ke domain yang sama > threshold.
+function ruleRepeatedDomainBySender(r, countsMap, threshold = 5){
+  const src = txt(r['Source']).trim().toLowerCase();
+  if(!src) return false;
+  const parts = splitDestParts(r['Destination']);
+  for(const p of parts){
+    const dom = getBaseDomain(p);
+    if(!dom) continue;
+    const key = `${src}|${dom.toLowerCase()}`;
+    if((countsMap.get(key) || 0) > threshold) return true;
+  }
+  return false;
+}
+
+// Rule: true jika domain tujuan bertld tidak umum (xyz/top/icu).
+function ruleWeirdTLD(r){
+  const dom = getBaseDomain(txt(r['Destination']));
+  return dom && /\.(xyz|top|icu)$/i.test(dom);
+}
+
+// Rule: true jika insiden terjadi antara 00:00–04:59.
+function ruleOutOfHours(r){
+  const d = parseIncidentTime(r['Incident Time']);
+  if(!d) return false;
+  const h = d.getHours();
+  return h>=0 && h<5;
+}
+
+// Membuat elemen tabel sederhana berdasarkan header dan rows (non-clickable).
+function makeSimpleTableEl(headers, rows){
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr>${headers.map(h=>
+    h==='Count' ? `<th class="count-col">${escapeHtml(h)}</th>`
+                : `<th>${escapeHtml(h)}</th>`
+  ).join('')}</tr>`;
+  const tbody = document.createElement('tbody');
+  for(const r of rows){
+    const tr = document.createElement('tr');
+    r.forEach((v,idx)=>{
+      const td=document.createElement('td');
+      if(headers[idx]==='Count') td.className='count-col';
+      td.textContent=String(v);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(thead); tbl.appendChild(tbody);
+  return tbl;
+}
+
+// Membuat section tabel yang isinya dapat diklik untuk membuka filter drill-down.
+function makeClickableTable(title, headers, rows, col){
+  const sec = document.createElement('div'); sec.className = 'section';
+  sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted">  </span></header>`;
+  const body = document.createElement('div'); body.className = 'tablewrap';
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr>${headers.map(h=>
+    h==='Count' ? `<th class="count-col">${escapeHtml(h)}</th>`
+                : `<th>${escapeHtml(h)}</th>`
+  ).join('')}</tr>`;
+  const tbody = document.createElement('tbody');
+  for(const pair of rows){
+    const name = pair[0]; const count = pair[1];
+    const tr = document.createElement('tr');
+    const td0 = document.createElement('td');
+    const a = document.createElement('a'); a.href='#'; a.className='link'; a.textContent = name;
+    a.addEventListener('click',(e)=>{e.preventDefault(); openFilterTab(col, name);});
+    td0.appendChild(a); tr.appendChild(td0);
+    const td1 = document.createElement('td');
+    td1.textContent = count;
+    td1.className='count-col';
+    tr.appendChild(td1);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(thead); tbl.appendChild(tbody); body.appendChild(tbl); sec.appendChild(body);
+  return sec;
+}
+
+// Mengagregasi jumlah baris per domain tujuan unik (berdasarkan base domain).
+function aggregateDomains(rows){
+  const m = new Map();
+  for(const r of rows){
+    const dest = txt(r['Destination']);
+    const semi = dest.split(';');
+    const parts = semi.map(x=> x.split(',')).flat().map(s=> s.trim()).filter(Boolean);
+    const bases = parts.map(getBaseDomain).filter(Boolean);
+    const uniq = Array.from(new Set(bases));
+    for(const b of uniq){ m.set(b, (m.get(b)||0)+1); }
+  }
+  return Array.from(m.entries()).sort((a,b)=> b[1]-a[1]);
+}
+
+// Mengagregasi jumlah alert per hari (berdasarkan Incident Time, ISO yyyy-mm-dd).
+function aggregateByDay(rows){
+  const m = new Map();
+  for(const r of rows){
+    const d = parseIncidentTime(r['Incident Time']); if(!d) continue;
+    const key = d.toISOString().slice(0,10);
+    m.set(key, (m.get(key)||0)+1);
+  }
+  return Array.from(m.entries()).sort((a,b)=> a[0].localeCompare(b[0]));
+}
+
+// Menggambar line chart responsif (SVG) dengan sumbu, grid, dan tooltip interaktif.
+function makeLineChart(pairs){
+  const dates=pairs.map(p=>p[0]), values=pairs.map(p=>p[1]);
+  const w=Math.max(600, document.querySelector('.wrap').clientWidth - 40);
+  const h=220, pl=48, pr=12, pt=12, pb=28;
+  const max=Math.max(1,...values), min=0;
+  const x = (i)=> pl + (w-pl-pr) * (i/Math.max(1,values.length-1));
+  const y = (v)=> h - pb - (h-pt-pb)*((v-min)/(max-min||1));
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.style.width='100%';
+
+  const ax=document.createElementNS(svg.namespaceURI,'line'); ax.setAttribute('x1',pl); ax.setAttribute('y1',h-pb); ax.setAttribute('x2',w-pr); ax.setAttribute('y2',h-pb); ax.setAttribute('stroke','#2b3d55'); svg.appendChild(ax);
+  const ay=document.createElementNS(svg.namespaceURI,'line'); ay.setAttribute('x1',pl); ay.setAttribute('y1',pt); ay.setAttribute('x2',pl); ay.setAttribute('y2',h-pb); ay.setAttribute('stroke','#2b3d55'); svg.appendChild(ay);
+
+  const ticks=5;
+  for(let i=0;i<=ticks;i++){
+    const v=min+(max-min)*i/ticks, ty=y(v);
+    const gl=document.createElementNS(svg.namespaceURI,'line'); gl.setAttribute('x1',pl); gl.setAttribute('x2',w-pr); gl.setAttribute('y1',ty); gl.setAttribute('y2',ty); gl.setAttribute('stroke','#1d2633'); gl.setAttribute('stroke-dasharray','2,4'); svg.appendChild(gl);
+    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',pl-6); label.setAttribute('y',ty+4); label.setAttribute('text-anchor','end'); label.setAttribute('fill','#8aa0b5'); label.setAttribute('font-size','12'); label.textContent=Math.round(v); svg.appendChild(label);
+  }
+
+  const step=Math.ceil(dates.length/12)||1;
+  for(let i=0;i<dates.length;i+=step){
+    const tx=x(i);
+    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',tx); label.setAttribute('y',h-8); label.setAttribute('text-anchor','middle'); label.setAttribute('fill','#8aa0b5'); label.setAttribute('font-size','12'); label.textContent=dates[i]; svg.appendChild(label);
+  }
+
+  const poly=document.createElementNS(svg.namespaceURI,'polyline'); poly.setAttribute('points', values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')); poly.setAttribute('fill','none'); poly.setAttribute('stroke','currentColor'); poly.setAttribute('stroke-width','2'); svg.appendChild(poly);
+
+  const dot=document.createElementNS(svg.namespaceURI,'circle'); dot.setAttribute('r','4'); dot.setAttribute('fill','currentColor'); dot.style.display='none'; svg.appendChild(dot);
+  const tooltip=document.createElement('div'); tooltip.className='tooltip'; document.body.appendChild(tooltip);
+  const hit=document.createElementNS(svg.namespaceURI,'rect'); hit.setAttribute('x',pl); hit.setAttribute('y',pt); hit.setAttribute('width',w-pl-pr); hit.setAttribute('height',h-pt-pb); hit.setAttribute('fill','transparent'); svg.appendChild(hit);
+
+  hit.addEventListener('mousemove', (e)=>{
+    const rect=svg.getBoundingClientRect(); const px=e.clientX-rect.left;
+    const t=Math.max(0, Math.min(1,(px-pl)/(w-pl-pr))); const i=Math.round(t*(values.length-1));
+    const cx=x(i), cy=y(values[i]); dot.setAttribute('cx',cx); dot.setAttribute('cy',cy); dot.style.display='';
+    tooltip.style.display='block'; tooltip.textContent=`${dates[i]} • ${values[i]} alerts`;
+    tooltip.style.left=(rect.left+window.scrollX+cx+12)+'px'; tooltip.style.top=(rect.top+window.scrollY+cy-10)+'px';
+  });
+  hit.addEventListener('mouseleave', ()=>{ dot.style.display='none'; tooltip.style.display='none'; });
+  return svg;
+}
+
+// Merender section tabel untuk sebuah tab lengkap dengan pager, export, copy, dan page size.
+function renderTableSection(tab){
+  const sec = document.createElement('div'); sec.className = 'sectionx';
+  sec.innerHTML = `<header><strong>${escapeHtml(tab.label)}</strong><span class="tiny muted"></span></header>`;
+
+  const body = document.createElement('div'); body.className = 'tablewrap';
+  const tableEl = renderDataTable(tab); body.appendChild(tableEl); sec.appendChild(body);
+
+  const actions = document.createElement('div'); actions.className = 'table-actions';
+  const pager = document.createElement('div'); pager.className = 'pager'; pager.id = `pager-${safeKey(tab.key)}`;
+  const right = document.createElement('div'); right.className = 'right';
+  right.innerHTML = `
+    <button class="btn" data-act="export">Export CSV</button>
+    <button class="btn" data-act="copy">Copy table</button>
+    <label style="margin-left:8px">Rows/page
+      <select data-role="pagesize"><option>25</option><option selected>50</option><option>100</option></select>
+    </label>`;
+  actions.appendChild(pager); actions.appendChild(right); sec.appendChild(actions);
+
+  right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
+  right.querySelector('[data-act="copy"]').addEventListener('click', ()=> copyCurrentView(tableEl));
+  right.querySelector('[data-role="pagesize"]').addEventListener('change', (e)=>{ const st=getTabState(tab.key); st.pageSize=parseInt(e.target.value,10)||50; st.page=1; rerenderTabTable(tab, sec); });
+
+  updatePager(tab, sec, tableEl);
+  return sec;
+}
+
+// Merender tab "Custom JS" beserta UI input API key, chatbot, editor predicate, dan hasil eksekusi.
+function renderCustomTab(tab){
+  const wrap = document.createElement('div');
+  wrap.className = 'section cjs-wrap';
+
+  wrap.innerHTML = `
+    <header>
+      <div>
+        <strong>Custom JS Filter</strong>
+      </div>
+    </header>
+  `;
+
+  const stack = document.createElement('div');
+  stack.className = 'cjs-stack';
+
+  const chatCard = document.createElement('div');
+  chatCard.className = 'cjs-card';
+
+  const chatHeader = document.createElement('div');
+  chatHeader.innerHTML = `
+  <strong>Chatbot</strong>
+  <div id="apikey-section"></div>
+`;
+
+  const apiKeyRow = document.createElement('div');
+  apiKeyRow.className = 'cjs-chatrow';
+
+  const apiKeyInput = document.createElement('input');
+  apiKeyInput.type = 'text';
+  apiKeyInput.id = 'apikey-input';
+  apiKeyInput.className = 'cjs-textinput';
+  apiKeyInput.placeholder = 'Enter your API Key';
+  apiKeyInput.autocomplete = 'new-password';
+
+  const saveApiKeyBtn = document.createElement('button');
+  saveApiKeyBtn.className = 'btn';
+  saveApiKeyBtn.id = 'save-apikey';
+  saveApiKeyBtn.textContent = 'Save API-KEY';
+
+  saveApiKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (!key) { alert('API Key cannot be empty.'); return; }
+    setSecret('OPENAI_API_KEY', key, 90);
+    window.OPENAI_API_KEY = key;
+    apiKeyInput.type = 'password';
+    alert('API Key saved.');
+  });
+
+  apiKeyRow.appendChild(apiKeyInput);
+  apiKeyRow.appendChild(saveApiKeyBtn);
+
+  const apiKeySection = chatHeader.querySelector('#apikey-section');
+  if (apiKeySection) {
+    apiKeySection.appendChild(apiKeyRow);
+  }
+
+  window.OPENAI_API_KEY = getSecret('OPENAI_API_KEY') || '';
+  if (window.OPENAI_API_KEY) {
+    apiKeyInput.value = window.OPENAI_API_KEY;
+    apiKeyInput.type = 'password';
+  }
+
+  const chatRow = document.createElement('div');
+  chatRow.className = 'cjs-chatrow';
+
+  const chatbotTA = document.createElement('input');
+  chatbotTA.type = 'text';
+  chatbotTA.id = 'chatbot-input';
+  chatbotTA.className = 'cjs-textinput';
+  chatbotTA.placeholder = 'Just write the assignment (e.g. "file size more than 1mb") then click Run Chatbot.';
+
+  const chatbotRunBtn = document.createElement('button');
+  chatbotRunBtn.className = 'btn';
+  chatbotRunBtn.id = 'chatbot-run';
+  chatbotRunBtn.textContent = 'Run Chatbot';
+
+  chatRow.appendChild(chatbotTA);
+  chatRow.appendChild(chatbotRunBtn);
+
+  const chatbotStatus = document.createElement('div');
+  chatbotStatus.id = 'chatbot-status';
+  chatbotStatus.className = 'cjs-status';
+
+  chatCard.appendChild(chatHeader);
+  chatCard.appendChild(chatRow);
+  chatCard.appendChild(chatbotStatus);
+
+  const taCard = document.createElement('div');
+  taCard.className = 'cjs-card';
+
+  const taHeader = document.createElement('div');
+  taHeader.innerHTML = `
+  <div class="tiny muted">
+	Evaluated per row (<code>rows</code>, <code>i</code>).
+  </div>
+`;
+
+  const ta = document.createElement('textarea');
+  ta.id = 'customjs-input';
+  ta.className = 'cjs-textarea';
+  ta.placeholder = ` row.ID → "70100001" ... `;
+
+  const btns = document.createElement('div');
+  btns.className = 'cjs-btnrow';
+  btns.innerHTML = `
+  <button class="btn" id="customjs-run">Run</button>
+  <button class="btn" id="customjs-clear">Clear</button>
+  <span class="spacer"></span>
+  <span id="customjs-status" class="cjs-status"></span>
+`;
+
+  taCard.appendChild(taHeader);
+  taCard.appendChild(ta);
+  taCard.appendChild(btns);
+
+  const resultMount = document.createElement('div');
+  resultMount.id = 'customjs-result';
+  resultMount.className = 'cjs-result';
+
+  stack.appendChild(chatCard);
+  stack.appendChild(taCard);
+  stack.appendChild(resultMount);
+  wrap.appendChild(stack);
+
+  const runBtn   = btns.querySelector('#customjs-run');
+  const clearBtn = btns.querySelector('#customjs-clear');
+  const statusEl = btns.querySelector('#customjs-status');
+
+  clearBtn.addEventListener('click', ()=>{
+    ta.value = '';
+    statusEl.textContent = '';
+    resultMount.innerHTML = '';
+    delete window.__customFreq;
+  });
+
+  runBtn.addEventListener('click', async ()=>{
+    delete window.__customFreq;
+    statusEl.textContent = 'Compiling...';
+    resultMount.innerHTML = '';
+
+    const code = String(ta.value || '').trim();
+    if (!code){
+      statusEl.textContent = 'Empty input.';
+      return;
+    }
+
+    let pred;
+    try {
+      pred = secureCompilePredicate(code, true);
+      const testRows = (tab.rows && tab.rows.length) ? tab.rows : state.raw;
+      if (testRows.length) {
+        const tRow  = deepFreeze({...testRows[0]});
+        const tRows = deepFreeze(testRows.map(r => Object.freeze({...r})));
+        const SAFE = {
+          Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
+          isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI, encodeURIComponent, decodeURIComponent
+        };
+        const v = pred(tRow, tRows, 0, SAFE);
+        if (typeof v !== 'boolean') throw new Error('Predicate must return boolean.');
+      }
+    } catch (e) {
+      statusEl.textContent = 'Compile error: ' + (e && e.message ? e.message : String(e));
+      return;
+    }
+
+    const allRows = tab.rows || state.raw;
+    const BATCH = 800;
+    const out = [];
+    const t0 = performance.now();
+    statusEl.textContent = `Running... 0 / ${allRows.length}`;
+
+    const SAFE = {
+      Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
+      isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI, encodeURIComponent, decodeURIComponent
+    };
+    const frozenRows = deepFreeze(allRows.map(r => Object.freeze({...r})));
+
+    try {
+      for (let start = 0; start < allRows.length; start += BATCH) {
+        const end = Math.min(start + BATCH, allRows.length);
+        for (let i = start; i < end; i++) {
+          const rowClone = deepFreeze({ ...allRows[i] });
+          let ok = false;
+          try {
+            ok = !!pred(rowClone, frozenRows, i, SAFE);
+          } catch (_) { ok = false; }
+          if (ok) out.push(allRows[i]);
+        }
+        statusEl.textContent = `Running... ${end} / ${allRows.length}`;
+        await new Promise(r => setTimeout(r, 0));
+      }
+    } catch (e) {
+      statusEl.textContent = 'Runtime error: ' + (e && e.message ? e.message : String(e));
+      return;
+    }
+
+    const dt = Math.round(performance.now() - t0);
+    statusEl.textContent = `Done. Matched ${out.length} / ${allRows.length} rows in ${dt} ms`;
+
+    const fakeTab = { key:'custom_result', label:`Results (${out.length})`, type:'drill', rows: out, closable:false };
+    const section = renderTableSection(fakeTab);
+    resultMount.innerHTML = '';
+    resultMount.appendChild(section);
+  });
+
+  const PREPROMPT = `Tulislah JavaScript predicate untuk tab “Custom JS”. Kode dieksekusi untuk setiap baris data dan harus mengembalikan boolean. Lingkungan eksekusi: Dataset penuh: rows (Array<Row>) Baris saat ini: row (Object), indeksnya i (Number) Batasan: Gunakan JavaScript murni ("use strict"). Jangan gunakan fetch, DOM, window, globalThis, Function, eval, storage API, atau library eksternal. Anda boleh menggunakan rows dan i untuk logika lintas baris, tetapi hasil akhir tetap boolean untuk baris saat ini. Field yang tersedia (camelCase, case-sensitive) + contoh: row.ID → "70100001" row.IncidentTime → "25 Aug. 2025, 09:01:00 AM GMT+0800" row.EventTime → "25 Aug. 2025, 08:59:12 AM GMT+0800" row.FileName → "contract_2025.pdf; image.png" row.Source → "SRC-USER-001" row.Policies → "Customer / Prospective Customer PII" row.Channel → "Network email" row.Destination → "alice@example.org" row.Details → "sample row …" {Details ini Email Subject} row.Status → "New" Parsing tanggal (contoh aman untuk ambil hari): const s = row.IncidentTime || row.EventTime || ""; const m = /^\\s*(\\d{1,2})\\s+[A-Za-z]{3,}.?/.exec(s); const day = m ? parseInt(m[1], 10) : NaN; Format keluaran: Hanya keluarkan kode JavaScript (fungsi anonymous biasa atau blok statements) yang hasil akhirnya boolean. Boleh multi-statement; akhiri dengan return ...; Perintah tugas:`;
+
+  function extractJS(text){
+    if (!text) return '';
+    const m = text.match(/```(?:javascript|js)?\s*([\s\S]*?)```/i);
+    return (m ? m[1] : text).trim();
+  }
+
+  async function runChatbot(task){
+    const apiKey = window.OPENAI_API_KEY || window.__OPENAI_API_KEY__ || '';
+    if (!apiKey) throw new Error('OPENAI_API_KEY tidak tersedia di window.');
+
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        temperature: 1,
+        messages: [
+          { role: 'system', content: PREPROMPT },
+          { role: 'user', content: task }
+        ]
+      })
+    });
+
+    if (!resp.ok) {
+      let msg = `HTTP ${resp.status}`;
+      try { const err = await resp.json(); if (err?.error?.message) msg += `: ${err.error.message}`; } catch(_) {}
+      throw new Error(msg);
+    }
+
+    const data = await resp.json();
+    const content = data?.choices?.[0]?.message?.content || '';
+    return extractJS(content);
+  }
+
+  chatbotRunBtn.addEventListener('click', async ()=>{
+    const task = String(chatbotTA.value || '').trim();
+    if (!task){
+      chatbotStatus.textContent = 'Tugas kosong.';
+      return;
+    }
+
+    chatbotRunBtn.disabled = true;
+    chatbotRunBtn.textContent = 'Running...';
+
+    try {
+      const code = await runChatbot(task);
+      if (!code){
+        chatbotStatus.textContent = 'Model tidak mengembalikan kode.';
+        return;
+      }
+      ta.value = code;
+      chatbotStatus.textContent = 'Menjalankan predicate...';
+      runBtn.click();
+      chatbotStatus.textContent = 'Selesai.';
+    } catch(err){
+      chatbotStatus.textContent = 'Chatbot error: ' + (err?.message || String(err));
+    } finally {
+      chatbotRunBtn.disabled = false;
+      chatbotRunBtn.textContent = 'Run Chatbot';
+    }
+  });
+
+  return wrap;
+}
+
+// Merender tabel data untuk sebuah tab, termasuk filter, sort, pagination, dan metadata.
+function renderDataTable(tab){
+  const st = getTabState(tab.key);
+  const rows = applyFiltersAndSort(tab.rows, st.filters, st.sort);
+  const page = st.page, pageSize = st.pageSize;
+  const start = (page - 1) * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
+
+  const tbl = document.createElement('table');
+
+  const visibleCols = VISIBLE_COLS;
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  for (const col of visibleCols){
+    const th = document.createElement('th');
+    th.textContent = HEADER_LABELS[col];
+
+    if (col === ICON_COL) th.classList.add('iconcell');
+
+    if (FILTERABLE_COLS.includes(col)){
+      const ico = document.createElement('span');
+      ico.className = 'filter-icon';
+      ico.innerHTML = svgFilter();
+      ico.title = 'Filter contains text';
+      ico.addEventListener('click', (e)=> openFilterPopover(e.currentTarget, tab, col));
+      th.appendChild(ico);
+    }
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+  tbl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  for (const r of pageRows){
+    const tr = document.createElement('tr');
+
+    const cells = {
+      'Time'       : '',
+      'Source'     : txt(r['Source']).trim(),
+      'Policies'   : txt(r['Policies']),
+      'Channel'    : txt(r['Channel']),
+      'Destination': txt(r['Destination']).trim(),
+      'File Name'  : txt(r['File Name']),
+      'Size'       : txt(r['Size']),
+      'Details'    : txt(r['Details']),
+      'Status'     : txt(r['Status'])
+    };
+
+    for (const col of visibleCols){
+      const td  = document.createElement('td');
+
+      if (col === ICON_COL){
+        td.classList.add('iconcell');
+        const btn = document.createElement('button');
+        btn.className = 'icon-copy';
+        btn.title = 'Copy this row';
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+		  <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+		</svg>`;
+        btn.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          btn.disabled = true;
+          try { await copyRowToClipboard(r); } finally { btn.disabled = false; }
+        });
+        td.appendChild(btn);
+        tr.appendChild(td);
+        continue;
+      }
+
+      if (col === 'Time'){
+        td.classList.add('timecell');
+        td.innerHTML = timeCellHTML(r);
+        td.title     = timeCellPlainText(r);
+      } else if (col === 'Source' || col === 'Destination' || col === 'Policies' || col === 'Status' || col === 'File Name' || col === 'Details' || col === 'Channel'){
+        const full  = cells[col];
+        const shown = cells[col];
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'link copy-cell';
+        a.textContent = shown;
+        a.title = full;
+        a.dataset.value = full;
+        a.addEventListener('click',(e)=>{
+          e.preventDefault();
+          if (full) {
+            navigator.clipboard.writeText(full).then(()=>{
+              console.log(`${col} "${full}" copied`);
+            });
+          }
+        });
+        td.appendChild(a);
+      } else {
+        const full  = cells[col];
+        const shown = cells[col];
+        td.textContent = shown;
+        td.title = full;
+      }
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  tbl.appendChild(tbody);
+
+  tbl.__meta = { total: rows.length, page, pages: Math.max(1, Math.ceil(rows.length / pageSize)), rows, pageRows, visibleCols };
+  tbl.classList.add(`cols-${visibleCols.length}`);
+  return tbl;
+}
+
+const INACTIVE_ICON = '🔍';
+const ACTIVE_ICON = '🔍✨';
+
+// Memperbarui ikon filter pada header tabel sesuai state filter tab.
+function updateFilterIcons(tab, root){
+  const st = getTabState(tab.key);
+  let scope =
+    (root && root) ||
+    document.querySelector(`[data-tab="${tab.key}"]`) ||
+    document.querySelector('table');
+  if (!scope) return;
+  scope.querySelectorAll('.filter-icon').forEach(ico=>{
+    const col = ico.getAttribute('data-col');
+    const val = (st.filters?.[col] ?? '').trim();
+    ico.textContent = val ? ACTIVE_ICON : INACTIVE_ICON;
+    ico.classList.toggle('is-active', !!val);
+    ico.setAttribute('aria-pressed', val ? 'true' : 'false');
+    ico.title = val ? `Filter aktif: ${val}` : 'Filter';
+  });
+}
+
+// Membuka popover filter/sort untuk kolom tertentu dan menerapkan aksi pengguna.
+function openFilterPopover(anchor, tab, col){
+  closePopovers();
+  const th = anchor.closest('th');
+  const pop = document.createElement('div');
+  pop.className = 'filter-pop';
+  const st = getTabState(tab.key);
+  const currentFilter = st.filters[col] || '';
+  const currentSort = (st.sort && st.sort.col === col) ? st.sort.type : null;
+  pop.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(4,auto); gap:6px; margin-bottom:8px;">
+      <button class="btn btn-sort" title="Ascending" data-type="asc"  ${currentSort==='asc'?'style="outline:1px solid var(--accent)"':''}>A</button>
+      <button class="btn btn-sort" title="Descending" data-type="desc" ${currentSort==='desc'?'style="outline:1px solid var(--accent)"':''}>D</button>
+      <button class="btn btn-sort" title="Most" data-type="most" ${currentSort==='most'?'style="outline:1px solid var(--accent)"':''}>M</button>
+      <button class="btn btn-sort" title="Less" data-type="less" ${currentSort==='less'?'style="outline:1px solid var(--accent)"':''}>L</button>
+    </div>
+    <div><input type="text" placeholder="contains... (kosongkan untuk clear)" 
+      value="${escapeHtml(currentFilter)}" style="width:100%" /></div>
+    <div class="tiny muted" style="margin-top:4px">Enter untuk apply filter • Esc untuk tutup</div>
+  `;
+  th.style.position = "relative";
+  th.appendChild(pop);
+  updateFilterIcons(tab, th.closest('[data-tab]') || th.closest('table'));
+  pop.querySelectorAll('.btn-sort').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const type = btn.getAttribute('data-type');
+      st.sort = { col, type };
+      st.page = 1;
+      rerenderActive();
+      updateFilterIcons(tab, th.closest('[data-tab]') || th.closest('table'));
+      closePopovers();
+    });
+  });
+  const input = pop.querySelector('input');
+  input.focus(); input.select();
+  input.addEventListener('keydown',(e)=>{
+    if(e.key==='Enter'){
+      const v=input.value.trim();
+      if(v) st.filters[col]=v; else delete st.filters[col];
+      st.page=1;
+      rerenderActive();
+      updateFilterIcons(tab, th.closest('[data-tab]') || th.closest('table'));
+      closePopovers();
+    } else if(e.key==='Escape'){ closePopovers(); }
+  });
+}
+
+// Menentukan posisi absolut popover relatif ke anchor.
+function positionPopover(pop, anchor){
+  const r = anchor.getBoundingClientRect();
+  pop.style.left = (r.left + window.scrollX) + 'px';
+  pop.style.top = (r.bottom + window.scrollY + 6) + 'px';
+}
+
+// Menutup semua popover filter yang sedang terbuka.
+function closePopovers(){
+  $$('.filter-pop').forEach(p=> p.remove());
+}
+
+window.addEventListener('click', (e)=>{ if(!e.target.closest('.filter-pop') && !e.target.closest('.filter-icon')) closePopovers(); });
+
+// Menerapkan filter dan sorting pada array baris lalu mengembalikan hasilnya.
+function applyFiltersAndSort(rows, filters, sort){
+  let out = rows.slice();
+  for(const k of Object.keys(filters||{})){
+    const needle = (filters[k]||'').toLowerCase();
+    if(k==='Time'){
+      out = out.filter(r=>{
+        const comp = `ID ${txt(r['ID'])} Incident ${txt(r['Incident Time'])} Event ${txt(r['Event Time'])}`.toLowerCase();
+        return comp.includes(needle);
+      });
+    } else {
+      out = out.filter(r=> txt(r[k]).toLowerCase().includes(needle));
+    }
+  }
+  const byFreq = (col)=>{
+    const m = new Map();
+    for(const r of out){
+      const key = (col==='Time')
+        ? `ID ${txt(r['ID'])} Incident ${txt(r['Incident Time'])} Event ${txt(r['Event Time'])}`
+        : txt(r[col]).trim();
+      if(!key) continue;
+      m.set(key, (m.get(key)||0)+1);
+    }
+    return m;
+  };
+  if (sort && sort.col){
+    const col = sort.col;
+    if (sort.type === 'asc' || sort.type === 'desc'){
+      if (col === 'Time'){
+        out.sort((a,b)=>{
+          const at=parseIncidentTime(a['Incident Time']);
+          const bt=parseIncidentTime(b['Incident Time']);
+          const cmp = (at?at.getTime():-Infinity) - (bt?bt.getTime():-Infinity);
+          return sort.type === 'asc' ? cmp : -cmp;
+        });
+      } else {
+        out.sort((a,b)=>{
+          const av = txt(a[col]).toLowerCase();
+          const bv = txt(b[col]).toLowerCase();
+          const cmp = av.localeCompare(bv, undefined, {numeric:true,sensitivity:'base'});
+          if (cmp !== 0) return sort.type === 'asc' ? cmp : -cmp;
+          const at=parseIncidentTime(a['Incident Time']); const bt=parseIncidentTime(b['Incident Time']);
+          return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
+        });
+      }
+    } else if (sort.type === 'most' || sort.type === 'less'){
+      const freq = byFreq(col);
+      out.sort((a,b)=>{
+        const ak = (col==='Time')
+          ? `ID ${txt(a['ID'])} Incident ${txt(a['Incident Time'])} Event ${txt(a['Event Time'])}`
+          : txt(a[col]).trim();
+        const bk = (col==='Time')
+          ? `ID ${txt(b['ID'])} Incident ${txt(b['Incident Time'])} Event ${txt(b['Event Time'])}`
+          : txt(b[col]).trim();
+        const af = freq.get(ak)||0, bf = freq.get(bk)||0;
+        if (af !== bf) return (sort.type === 'most') ? (bf - af) : (af - bf);
+        const av = txt(a[col]).toLowerCase(), bv = txt(b[col]).toLowerCase();
+        const cmp = av.localeCompare(bv, undefined, {numeric:true,sensitivity:'base'});
+        if (cmp !== 0) return cmp;
+        const at=parseIncidentTime(a['Incident Time']); const bt=parseIncidentTime(b['Incident Time']);
+        return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
+      });
+    }
+  } else {
+    const sF = freqMap(out,'Source'); const dF = freqMap(out,'Destination');
+    out.sort((a,b)=>{
+      const as=sF.get(txt(a['Source']).trim())||0, bs=sF.get(txt(b['Source']).trim())||0; if(bs!==as) return bs-as;
+      const ad=dF.get(txt(a['Destination']).trim())||0, bd=dF.get(txt(b['Destination']).trim())||0; if(bd!==ad) return bd-ad;
+      const at=parseIncidentTime(a['Incident Time']); const bt=parseIncidentTime(b['Incident Time']);
+      return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
+    });
+  }
+  return out;
+}
+
+// Memperbarui elemen pager (info halaman dan tombol navigasi) untuk tabel aktif.
+function updatePager(tab, sectionEl, tableEl){
+  const pager = sectionEl.querySelector(`#pager-${safeKey(tab.key)}`);
+  const st = getTabState(tab.key);
+  const total = tableEl.__meta.total, page = tableEl.__meta.page, pages = tableEl.__meta.pages;
+  pager.innerHTML = '';
+  const info = document.createElement('span');
+  const start = (page-1)*st.pageSize + 1, end = Math.min(total, page*st.pageSize);
+  info.textContent = total ? `Showing ${start}–${end} of ${total}` : 'No rows';
+  pager.appendChild(info);
+  const mk=(label,fn,dis)=>{const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.disabled=!!dis; b.addEventListener('click',fn); return b;};
+  pager.appendChild(mk('⏮', ()=>{ st.page=1; rerenderTabTable(tab,sectionEl); }, page<=1));
+  pager.appendChild(mk('◀',  ()=>{ st.page=Math.max(1,st.page-1); rerenderTabTable(tab,sectionEl); }, page<=1));
+  pager.appendChild(mk('▶',  ()=>{ st.page=Math.min(pages,st.page+1); rerenderTabTable(tab,sectionEl); }, page>=pages));
+  pager.appendChild(mk('⏭', ()=>{ st.page=pages; rerenderTabTable(tab,sectionEl); }, page>=pages));
+}
+
+// Merender ulang tabel pada section tab tertentu dan menyinkronkan pager.
+function rerenderTabTable(tab, sectionEl){
+  const body = sectionEl.querySelector('.tablewrap'); body.innerHTML = '';
+  const tbl = renderDataTable(tab); body.appendChild(tbl);
+  updatePager(tab, sectionEl, tbl);
+}
+
+// Merender ulang tab aktif (digunakan setelah filter/sort berubah).
+function rerenderActive(){
+  renderActiveTab();
+}
+
+// Menormalkan nama file untuk dipakai sebagai nama unduhan yang aman.
+function sanitizeFileName(s){
+  let out = '';
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c==='_'||c==='-') out+=c; else out+='_';
+  }
+  return out;
+}
+
+// Mengekspor tampilan tabel saat ini (halaman aktif) ke CSV.
+function exportCurrentView(tab, tableEl){
+  const rows = tableEl.__meta.pageRows; const cols = tableEl.__meta.visibleCols; const dq = '"', nl = '\n';
+  const csv = [cols.join(',')].concat(
+    rows.map(r=> cols.map(c=>{
+      const v = (c==='Time') ? `ID ${txt(r['ID'])} | Incident ${txt(r['Incident Time'])} | Event ${txt(r['Event Time'])}` : txt(r[c]);
+      return (v.includes(dq)||v.includes(',')||v.includes(nl)) ? dq+v.split(dq).join(dq+dq)+dq : v;
+    }).join(','))
+  ).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${sanitizeFileName(tab.label||'table')}_page${tableEl.__meta.page}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// Menyalin tampilan tabel saat ini (halaman aktif) sebagai TSV ke clipboard.
+function copyCurrentView(tableEl){
+  const cols = tableEl.__meta.visibleCols;
+  const header = cols.join('\t');
+  const rows = tableEl.__meta.pageRows.map(r=>
+    cols.map(c=> c==='Time'
+      ? `ID ${txt(r['ID'])} | Incident ${txt(r['Incident Time'])} | Event ${txt(r['Event Time'])}`
+      : txt(r[c])
+    ).join('\t')
+  ).join('\n');
+  navigator.clipboard.writeText(header+'\n'+rows);
+}
+
+// Menerapkan filter drill-down pada kumpulan baris untuk kolom/Domain tertentu.
+function applyDrillFilter(universe, filter){
+  let rows = universe.slice();
+  if(filter.col === 'Domain'){
+    rows = rows.filter(r=>{
+      const semi  = txt(r['Destination']).split(';');
+      const parts = semi.map(x=> x.split(',')).flat().map(s=> s.trim()).filter(Boolean);
+      return parts.some(x=> getBaseDomain(x) === filter.value);
+    });
+  } else {
+    rows = rows.filter(r=> txt(r[filter.col]).trim() === filter.value);
+  }
+  return rows;
+}
+
+// Membuka tab drill-down baru berdasarkan kolom dan nilai yang dipilih.
+function openFilterTab(col, value, fromTab){
+  const universe = (fromTab ? fromTab.rows : state.raw);
+  const rows = applyDrillFilter(universe, {col, value});
+  const key = `flt::${col}::${safeKey(value)}::${Date.now()}`;
+  const label = `${col}: ${value}`;
+  const tab = { key, label, type:'drill', rows, closable:true, filter:{col, value} };
+  state.tabs.push(tab);
+  state.activeTab = key;
+  renderTabs();
+}
+
+// Membuka tab ad-hoc baru berisi kumpulan rows yang diberikan.
+function openAdHocTab(label, rows){
+  const key = `adhoc::${safeKey(label)}::${Date.now()}`;
+  const tab = { key, label, type:'drill', rows, closable:true, filter:null };
+  state.tabs.push(tab);
+  state.activeTab = key;
+  renderTabs();
+}
+
+// Memperbarui label rentang waktu Incident berdasarkan dataset yang dimuat.
+function updateIncidentRange(){
+  const el = document.getElementById('rangeVal');
+  if (!el) return;
+
+  if (!state.raw.length){
+    el.textContent = '–';
+    return;
+  }
+
+  const dates = state.raw
+    .map(r => parseIncidentTime(r['Incident Time']))
+    .filter(Boolean)
+    .sort((a,b)=>a-b);
+
+  if (!dates.length){
+    el.textContent = '–';
+    return;
+  }
+
+  const min = formatDateShort(dates[0]);
+  const max = formatDateShort(dates[dates.length-1]);
+
+  // Tampilkan gabungan nama file (diisi dari handler upload multi-file)
+  el.textContent = (currentFilename ? currentFilename + ': ' : '') + `${min} – ${max}`;
+}
+
+// Mem-parse file CSV menggunakan Papa.parse dan mengembalikan array objek.
+function parseCSV(file){
+  return new Promise((resolve, reject)=>{
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      complete: res => resolve(res.data),
+      error: reject
+    });
+  });
+}
+
+const fileInput = $('#file');
+fileInput.addEventListener('change', async (e)=>{
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+  clearRuleCaches();
+  state.raw = [];
+  state.tabs = [];
+  state.activeTab = null;
+  if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
+  currentFilename = Array.from(files).map(f => f.name).join(', ');
+  for (const f of files) {
+    const rows = await parseCSV(f);
+    ingest(rows);
+  }
+});
+
+const drop = $('#drop');
+['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.add('hover');}));
+['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.remove('hover');}));
+drop.addEventListener('drop', async (e)=>{
+  const files = e.dataTransfer.files;
+  if (!files || files.length === 0) return;
+  clearRuleCaches();
+  state.raw = [];
+  state.tabs = [];
+  state.activeTab = null;
+  if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
+  currentFilename = Array.from(files).map(f => f.name).join(', ');
+  for (const f of files) {
+    const rows = await parseCSV(f);
+    ingest(rows);
+  }
+});
+
+document.getElementById('demoBtn').addEventListener('click', ()=>{
+  clearRuleCaches();
+  state.raw = [];
+  state.tabs = [];
+  state.activeTab = null;
+  if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
+  currentFilename = 'Sample data';
+  const demo = [
+    {"ID":"70100001","Incident Time":"26 Aug. 2025, 02:07:36 PM GMT+0800","Event Time":"26 Aug. 2025, 02:07:22 PM GMT+0800","Source":"SRC-USER-001","Policies":"Customer / Prospective Customer PII","Destination":"alice@example.org","File Name":"contract_2025.pdf; image.png","Details":"Quarterly contract package","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100002","Incident Time":"26 Aug. 2025, 01:53:17 PM GMT+0800","Event Time":"26 Aug. 2025, 01:53:12 PM GMT+0800","Source":"SRC-USER-002","Policies":"Employee PII","Destination":"bob@example.org","File Name":"forms.zip; screenshot.png","Details":"HR forms bundle","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100021","Incident Time":"26 Aug. 2025, 08:15:00 AM GMT+0800","Event Time":"26 Aug. 2025, 08:14:55 AM GMT+0800","Source":"john.doe@corp.com","Policies":"General","Destination":"john.doe@corp.com","File Name":"todo.txt","Details":"Sent note to self","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100022","Incident Time":"26 Aug. 2025, 09:20:00 AM GMT+0800","Event Time":"26 Aug. 2025, 09:19:55 AM GMT+0800","Source":"mary.smith@example.org","Policies":"Customer Data","Destination":"marysmith@example.org","File Name":"draft.docx","Details":"Self mail slight variation","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100023","Incident Time":"26 Aug. 2025, 11:00:00 AM GMT+0800","Event Time":"26 Aug. 2025, 10:59:50 AM GMT+0800","Source":"SRC-SELF-001@example.com","Policies":"Employee PII","Destination":"srcself001@example.com","File Name":"notes.pdf","Details":"Another self mail","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100024","Incident Time":"26 Aug. 2025, 01:05:00 PM GMT+0800","Event Time":"26 Aug. 2025, 01:04:53 PM GMT+0800","Source":"henrya@id.ibm.com","Policies":"General","Destination":"hendryadrian@gmail.com","File Name":"ideas.txt","Details":"Cross-domain self mail","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"High"},
+    {"ID":"70100025","Incident Time":"26 Aug. 2025, 03:40:00 PM GMT+0800","Event Time":"26 Aug. 2025, 03:39:55 PM GMT+0800","Source":"anna_lee@company.com","Policies":"General","Destination":"anna.lee@company.com","File Name":"reminder.docx","Details":"Slightly different self mail","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100003","Incident Time":"26 Aug. 2025, 01:32:19 PM GMT+0800","Event Time":"26 Aug. 2025, 01:32:12 PM GMT+0800","Source":"self.user@example.com","Policies":"Customer / Prospective Customer PII","Destination":"self.user@example.com","File Name":"notes.txt; image.png","Details":"Self mail","Status":"Open","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100004","Incident Time":"26 Aug. 2025, 11:18:00 AM GMT+0800","Event Time":"26 Aug. 2025, 11:17:54 AM GMT+0800","Source":"SRC-USER-003","Policies":"Customer / Prospective Customer PII","Destination":"external.contact@gmail.com","File Name":"client_list.xlsx; logo.png","Details":"Sharing list","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100005","Incident Time":"26 Aug. 2025, 10:46:44 AM GMT+0800","Event Time":"26 Aug. 2025, 10:46:40 AM GMT+0800","Source":"SRC-USER-004","Policies":"Data Handling","Destination":"ops@example.com","File Name":"update.docx","Details":"","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100006","Incident Time":"26 Aug. 2025, 10:41:20 AM GMT+0800","Event Time":"26 Aug. 2025, 10:41:12 AM GMT+0800","Source":"SRC-USER-005","Policies":"Number Pattern","Destination":"team@example.com","File Name":"report; readme; image.png","Details":"Attachments w/o extension","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100007","Incident Time":"26 Aug. 2025, 09:54:03 AM GMT+0800","Event Time":"26 Aug. 2025, 09:53:59 AM GMT+0800","Source":"SRC-USER-006","Policies":"File Movement","Destination":"archive@example.org","File Name":"report 1.pdf; report 2.pdf; report 3.pdf; report 4.pdf; image.png","Details":"Batch reports","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100026","Incident Time":"26 Aug. 2025, 04:20:00 PM GMT+0800","Event Time":"26 Aug. 2025, 04:19:55 PM GMT+0800","Source":"SRC-USER-013","Policies":"File Movement","Destination":"storage@example.net","File Name":"scan_001.jpg; scan_002.jpg; scan_003.jpg; scan_004.jpg","Details":"Scanned images sequential","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100027","Incident Time":"26 Aug. 2025, 05:45:00 PM GMT+0800","Event Time":"26 Aug. 2025, 05:44:52 PM GMT+0800","Source":"SRC-USER-014","Policies":"File Movement","Destination":"archive@example.org","File Name":"invoice-jan.pdf; invoice-feb.pdf; invoice-mar.pdf","Details":"Sequential invoices","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100008","Incident Time":"26 Aug. 2025, 09:35:00 AM GMT+0800","Event Time":"26 Aug. 2025, 09:34:55 AM GMT+0800","Source":"SRC-USER-007","Policies":"General","Destination":"finance@example.com","File Name":"salary_projection.xlsx; image.png","Details":"confidential salary update","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"High"},
+    {"ID":"70100009","Incident Time":"26 Aug. 2025, 09:20:11 AM GMT+0800","Event Time":"26 Aug. 2025, 09:20:05 AM GMT+0800","Source":"SRC-USER-008","Policies":"General","Destination":"contact@malicious.xyz","File Name":"invite.pdf; image.png","Details":"Weird TLD test","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100010","Incident Time":"26 Aug. 2025, 02:45:00 AM GMT+0800","Event Time":"26 Aug. 2025, 02:44:50 AM GMT+0800","Source":"SRC-USER-009","Policies":"General","Destination":"night.ops@example.com","File Name":"night_export.csv","Details":"late run","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100011","Incident Time":"25 Aug. 2025, 09:01:00 AM GMT+0800","Event Time":"25 Aug. 2025, 09:00:57 AM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"a@partner.com","File Name":"fileA.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100012","Incident Time":"25 Aug. 2025, 11:10:00 AM GMT+0800","Event Time":"25 Aug. 2025, 11:09:55 AM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"b@partner.com","File Name":"fileB.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100013","Incident Time":"25 Aug. 2025, 01:20:00 PM GMT+0800","Event Time":"25 Aug. 2025, 01:19:52 PM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"c@partner.com","File Name":"fileC.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100014","Incident Time":"25 Aug. 2025, 03:35:00 PM GMT+0800","Event Time":"25 Aug. 2025, 03:34:57 PM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"d@partner.com","File Name":"fileD.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100015","Incident Time":"25 Aug. 2025, 04:50:00 PM GMT+0800","Event Time":"25 Aug. 2025, 04:49:58 PM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"e@partner.com","File Name":"fileE.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100016","Incident Time":"25 Aug. 2025, 05:59:00 PM GMT+0800","Event Time":"25 Aug. 2025, 05:58:53 PM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"f@partner.com","File Name":"fileF.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100017","Incident Time":"26 Aug. 2025, 09:05:00 AM GMT+0800","Event Time":"26 Aug. 2025, 09:04:58 AM GMT+0800","Source":"SRC-REP-001","Policies":"General","Destination":"g@partner.com","File Name":"fileG.pdf","Details":"daily send","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100018","Incident Time":"26 Aug. 2025, 10:15:00 AM GMT+0800","Event Time":"26 Aug. 2025, 10:14:52 AM GMT+0800","Source":"SRC-USER-010","Policies":"General","Destination":"external.freelancer@gmail.com","File Name":"draft 1.docx; draft 2.docx; draft 3.docx; image.png","Details":"confidential draft series","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Medium"},
+    {"ID":"70100019","Incident Time":"26 Aug. 2025, 12:10:00 AM GMT+0800","Event Time":"26 Aug. 2025, 12:09:50 AM GMT+0800","Source":"SRC-USER-011","Policies":"General","Destination":"ops@example.net","File Name":"readme; changelog","Details":"ok","Status":"New","Channel":"Network email","Action":"Permitted","Severity":"Low"},
+    {"ID":"70100020","Incident Time":"26 Aug. 2025, 10:01:00 AM GMT+0800","Event Time":"26 Aug. 2025, 10:00:48 AM GMT+0800","Source":"SRC-USER-012","Policies":"Number Pattern","Destination":"eve@example.net","File Name":"blocked.csv","Details":"blocked test","Status":"New","Channel":"Network email","Action":"Block","Severity":"High"}
+  ];
+  ingest(demo);
+});
+
+
+/* =============================
+   Small inline SVGs
+============================= */
+function svgFilter(){
+  return '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2l-7 8v5l-4 1v-6L3 6z"/></svg>';
+}
+
+// Delegasi: semua klik pada .copy-id
+document.addEventListener('click', e=>{
+  const a = e.target.closest('.copy-id');
+  if(a){
+    e.preventDefault();
+    const id = a.dataset.id;
+    if(id){
+      navigator.clipboard.writeText(id).then(()=>{
+        console.log(`Incident ID ${id} copied`);
+      });
+    }
+  }
+});
+
+// Delegasi: semua klik pada .copy-cell
+document.addEventListener('click', e=>{
+  const a = e.target.closest('.copy-cell');
+  if(a){
+    e.preventDefault();
+    const val = a.dataset.value || a.textContent;
+    if(val){
+      navigator.clipboard.writeText(val).then(()=>{
+        console.log(`Cell "${val}" copied`);
+      });
+    }
+  }
+});
+
+/* =======================================================================================
+setCookie: Menyetel cookie dengan max-age dan expires (kompatibel Safari).
+getCookie: Mengambil nilai cookie berdasarkan nama.
+setSecret: Menyimpan nilai ke cookie dan localStorage sebagai fallback.
+getSecret: Mengambil nilai dari cookie atau localStorage sebagai fallback.
+safeKey: Menghasilkan kunci aman untuk id DOM.
+parseIncidentTime: Mem-parse waktu insiden Forcepoint ke objek Date.
+formatDateShort: Memformat objek Date menjadi yyyy-mm-dd.
+sanitizeForPlain: Menormalkan teks menjadi satu baris aman (tanpa newline/tab).
+escapeHtml: Meng-escape karakter khusus HTML.
+sanitizeForTSV: Menormalkan nilai untuk TSV (hapus tab/newline).
+getRowCells: Menghasilkan pasangan [key,value] untuk satu baris data.
+buildRowClipboardHTML: Membuat HTML tabel untuk clipboard (Excel/Office).
+buildRowClipboardTSV: Membuat TSV vertikal (key<TAB>value) untuk clipboard.
+copyRowToClipboard: Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback).
+txt: Mengonversi nilai ke string sederhana.
+stripGMT: Menghapus bagian " GMT..." dari waktu.
+justDate: Mengambil bagian tanggal saja dari "date, time".
+timeCellHTML: Menghasilkan HTML sel waktu dengan tooltip dan data-id.
+clip: Memotong string ke panjang maksimum dengan elipsis.
+timeCellPlainText: Membuat tooltip teks sederhana untuk informasi waktu.
+freqMap: Menghasilkan peta frekuensi nilai dari array objek pada key tertentu.
+ensureCols: Memastikan semua kolom penting tersedia pada satu baris data.
+sanitizeHeaders: Menormalkan header objek (trim nama key).
+normalizeSpaces: Menormalkan spasi/whitespace umum pada string.
+smartSplit: Memecah daftar pada titik koma secara cerdas (abaikan dalam () atau []).
+stripSizeSuffix: Menghapus akhiran ukuran file dari token.
+hasExtension: Mengecek apakah token memiliki ekstensi file.
+coreName: Mengambil nama inti (tanpa ekstensi).
+shouldIgnoreCore: Menentukan apakah nama inti sebaiknya diabaikan (prefix noise umum).
+shouldIgnoreToken: Menentukan apakah token nama file harus diabaikan (noise).
+normalizeFileList: Menormalkan daftar nama file: split, bersihkan, filter noise, dedup, gabungkan.
+getBaseDomain: Mengambil base domain dari input email atau host, memperhitungkan public suffix umum.
+splitDestParts: Memecah string destinasi menjadi array token bersih (pisah ; dan ,).
+isEmailLike: Memeriksa apakah string menyerupai alamat email sederhana.
+deepFreeze: Membekukan objek (hingga kedalaman tertentu) untuk mencegah modifikasi.
+secureCompilePredicate: Mengompilasi kode pengguna menjadi predicate aman dengan sandbox dan whitelist API.
+ingest: Mengonversi dan menambahkan baris data ke state, lalu memperbarui tab dan rentang insiden.
+buildTabs: Membangun definisi tab berdasarkan dataset (overview, custom, block, per channel, dan tab tersimpan).
+renderTabs: Merender tombol tab dan menghubungkan handler klik, lalu merender tab aktif dan ikon filter.
+getTabState: Mengembalikan/menginisialisasi state per tab (filter, pagination, sorting).
+renderActiveTab: Merender konten untuk tab aktif dan menyinkronkan ikon filter.
+runChatbot: Memanggil API OpenAI untuk menghasilkan predicate JavaScript dari prompt pengguna.
+computeRuleMatchesChunked: Menjalankan predicate per baris secara bertahap (chunked) untuk menjaga UI tetap responsif.
+bindCardsClickOnce: Mengikat handler klik sekali pada kartu metrik/rule untuk membuka tab ad-hoc.
+computeDatasetHash: Membuat hash ringan dataset untuk caching hasil rule.
+loadRuleCache: Memuat cache hasil rule dari sessionStorage.
+saveRuleCache: Menyimpan cache hasil rule ke sessionStorage (dengan fallback pembersihan).
+clearRuleCaches: Menghapus semua entri cache rule di sessionStorage.
+getRowId: Menghasilkan ID komposit stabil untuk sebuah baris (menghindari tabrakan multi-file).
+indexRowsById: Membangun indeks Map dari ID baris ke indeks array.
+renderOverview: Merender tampilan Overview: kartu metrik, tabel agregasi, dan chart volume harian.
+extractFirstEmail: Mengambil email valid pertama dari string.
+extractLocal: Mengambil dan menormalkan local-part email.
+commonPrefixLen: Menghitung panjang prefix yang sama di dua string.
+levenshtein: Menghitung jarak Levenshtein dengan early-exit threshold.
+jaroWinkler: Menghitung skor kemiripan Jaro-Winkler.
+isSelfLike: Menilai keserupaan local-part pengirim dan penerima (self-like).
+ruleSelfToSelf: Rule: true jika ada penerima yang mirip dengan pengirim.
+ruleRecipientFreeMail: Rule: true jika domain penerima termasuk free mail.
+ruleShortOrEmptySubject: Rule: true jika subject email kosong atau di bawah minimal pada channel email.
+ruleAttachmentNoExtension: Rule: true jika ada lampiran tanpa ekstensi.
+filenameCoreStrict: Ekstraksi core nama file yang dinormalisasi untuk deteksi urutan.
+fileCoresFromCell: Menurunkan daftar core nama file unik dari sel.
+extractStemTail: Mengambil stem dan angka ekor (tail) di akhir nama file.
+buildSequentialIndex: Membangun indeks stem→set tail numerik per sumber.
+getHotStemsBySource: Mengambil stem panas (tail unik ≥ threshold) per sumber.
+ruleSequentialAttachments: Rule: true jika baris punya attachment dengan stem hot sumbernya.
+ruleSensitiveKeywords: Rule: true jika ada keyword sensitif di subject, file name, atau policies.
+buildSenderDomainCounts: Menghitung frekuensi domain tujuan per pengirim.
+ruleRepeatedDomainBySender: Rule: true jika pengirim berulang ke domain yang sama > threshold.
+ruleWeirdTLD: Rule: true jika domain tujuan bertld tidak umum (xyz/top/icu).
+ruleOutOfHours: Rule: true jika insiden terjadi antara 00:00–04:59.
+makeSimpleTableEl: Membuat elemen tabel sederhana berdasarkan header dan rows (non-clickable).
+makeClickableTable: Membuat section tabel yang isinya dapat diklik untuk membuka filter drill-down.
+aggregateDomains: Mengagregasi jumlah baris per domain tujuan unik (berdasarkan base domain).
+aggregateByDay: Mengagregasi jumlah alert per hari (berdasarkan Incident Time, ISO yyyy-mm-dd).
+makeLineChart: Menggambar line chart responsif (SVG) dengan sumbu, grid, dan tooltip interaktif.
+renderTableSection: Merender section tabel untuk sebuah tab lengkap dengan pager, export, copy, dan page size.
+renderCustomTab: Merender tab "Custom JS" beserta UI input API key, chatbot, editor predicate, dan hasil eksekusi.
+renderDataTable: Merender tabel data untuk sebuah tab, termasuk filter, sort, pagination, dan metadata.
+updateFilterIcons: Memperbarui ikon filter pada header tabel sesuai state filter tab.
+openFilterPopover: Membuka popover filter/sort untuk kolom tertentu dan menerapkan aksi pengguna.
+positionPopover: Menentukan posisi absolut popover relatif ke anchor.
+closePopovers: Menutup semua popover filter yang sedang terbuka.
+applyFiltersAndSort: Menerapkan filter dan sorting pada array baris lalu mengembalikan hasilnya.
+updatePager: Memperbarui elemen pager (info halaman dan tombol navigasi) untuk tabel aktif.
+rerenderTabTable: Merender ulang tabel pada section tab tertentu dan menyinkronkan pager.
+rerenderActive: Merender ulang tab aktif (digunakan setelah filter/sort berubah).
+sanitizeFileName: Menormalkan nama file untuk dipakai sebagai nama unduhan yang aman.
+exportCurrentView: Mengekspor tampilan tabel saat ini (halaman aktif) ke CSV.
+copyCurrentView: Menyalin tampilan tabel saat ini (halaman aktif) sebagai TSV ke clipboard.
+applyDrillFilter: Menerapkan filter drill-down pada kumpulan baris untuk kolom/Domain tertentu.
+openFilterTab: Membuka tab drill-down baru berdasarkan kolom dan nilai yang dipilih.
+openAdHocTab: Membuka tab ad-hoc baru berisi kumpulan rows yang diberikan.
+updateIncidentRange: Memperbarui label rentang waktu Incident berdasarkan dataset yang dimuat.
+parseCSV: Mem-parse file CSV menggunakan Papa.parse dan mengembalikan array objek.
+======================================================================================= */
+
+</script>
+</body>
+</html>
