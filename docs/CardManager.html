@@ -719,7 +719,7 @@ function bindOpenMatches() {
   });
 }
 
-/* Opens the results table below for the selected file. (MODIFIED) */
+/* Opens a paginated results table below for the selected file. */
 function openResultTable(fileId) {
   const rec = matchesCache.get(fileId);
   const f = fileById(fileId);
@@ -735,7 +735,15 @@ function openResultTable(fileId) {
     'File Name', 'Details', 'Size', 'Status'
   ];
   const headerHTML = cols.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
-  const bodyHTML = rows
+  let page = 1;
+  let pageSize = 50;
+
+  const renderPage = () => {
+    const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+    page = Math.min(Math.max(1, page), pages);
+    const start = (page - 1) * pageSize;
+    const pageRows = rows.slice(start, start + pageSize);
+    const bodyHTML = pageRows
     .map((rRaw) => {
       const rc = normalizedRowByRaw.get(rRaw);
       const timeText = `ID ${safe(rc.ID)} | Incident ${safe(rc.IncidentTime)} | Event ${safe(rc.EventTime)}`;
@@ -756,11 +764,19 @@ function openResultTable(fileId) {
     })
     .join('');
 
-  wrap.innerHTML = `
+    wrap.innerHTML = `
     <section class="section">
       <header>
         <strong>Results • ${escapeHtml(f.name)}</strong>
-        <div class="right"><span class="muted-sm">${rows.length} matched rows</span></div>
+        <div class="right">
+          <label class="muted-sm">Rows per page
+            <select class="textinput" data-role="page-size">
+              <option value="50"${pageSize === 50 ? ' selected' : ''}>50</option>
+              <option value="100"${pageSize === 100 ? ' selected' : ''}>100</option>
+            </select>
+          </label>
+          <span class="muted-sm">${rows.length} matched rows</span>
+        </div>
       </header>
       <div style="overflow:auto">
         <table class="cols-10">
@@ -768,10 +784,17 @@ function openResultTable(fileId) {
           <tbody>${bodyHTML || `<tr><td colspan="${cols.length}" class="muted-sm">No rows matched.</td></tr>`}</tbody>
         </table>
       </div>
+      <div class="pager" data-role="pager">
+        <span class="muted-sm">${rows.length ? start + 1 : 0}–${Math.min(start + pageSize, rows.length)} of ${rows.length} • Page ${page} of ${pages}</span>
+        <button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button>
+        <button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button>
+        <button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button>
+        <button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button>
+      </div>
     </section>`;
 
   // (ADDED) Event listener that handles copy-button clicks through event delegation
-  const table = wrap.querySelector('table');
+    const table = wrap.querySelector('table');
   if (table) {
       table.addEventListener('click', (e) => {
           const button = e.target.closest('[data-act="copy-row"]');
@@ -787,7 +810,25 @@ function openResultTable(fileId) {
               console.error('Failed to parse row data for copying:', err);
           }
       });
-  }
+    }
+
+    wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
+      pageSize = Number(event.target.value) || 50;
+      page = 1;
+      renderPage();
+    });
+    wrap.querySelector('[data-role="pager"]').addEventListener('click', (event) => {
+      const action = event.target.closest('[data-page]')?.dataset.page;
+      if (!action) return;
+      if (action === 'first') page = 1;
+      if (action === 'prev') page--;
+      if (action === 'next') page++;
+      if (action === 'last') page = pages;
+      renderPage();
+    });
+  };
+
+  renderPage();
 }
 
 window.addEventListener('keydown', (e) => {

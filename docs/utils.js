@@ -36,7 +36,7 @@ const ICON_COL = '__Copy';
     outofhours: 'Suspicious: email sent outside normal working hours (12AM–5AM)'
   };
 
-  const state = { raw: [], tabs: [], activeTab: null, tabState: new Map() };
+  const state = { raw: [], tabs: [], activeTab: null, tabState: new Map(), datasetFiles: [] };
   let currentFilename = '';
   let openAiApiKey = '';
 
