@@ -72,6 +72,7 @@
 
   const state = { raw: [], tabs: [], activeTab: null, tabState: new Map() };
   let currentFilename = '';
+  let openAiApiKey = '';
 
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
@@ -90,18 +91,37 @@
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-  // Stores a value in a cookie with localStorage as a fallback
+  // Stores a value in a cookie and an expiring localStorage fallback.
   function setSecret(name, value, days = 7) {
-    try { setCookie(name, value, days); } catch (_) {}
-    try { localStorage.setItem(name, value); } catch (_) {}
+    const retentionDays = Math.min(90, Math.max(1, Math.floor(Number(days) || 7)));
+    const expiresAt = Date.now() + retentionDays * 24 * 60 * 60 * 1000;
+    try { setCookie(name, value, retentionDays); } catch (_) {}
+    try {
+      localStorage.setItem(name, value);
+      localStorage.setItem(`${name}:expiresAt`, String(expiresAt));
+    } catch (_) {}
   }
 
-  // Gets a value from a cookie or localStorage as a fallback
+  // Gets a value from a cookie or a non-expired localStorage fallback.
   function getSecret(name) {
-    return getCookie(name) ?? (() => {
-      try { return localStorage.getItem(name); } catch (_) { return null; }
-    })();
+    const cookieValue = getCookie(name);
+    if (cookieValue !== null) return cookieValue;
+
+    try {
+      const value = localStorage.getItem(name);
+      const expiresAt = Number(localStorage.getItem(`${name}:expiresAt`));
+      if (!value || !expiresAt || Date.now() >= expiresAt) {
+        localStorage.removeItem(name);
+        localStorage.removeItem(`${name}:expiresAt`);
+        return null;
+      }
+      return value;
+    } catch (_) {
+      return null;
+    }
   }
+
+  openAiApiKey = getSecret('OPENAI_API_KEY') || '';
 
   // Generates a safe key for a DOM ID
   function safeKey(s) {
@@ -622,6 +642,8 @@ function renderActiveTab(){
 
 // Calls the OpenAI API to generate a JavaScript predicate from a user prompt.
 async function runChatbot(prompt){
+  if (!openAiApiKey) throw new Error('An OpenAI API Key has not been saved.');
+
   const preprompt = `
 Write a JavaScript predicate for the “Custom JS” tab.
 The code is executed for each data row and must return a boolean.
@@ -677,7 +699,7 @@ Task instruction:
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer " + OPENAI_API_KEY
+      "Authorization": "Bearer " + openAiApiKey
     },
     body: JSON.stringify({
       model: "gpt-5-mini",
@@ -1527,6 +1549,20 @@ function renderCustomTab(tab){
   apiKeyInput.placeholder = 'Enter your API Key';
   apiKeyInput.autocomplete = 'new-password';
 
+  const retentionLabel = document.createElement('label');
+  retentionLabel.textContent = 'Save for (days) ';
+
+  const retentionInput = document.createElement('input');
+  retentionInput.type = 'number';
+  retentionInput.id = 'apikey-retention-days';
+  retentionInput.className = 'cjs-textinput';
+  retentionInput.min = '1';
+  retentionInput.max = '90';
+  retentionInput.step = '1';
+  retentionInput.value = '90';
+  retentionInput.style.width = '80px';
+  retentionLabel.appendChild(retentionInput);
+
   const saveApiKeyBtn = document.createElement('button');
   saveApiKeyBtn.className = 'btn';
   saveApiKeyBtn.id = 'save-apikey';
@@ -1535,13 +1571,19 @@ function renderCustomTab(tab){
   saveApiKeyBtn.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
     if (!key) { alert('API Key cannot be empty.'); return; }
-    setSecret('OPENAI_API_KEY', key, 90);
-    window.OPENAI_API_KEY = key;
+    const retentionDays = Number(retentionInput.value);
+    if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 90) {
+      alert('Storage duration must be a whole number between 1 and 90 days.');
+      return;
+    }
+    setSecret('OPENAI_API_KEY', key, retentionDays);
+    openAiApiKey = key;
     apiKeyInput.type = 'password';
-    alert('API Key saved.');
+    alert(`API Key saved for ${retentionDays} day${retentionDays === 1 ? '' : 's'}.`);
   });
 
   apiKeyRow.appendChild(apiKeyInput);
+  apiKeyRow.appendChild(retentionLabel);
   apiKeyRow.appendChild(saveApiKeyBtn);
 
   const apiKeySection = chatHeader.querySelector('#apikey-section');
@@ -1549,9 +1591,8 @@ function renderCustomTab(tab){
     apiKeySection.appendChild(apiKeyRow);
   }
 
-  window.OPENAI_API_KEY = getSecret('OPENAI_API_KEY') || '';
-  if (window.OPENAI_API_KEY) {
-    apiKeyInput.value = window.OPENAI_API_KEY;
+  if (openAiApiKey) {
+    apiKeyInput.value = openAiApiKey;
     apiKeyInput.type = 'password';
   }
 
@@ -1671,8 +1712,8 @@ function renderCustomTab(tab){
   }
 
   async function runChatbot(task){
-    const apiKey = window.OPENAI_API_KEY || window.__OPENAI_API_KEY__ || '';
-    if (!apiKey) throw new Error('OPENAI_API_KEY is not available on window.');
+    const apiKey = openAiApiKey;
+    if (!apiKey) throw new Error('An OpenAI API Key has not been saved.');
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
