@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Forcepoint DLP Alerts Analyzer v2.2</title>
-  <!-- Papa Parse for CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="csv-utils.js"></script>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -2170,20 +2170,6 @@ function updateIncidentRange(){
   el.textContent = (currentFilename ? currentFilename + ': ' : '') + `${min} – ${max}`;
 }
 
-// Parses a CSV file with Papa.parse and returns an object array.
-function parseCSV(file){
-  return new Promise((resolve, reject)=>{
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: false,
-      worker: true,
-      complete: res => resolve(res.data),
-      error: reject
-    });
-  });
-}
-
 const fileInput = $('#file');
 fileInput.addEventListener('change', async (e)=>{
   const files = e.target.files;
@@ -2195,7 +2181,7 @@ fileInput.addEventListener('change', async (e)=>{
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
   for (const f of files) {
-    const rows = await parseCSV(f);
+    const rows = await CSVUtils.parseFile(f);
     ingest(rows);
   }
 });
@@ -2213,7 +2199,7 @@ drop.addEventListener('drop', async (e)=>{
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
   for (const f of files) {
-    const rows = await parseCSV(f);
+    const rows = await CSVUtils.parseFile(f);
     ingest(rows);
   }
 });
@@ -2389,7 +2375,6 @@ applyDrillFilter: Applies a drill-down filter to rows for a given column or doma
 openFilterTab: Opens a new drill-down tab based on the selected column and value.
 openAdHocTab: Opens a new ad hoc tab containing the provided rows.
 updateIncidentRange: Updates the incident time-range label from the loaded dataset.
-parseCSV: Parses a CSV file with Papa.parse and returns an object array.
 ======================================================================================= */
 
 </script>

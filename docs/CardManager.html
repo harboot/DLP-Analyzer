@@ -5,6 +5,9 @@
 <title>JS Snippet Manager</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="csv-utils.js"></script>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -271,135 +274,7 @@ function getRowCell(fileId, cls) {
 
 /* Reads one CSV File and returns rows as an object array. */
 function parseCSVFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Failed to read CSV.'));
-    reader.onload = () => {
-      try {
-        let text = String(reader.result || '');
-        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-        resolve(parseCSV(text));
-      } catch (e) {
-        reject(e);
-      }
-    };
-    reader.readAsText(file);
-  });
-}
-
-/* Parses CSV text into an object array (automatically detects the delimiter). */
-/* Parses CSV text into an object array (automatically detects the delimiter). */
-/* Parses CSV text into an object array (automatically detects the delimiter). */
-function parseCSV(text) {
-  const s = text.replace(/\r\n?/g, '\n');
-
-  // --- NEW LOGIC START: Combine split lines (multiline fields) ---
-  const physicalLines = s.split('\n');
-  const logicalLines = [];
-  let currentLineBuffer = '';
-
-  for (const line of physicalLines) {
-    // Add the current physical line to the buffer, plus the newline removed by .split()
-    // if the buffer already contained data.
-    if (currentLineBuffer) {
-        currentLineBuffer += '\n';
-    }
-    currentLineBuffer += line;
-
-    // Count unescaped quotes (") (excluding "") in the buffer
-    const quoteCount = (currentLineBuffer.match(/(?<!")"(?!")/g) || []).length;
-
-    // An even quote count means that all opening quotes have been closed.
-    // This logical line is complete.
-    if (quoteCount % 2 === 0) {
-      logicalLines.push(currentLineBuffer);
-      currentLineBuffer = ''; // Reset the buffer for the next logical line
-    }
-  }
-
-  // If data remains in the buffer after the loop (for example, the file ends inside a quoted field),
-  // append it as the final line.
-  if (currentLineBuffer) {
-    logicalLines.push(currentLineBuffer);
-  }
-  // --- NEW LOGIC END ---
-
-  // Continue processing with the corrected 'logicalLines'
-  const finalLines = logicalLines;
-  while (finalLines.length && !finalLines[0].trim()) finalLines.shift();
-  while (finalLines.length && !finalLines[finalLines.length - 1].trim()) finalLines.pop();
-  if (!finalLines.length) return [];
-
-  const delim = detectDelimiter(finalLines);
-  const headers = splitCSVLine(finalLines[0], delim);
-  const rows = [];
-
-  for (let r = 1; r < finalLines.length; r++) {
-    let line = finalLines[r];
-    if (!line.trim()) continue;
-
-    // Keep the existing trailing-comma patch
-    if (line.endsWith(delim)) {
-      line = line.slice(0, -1);
-    }
-
-    const cells = splitCSVLine(line, delim);
-    if (cells.every((x) => !String(x || '').trim())) continue;
-
-    const obj = {};
-    headers.forEach((h, idx) => (obj[h] = cells[idx] !== undefined ? cells[idx] : ''));
-    rows.push(obj);
-  }
-
-  return rows;
-}
-
-/* Detects the best CSV delimiter from sample rows (comma, semicolon, or tab). */
-function detectDelimiter(lines) {
-  const CAND = [',', ';', '\t'];
-  const sample = lines.slice(0, Math.min(25, lines.length));
-  let best = ',';
-  let bestScore = -Infinity;
-  for (const d of CAND) {
-    const headerCells = splitCSVLine(sample[0] || '', d);
-    const target = headerCells.length;
-    let consistent = 0;
-    for (let i = 0; i < sample.length; i++) {
-      const n = splitCSVLine(sample[i], d).length;
-      if (n === target) consistent++;
-    }
-    const score = (target > 1 ? 1000 : 0) + consistent * 10 + target;
-    if (score > bestScore) {
-      bestScore = score;
-      best = d;
-    }
-  }
-  return best;
-}
-
-/* Splits one CSV row into cells while respecting quotes. */
-function splitCSVLine(line, delim) {
-  const out = [];
-  let cur = '';
-  let inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQ && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else {
-        inQ = !inQ;
-      }
-    } else if (c === delim && !inQ) {
-      out.push(cur);
-      cur = '';
-    } else {
-      cur += c;
-    }
-  }
-  out.push(cur);
-  return out;
+  return CSVUtils.parseFile(file);
 }
 
 /* Compiles a JS predicate safely (restricts dangerous global access). */
@@ -946,10 +821,6 @@ fileById: Finds a file by ID, or returns null when none exists
 applyFilter: Applies text search to filenames and file contents.
 getRowCell: Gets the cell in a given file row for a specified class.
 parseCSVFile: Reads one CSV File and returns rows as an object array.
-parseCSV: Parses CSV text into an object array (automatically detects the delimiter).
-detectDelimiter: Detects the best CSV delimiter from sample rows (comma, semicolon, or tab).
-countDelimOutsideQuotes: Counts delimiters outside quotes in one row.
-splitCSVLine: Splits one CSV row into cells while respecting quotes.
 secureCompilePredicate: Compiles a JS predicate safely (restricts dangerous global access).
 normalizeFileList: Normalizes a filename list into a '; '-separated format.
 ensureCamelRow: Converts a row into a consistent camelCase version for processing.
