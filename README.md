@@ -16,6 +16,8 @@ Export labels can vary between Forcepoint versions and configured report templat
 
 ## Open the application
 
+To try Alert Analyzer immediately, open the [hosted GitHub Pages version](https://harboot.github.io/DLP-Analyzer/DLP_Tools.html#AlertAnalyzer).
+
 Open `docs/DLP_Tools.html` directly in a web browser. No web server, installation, or build step is required.
 
 `DLP_Tools.html` is the main page and provides navigation to every tool. Individual HTML files in `docs/` can also be opened directly when you only need a specific tool.

@@ -9,6 +9,23 @@ function ingest(rows){
     row.EventTime    = row['Event Time'];
     row.FileName     = row['File Name'];
     row.Size         = row['Transaction Size (KB)'];
+
+    // Values shared by summaries and rules are derived once during ingestion.
+    // Keeping them on the row also means the worker receives them through the
+    // structured clone instead of repeatedly parsing the original CSV cells.
+    const incidentDate = parseIncidentTime(row['Incident Time']);
+    row.sourceLower = txt(row['Source']).trim().toLowerCase();
+    row.destinationDomains = Array.from(new Set(
+      splitDestParts(row['Destination']).map(getBaseDomain).filter(Boolean)
+    ));
+    row.fileTokens = txt(row['File Name'])
+      .split(/[;,\n]/)
+      .map(token => token.trim())
+      .filter(Boolean);
+    row.incidentDate = incidentDate;
+    row.incidentHour = incidentDate ? incidentDate.getHours() : null;
+    row.actionLower = txt(row['Action']).toLowerCase();
+    row.channelLower = txt(row['Channel']).toLowerCase();
     return row;
   });
 
@@ -24,7 +41,7 @@ function buildTabs(){
   const all = state.raw;
 
   const isBlocked = r => {
-    const a = txt(r['Action']).toLowerCase();
+    const a = r.actionLower;
     return a.includes('block') || a.includes('quarantine');
   };
 
@@ -131,5 +148,4 @@ document.getElementById('demoBtn').addEventListener('click', ()=>{
   ];
   ingest(demo);
 });
-
 
