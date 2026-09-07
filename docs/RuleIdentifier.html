@@ -6,6 +6,7 @@
 <title>DLP Alerts ↔ Policies Matcher</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="csv-utils.js"></script>
+  <script src="dlp-utils.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="page-rule-identifier tool-page">
@@ -61,7 +62,7 @@
 
 <script>
 /* ---------------------------- DOM helpers ---------------------------- */
-const $ = s => document.querySelector(s);
+const $ = DLPUtils.query;
 const logEl = $('#log');
 const barEl = $('#bar');
 const chartCanvas = $('#ruleChart');

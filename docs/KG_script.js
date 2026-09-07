@@ -1,3 +1,5 @@
+const escapeHtml = DLPUtils.escapeHtml;
+
 // Configuration constants
 const CONFIG = {
     MIN_LEN: 4,
@@ -128,13 +130,6 @@ function showError(message) {
 
 function hideError() {
     errorContainer.style.display = 'none';
-}
-
-// Utility function to escape HTML special characters
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // Parse input text into lines

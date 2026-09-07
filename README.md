@@ -33,8 +33,18 @@ docs/
 ├── KeywordGenerator.html # Keyword generator
 ├── KG_script.js          # Keyword Generator logic
 ├── csv-utils.js          # Shared Papa Parse wrapper (worker-enabled)
+├── dlp-utils.js          # Shared DOM and text/HTML safety helpers
 └── styles.css            # Shared stylesheet for all pages
 ```
+
+## Shared browser utilities
+
+Pages should load `dlp-utils.js` before their page-specific script and reuse the
+frozen `DLPUtils` namespace instead of defining equivalent helpers again. The
+namespace currently provides `query`, `queryAll`, `toText`, `escapeHtml`, and
+`sanitizeForTSV`. Keeping these small, general-purpose helpers shared ensures
+that selectors and output escaping behave consistently across the tools;
+page-specific parsing and rendering logic should remain in each tool's script.
 
 ## Page functions
 

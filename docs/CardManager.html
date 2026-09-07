@@ -7,6 +7,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="csv-utils.js"></script>
+  <script src="dlp-utils.js"></script>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -99,25 +100,19 @@
 const LS_KEY = 'jsSnippetItems:v3';
 
 /* Selects the first element matching a selector. */
-const $ = (s) => document.querySelector(s);
+const $ = DLPUtils.query;
 
 /* Returns an array of all elements matching a selector. */
-const $$ = (s) => Array.from(document.querySelectorAll(s));
+const $$ = DLPUtils.queryAll;
 
 /* Creates a short random ID for a file item. */
 const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
 
 /* Converts special characters to safe HTML entities. */
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (m) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
-  );
-}
+const escapeHtml = DLPUtils.escapeHtml;
 
 /* Converts a value to a display-safe string. */
-function safe(v) {
-  return v == null ? '' : String(v);
-}
+const safe = DLPUtils.toText;
 
 
 /* =================================================================== */
@@ -130,9 +125,7 @@ function getRowCells(row) {
 }
 
 // Sanitizes a string for TSV (Tab-Separated Values)
-function sanitizeForTSV(v) {
-  return String(v ?? '').replace(/\t/g, ' ').replace(/[\r\n]/g, ' ');
-}
+const sanitizeForTSV = DLPUtils.sanitizeForTSV;
 
 // Builds an HTML table for the clipboard (Excel/Office)
 function buildRowClipboardHTML(row) {
