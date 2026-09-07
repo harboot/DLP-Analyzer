@@ -238,20 +238,20 @@ body.tool-page :focus-visible {
 	  width: 84%;
 	  white-space: nowrap;
 	  overflow: hidden;
-	  text-overflow: ellipsis; /* hanya kolom name yang pakai ellipsis */
+	  text-overflow: ellipsis; /* only the name column uses an ellipsis */
 	}
 
 	#tbl th.matches,
 	#tbl td.matches {
 	  width: 10%;
-	  text-align: right; /* tanpa ellipsis */
+	  text-align: right; /* without an ellipsis */
 	}
 
 	#tbl th.actions,
 	#tbl td.actions {
 	  width: 6%;
 	  min-width: 50px;
-	  text-align: right; /* tanpa ellipsis */
+	  text-align: right; /* without an ellipsis */
 	}
 
     .name{font-weight:600}
