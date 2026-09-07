@@ -713,6 +713,20 @@ async function computeRuleMatchesChunked(rows, predicate, onProgress, CHUNK_SIZE
   return matches;
 }
 
+// Executes built-in rules or user predicates without blocking rendering/input.
+function runAnalyzerWorker(type, rows, options = {}, onProgress){
+  return new Promise((resolve, reject) => {
+    const worker = new Worker('AlertAnalyzer.worker.js');
+    worker.onmessage = ({data}) => {
+      if (data.type === 'progress' && onProgress) onProgress(data.processed, data.total);
+      else if (data.type === 'complete') { worker.terminate(); resolve(data.result); }
+      else if (data.type === 'error') { worker.terminate(); reject(new Error(data.message)); }
+    };
+    worker.onerror = error => { worker.terminate(); reject(error); };
+    worker.postMessage({ type, rows, ...options });
+  });
+}
+
 // Binds click handlers once to metric/rule cards to open ad hoc tabs.
 function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
   if (cards.__boundClick) return;
@@ -943,23 +957,26 @@ function renderOverview(rows){
     }
 
     const idsByRule = {};
+    let indicesByRule;
+    try {
+      indicesByRule = await runAnalyzerWorker('rules', rows, {}, processed => {
+        for (const def of ruleDefs) {
+          const span = cards.querySelector(`a.metric[data-rule="${def.key}"] .temp-count`);
+          if (span) span.textContent = `${processed}/${rows.length}`;
+        }
+      });
+    } catch (error) {
+      console.error('Rule worker failed:', error);
+      indicesByRule = null;
+    }
     for (const def of ruleDefs) {
       const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
       if (!a) continue;
 
-      const ids = [];
-      const matches = await computeRuleMatchesChunked(
-        rows,
-        (r) => {
-          const ok = def.fn(r);
-          if (ok) ids.push(getRowId(r));
-          return ok;
-        },
-        (countSoFar) => {
-          const span = a.querySelector('.temp-count');
-          if (span) span.textContent = countSoFar;
-        }
-      );
+      const matches = indicesByRule
+        ? (indicesByRule[def.key] || []).map(index => rows[index])
+        : await computeRuleMatchesChunked(rows, def.fn);
+      const ids = matches.map(getRowId);
 
       idsByRule[def.key] = ids;
       a.__matches = matches;
@@ -1622,55 +1639,19 @@ function renderCustomTab(tab){
       return;
     }
 
-    let pred;
-    try {
-      pred = secureCompilePredicate(code, true);
-      const testRows = (tab.rows && tab.rows.length) ? tab.rows : state.raw;
-      if (testRows.length) {
-        const tRow  = deepFreeze({...testRows[0]});
-        const tRows = deepFreeze(testRows.map(r => Object.freeze({...r})));
-        const SAFE = {
-          Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
-          isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI, encodeURIComponent, decodeURIComponent
-        };
-        const v = pred(tRow, tRows, 0, SAFE);
-        if (typeof v !== 'boolean') throw new Error('Predicate must return boolean.');
-      }
-    } catch (e) {
-      statusEl.textContent = 'Compile error: ' + (e && e.message ? e.message : String(e));
-      return;
-    }
-
     const allRows = tab.rows || state.raw;
-    const BATCH = 800;
-    const out = [];
     const t0 = performance.now();
     statusEl.textContent = `Running... 0 / ${allRows.length}`;
-
-    const SAFE = {
-      Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
-      isFinite, isNaN, parseInt, parseFloat, encodeURI, decodeURI, encodeURIComponent, decodeURIComponent
-    };
-    const frozenRows = deepFreeze(allRows.map(r => Object.freeze({...r})));
-
+    let matchedIndices;
     try {
-      for (let start = 0; start < allRows.length; start += BATCH) {
-        const end = Math.min(start + BATCH, allRows.length);
-        for (let i = start; i < end; i++) {
-          const rowClone = deepFreeze({ ...allRows[i] });
-          let ok = false;
-          try {
-            ok = !!pred(rowClone, frozenRows, i, SAFE);
-          } catch (_) { ok = false; }
-          if (ok) out.push(allRows[i]);
-        }
-        statusEl.textContent = `Running... ${end} / ${allRows.length}`;
-        await new Promise(r => setTimeout(r, 0));
-      }
+      matchedIndices = await runAnalyzerWorker('custom', allRows, {code}, processed => {
+        statusEl.textContent = `Running... ${processed} / ${allRows.length}`;
+      });
     } catch (e) {
-      statusEl.textContent = 'Runtime error: ' + (e && e.message ? e.message : String(e));
+      statusEl.textContent = 'Worker error: ' + (e && e.message ? e.message : String(e));
       return;
     }
+    const out = matchedIndices.map(index => allRows[index]);
 
     const dt = Math.round(performance.now() - t0);
     statusEl.textContent = `Done. Matched ${out.length} / ${allRows.length} rows in ${dt} ms`;
@@ -2155,6 +2136,7 @@ function parseCSV(file){
       header: true,
       skipEmptyLines: true,
       dynamicTyping: false,
+      worker: true,
       complete: res => resolve(res.data),
       error: reject
     });
