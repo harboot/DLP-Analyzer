@@ -94,9 +94,23 @@ function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
   });
 }
 
-// Creates a lightweight dataset hash for caching rule results.
-function computeDatasetHash(rows){
-  const keysrc = rows.slice(0, 50).map(r => `${txt(r['ID'])}|${txt(r['Incident Time'])}`).join('||');
+// Creates a dataset fingerprint from file metadata and rows sampled across the dataset.
+function computeDatasetHash(rows, files = state.datasetFiles){
+  const metadata = (files || [])
+    .map(file => `${file.name || ''}|${file.size || 0}|${file.lastModified || 0}`)
+    .sort()
+    .join('||');
+  const sampleCount = Math.min(100, rows.length);
+  const sampledRows = [];
+  for (let i = 0; i < sampleCount; i++) {
+    const index = sampleCount === 1 ? 0 : Math.floor(i * (rows.length - 1) / (sampleCount - 1));
+    const row = rows[index];
+    sampledRows.push([
+      index, txt(row['ID']), txt(row['Incident Time']), txt(row['Event Time']),
+      txt(row['Source']), txt(row['Destination']), txt(row['File Name'])
+    ].join('|'));
+  }
+  const keysrc = `${metadata}##${sampledRows.join('||')}`;
   let h = 5381;
   for (let i = 0; i < keysrc.length; i++) h = ((h << 5) + h) ^ keysrc.charCodeAt(i);
   h = (h >>> 0).toString(36);

@@ -82,6 +82,11 @@ fileInput.addEventListener('change', async (e)=>{
   if (!files || files.length === 0) return;
   clearRuleCaches();
   state.raw = [];
+  state.datasetFiles = Array.from(files, file => ({
+    name: file.name,
+    size: file.size,
+    lastModified: file.lastModified
+  }));
   state.tabs = [];
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
@@ -100,6 +105,11 @@ drop.addEventListener('drop', async (e)=>{
   if (!files || files.length === 0) return;
   clearRuleCaches();
   state.raw = [];
+  state.datasetFiles = Array.from(files, file => ({
+    name: file.name,
+    size: file.size,
+    lastModified: file.lastModified
+  }));
   state.tabs = [];
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
@@ -113,6 +123,7 @@ drop.addEventListener('drop', async (e)=>{
 document.getElementById('demoBtn').addEventListener('click', ()=>{
   clearRuleCaches();
   state.raw = [];
+  state.datasetFiles = [{ name: 'Sample data', size: 0, lastModified: 0 }];
   state.tabs = [];
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
@@ -148,4 +159,3 @@ document.getElementById('demoBtn').addEventListener('click', ()=>{
   ];
   ingest(demo);
 });
-
