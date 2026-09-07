@@ -455,8 +455,8 @@ function ensureCamelRow(r) {
 }
 
 /* Evaluates a predicate in batches to keep the UI responsive; returns matching rows. */
-async function computeMatches(rawRows, predicate, { chunk = 800, onProgress } = {}) {
-  const rows = rawRows.map(ensureCamelRow);
+async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800, onProgress } = {}) {
+  const rows = normalizedRows;
   const out = [];
   for (let start = 0; start < rows.length; start += chunk) {
     const end = Math.min(rows.length, start + chunk);
@@ -704,6 +704,8 @@ const csvNameEl = $('#csvName');
 if (csvInput) csvInput.style.display = 'none';
 
 let lastCSVRows = null;
+let normalizedCSVRows = null;
+let normalizedRowByRaw = new WeakMap();
 const matchesCache = new Map();
 
 btnUpload.addEventListener('click', () => {
@@ -727,6 +729,14 @@ csvInput.addEventListener('change', async (e) => {
       totalRows += rows.length;
     }
     lastCSVRows = merged;
+    // Normalization is intentionally done once per upload. Every snippet reuses
+    // this array instead of rebuilding the same row objects for every run.
+    normalizedRowByRaw = new WeakMap();
+    normalizedCSVRows = merged.map((row) => {
+      const normalized = ensureCamelRow(row);
+      normalizedRowByRaw.set(row, normalized);
+      return normalized;
+    });
     const names = files.map((f) => f.name).join(', ');
     csvNameEl.textContent = `${names} (${totalRows} rows total)`;
     matchesCache.clear();
@@ -802,7 +812,7 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
     return;
   }
   const badge = cell && cell.querySelector('.badge');
-  const matches = await computeMatches(lastCSVRows, predicate, {
+  const matches = await computeMatches(lastCSVRows, normalizedCSVRows, predicate, {
     chunk: 800,
     onProgress: (count) => {
       if (badge) badge.textContent = String(count);
@@ -859,7 +869,7 @@ function openResultTable(fileId) {
   const headerHTML = cols.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
   const bodyHTML = rows
     .map((rRaw) => {
-      const rc = ensureCamelRow(rRaw);
+      const rc = normalizedRowByRaw.get(rRaw);
       const timeText = `ID ${safe(rc.ID)} | Incident ${safe(rc.IncidentTime)} | Event ${safe(rc.EventTime)}`;
       // Add `data-row-json` to <tr> to store raw data
       // Add a <td> with a copy button
