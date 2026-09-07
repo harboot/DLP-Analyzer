@@ -95,43 +95,43 @@
 
 const LS_KEY = 'jsSnippetItems:v3';
 
-/* Memilih elemen pertama yang cocok dengan selector. */
+/* Selects the first element matching a selector. */
 const $ = (s) => document.querySelector(s);
 
-/* Menghasilkan array dari semua elemen yang cocok dengan selector. */
+/* Returns an array of all elements matching a selector. */
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-/* Membuat ID acak pendek untuk item file. */
+/* Creates a short random ID for a file item. */
 const uid = () => 'id_' + Math.random().toString(36).slice(2, 10);
 
-/* Mengonversi karakter khusus menjadi entitas HTML aman. */
+/* Converts special characters to safe HTML entities. */
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (m) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
   );
 }
 
-/* Mengubah nilai menjadi string aman untuk ditampilkan. */
+/* Converts a value to a display-safe string. */
 function safe(v) {
   return v == null ? '' : String(v);
 }
 
 
 /* =================================================================== */
-/* == BAGIAN FUNGSI UNTUK COPY KE CLIPBOARD (DITAMBAHKAN/DIMODIFIKASI) == */
+/* == CLIPBOARD COPY FUNCTIONS (ADDED/MODIFIED) == */
 /* =================================================================== */
 
-// Mengambil sel dari objek baris dan mengubahnya menjadi array [key, value]
+// Gets cells from a row object and converts them to a [key, value] array
 function getRowCells(row) {
   return Object.entries(row).map(([k, v]) => [String(k), String(v ?? '')]);
 }
 
-// Membersihkan string untuk format TSV (Tab-Separated Values)
+// Sanitizes a string for TSV (Tab-Separated Values)
 function sanitizeForTSV(v) {
   return String(v ?? '').replace(/\t/g, ' ').replace(/[\r\n]/g, ' ');
 }
 
-// Membuat HTML tabel untuk clipboard (Excel/Office)
+// Builds an HTML table for the clipboard (Excel/Office)
 function buildRowClipboardHTML(row) {
   const cells = getRowCells(row);
   const head = `
@@ -144,14 +144,14 @@ function buildRowClipboardHTML(row) {
   return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
 }
 
-// Membuat TSV vertikal (key<TAB>value) untuk clipboard
+// Builds vertical TSV (key<TAB>value) for the clipboard
 function buildRowClipboardTSV(row) {
   const cells = getRowCells(row);
   const lines = cells.map(([k, v]) => `${sanitizeForTSV(k)}\t${sanitizeForTSV(v)}`);
   return lines.join('\n') + '\n';
 }
 
-// Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback)
+// Copies one row to the clipboard as HTML and TSV (with fallback)
 async function copyRowToClipboard(row, targetButton) {
   const html = buildRowClipboardHTML(row);
   const tsvText = buildRowClipboardTSV(row);
@@ -175,7 +175,7 @@ async function copyRowToClipboard(row, targetButton) {
       document.execCommand('copy');
       ta.remove();
     }
-    // Memberikan feedback visual pada tombol yang di-klik
+    // Provide visual feedback on the clicked button
     if (targetButton) {
         targetButton.textContent = '✅';
         setTimeout(() => { targetButton.textContent = '📋'; }, 1500);
@@ -190,11 +190,11 @@ async function copyRowToClipboard(row, targetButton) {
 }
 
 /* =================================================================== */
-/* ================ AKHIR BAGIAN FUNGSI CLIPBOARD ==================== */
+/* ================ END OF CLIPBOARD FUNCTIONS ==================== */
 /* =================================================================== */
 
 
-/* Memuat daftar item dari localStorage. */
+/* Loads the item list from localStorage. */
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY));
@@ -204,12 +204,12 @@ function load() {
   }
 }
 
-/* Menyimpan daftar item ke localStorage. */
+/* Saves the item list to localStorage. */
 function save(items) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
-/* Memigrasikan data lama (v2) ke format baru jika kunci v3 belum ada. */
+/* Migrates legacy data (v2) to the new format when the v3 key does not exist. */
 (function migrate() {
   try {
     if (localStorage.getItem(LS_KEY)) return;
@@ -227,7 +227,7 @@ if (items.length === 0) {
     id: uid(),
     type: 'file',
     name: 'example.js',
-    code: "// contoh: terima baris dengan Status=New\nreturn (row.Status||'')==='New';",
+    code: "// example: accept rows with Status=New\nreturn (row.Status||'')==='New';",
     enabled: false
   });
   save(items);
@@ -245,17 +245,17 @@ const elCode = $('#inpCode');
 const elMeta = $('#meta');
 const elRunThis = $('#btnRunThis');
 
-/* Mengembalikan semua item bertipe 'file'. */
+/* Returns all items of type 'file'. */
 function files() {
   return items.filter((x) => x.type === 'file');
 }
 
-/* Mencari file berdasarkan ID, atau null jika tidak ada. */
+/* Finds a file by ID, or returns null when none exists. */
 function fileById(id) {
   return items.find((x) => x.type === 'file' && x.id === id) || null;
 }
 
-/* Menerapkan pencarian teks pada nama dan isi kode file. */
+/* Applies text search to filenames and file contents. */
 function applyFilter(list) {
   if (!filter) return list;
   const q = filter.toLowerCase();
@@ -264,12 +264,12 @@ function applyFilter(list) {
   );
 }
 
-/* Mengambil sel pada baris file tertentu untuk kolom kelas tertentu. */
+/* Gets the cell in a given file row for a specified class. */
 function getRowCell(fileId, cls) {
   return elTbody.querySelector(`tr[data-id="${fileId}"] .${cls}`);
 }
 
-/* Membaca satu file CSV (File) lalu mengembalikan rows sebagai array objek. */
+/* Reads one CSV File and returns rows as an object array. */
 function parseCSVFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -287,44 +287,44 @@ function parseCSVFile(file) {
   });
 }
 
-/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
-/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
-/* Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis). */
+/* Parses CSV text into an object array (automatically detects the delimiter). */
+/* Parses CSV text into an object array (automatically detects the delimiter). */
+/* Parses CSV text into an object array (automatically detects the delimiter). */
 function parseCSV(text) {
   const s = text.replace(/\r\n?/g, '\n');
 
-  // --- LOGIKA BARU DIMULAI: Menggabungkan baris yang terpotong (multiline fields) ---
+  // --- NEW LOGIC START: Combine split lines (multiline fields) ---
   const physicalLines = s.split('\n');
   const logicalLines = [];
   let currentLineBuffer = '';
 
   for (const line of physicalLines) {
-    // Tambahkan baris fisik saat ini ke buffer, plus karakter newline yang dihilangkan oleh .split()
-    // jika buffer sudah berisi sesuatu sebelumnya.
+    // Add the current physical line to the buffer, plus the newline removed by .split()
+    // if the buffer already contained data.
     if (currentLineBuffer) {
         currentLineBuffer += '\n';
     }
     currentLineBuffer += line;
 
-    // Hitung jumlah kutipan (") yang tidak di-escape (bukan "") di dalam buffer
+    // Count unescaped quotes (") (excluding "") in the buffer
     const quoteCount = (currentLineBuffer.match(/(?<!")"(?!")/g) || []).length;
 
-    // Jika jumlah kutipan genap, berarti semua kutipan terbuka sudah ditutup.
-    // Baris logis ini dianggap selesai.
+    // An even quote count means that all opening quotes have been closed.
+    // This logical line is complete.
     if (quoteCount % 2 === 0) {
       logicalLines.push(currentLineBuffer);
-      currentLineBuffer = ''; // Reset buffer untuk baris logis berikutnya
+      currentLineBuffer = ''; // Reset the buffer for the next logical line
     }
   }
 
-  // Jika setelah loop selesai masih ada sisa di buffer (misalnya file berakhir di tengah kutipan),
-  // tambahkan sisa tersebut sebagai baris terakhir.
+  // If data remains in the buffer after the loop (for example, the file ends inside a quoted field),
+  // append it as the final line.
   if (currentLineBuffer) {
     logicalLines.push(currentLineBuffer);
   }
-  // --- LOGIKA BARU SELESAI ---
+  // --- NEW LOGIC END ---
 
-  // Proses selanjutnya menggunakan 'logicalLines' yang sudah benar
+  // Continue processing with the corrected 'logicalLines'
   const finalLines = logicalLines;
   while (finalLines.length && !finalLines[0].trim()) finalLines.shift();
   while (finalLines.length && !finalLines[finalLines.length - 1].trim()) finalLines.pop();
@@ -338,7 +338,7 @@ function parseCSV(text) {
     let line = finalLines[r];
     if (!line.trim()) continue;
 
-    // Patch untuk trailing comma dari sebelumnya tetap dipertahankan
+    // Keep the existing trailing-comma patch
     if (line.endsWith(delim)) {
       line = line.slice(0, -1);
     }
@@ -354,7 +354,7 @@ function parseCSV(text) {
   return rows;
 }
 
-/* Mendeteksi delimiter CSV terbaik dari sampel baris (koma, titik-koma, atau tab). */
+/* Detects the best CSV delimiter from sample rows (comma, semicolon, or tab). */
 function detectDelimiter(lines) {
   const CAND = [',', ';', '\t'];
   const sample = lines.slice(0, Math.min(25, lines.length));
@@ -377,7 +377,7 @@ function detectDelimiter(lines) {
   return best;
 }
 
-/* Memecah satu baris CSV menjadi sel-sel dengan menghormati tanda kutip. */
+/* Splits one CSV row into cells while respecting quotes. */
 function splitCSVLine(line, delim) {
   const out = [];
   let cur = '';
@@ -402,7 +402,7 @@ function splitCSVLine(line, delim) {
   return out;
 }
 
-/* Mengompilasi predicate JS secara aman (membatasi akses global berbahaya). */
+/* Compiles a JS predicate safely (restricts dangerous global access). */
 function secureCompilePredicate(code) {
   const PRELUDE = `
     const window=undefined, document=undefined, globalThis=undefined,
@@ -425,7 +425,7 @@ function secureCompilePredicate(code) {
   };
 }
 
-/* Menormalkan daftar nama file menjadi format '; ' terpisah. */
+/* Normalizes a filename list into a '; '-separated format. */
 function normalizeFileList(v) {
   const s = String(v == null ? '' : v);
   if (!s.trim()) return '';
@@ -433,7 +433,7 @@ function normalizeFileList(v) {
   return parts.join('; ');
 }
 
-/* Mengubah satu row menjadi versi camelCase yang konsisten untuk pemrosesan. */
+/* Converts a row into a consistent camelCase version for processing. */
 function ensureCamelRow(r) {
   const IncidentTime = r['Incident Time'] ?? r.IncidentTime ?? '';
   const EventTime = r['Event Time'] ?? r.EventTime ?? '';
@@ -454,7 +454,7 @@ function ensureCamelRow(r) {
   };
 }
 
-/* Mengevaluasi predicate per-batch agar UI tetap responsif; mengembalikan baris yang match. */
+/* Evaluates a predicate in batches to keep the UI responsive; returns matching rows. */
 async function computeMatches(rawRows, predicate, { chunk = 800, onProgress } = {}) {
   const rows = rawRows.map(ensureCamelRow);
   const out = [];
@@ -475,7 +475,7 @@ async function computeMatches(rawRows, predicate, { chunk = 800, onProgress } = 
   return out;
 }
 
-/* Merender daftar file ke tabel kiri dan memasang event handler baris. */
+/* Renders the file list in the left table and attaches row event handlers. */
 function render() {
   const fileList = applyFilter(files()).sort((a, b) => a.name.localeCompare(b.name));
   const rows = [];
@@ -510,7 +510,7 @@ function render() {
   });
 }
 
-/* Membuat file baru kosong dan membukanya di editor. */
+/* Creates a new empty file and opens it in the editor. */
 function newFile() {
   let name = 'untitled.js';
   let i = 1;
@@ -522,7 +522,7 @@ function newFile() {
   openEditor(f.id);
 }
 
-/* Membuka editor untuk file ID tertentu dan mengisi field editor. */
+/* Opens the editor for a given file ID and populates the editor fields. */
 function openEditor(id) {
   const file = fileById(id);
   if (!file) return;
@@ -537,7 +537,7 @@ function openEditor(id) {
   setToggle(!!file.enabled, { persist: false });
 }
 
-/* Menyimpan perubahan pada file yang sedang dibuka. */
+/* Saves changes to the currently open file. */
 function saveCurrent() {
   if (!currentFileId) {
     alert('No file selected.');
@@ -563,7 +563,7 @@ function saveCurrent() {
   elMeta.textContent = 'Saved';
 }
 
-/* Menghapus file berdasarkan ID dengan konfirmasi, lalu merender ulang. */
+/* Deletes a file by ID after confirmation, then rerenders. */
 function deleteFile(id) {
   const file = fileById(id);
   if (!file) return;
@@ -577,7 +577,7 @@ function deleteFile(id) {
   render();
 }
 
-/* Mereset tampilan editor ke keadaan kosong. */
+/* Resets the editor view to an empty state. */
 function clearEditor() {
   elTitle.textContent = 'Editor';
   elName.value = '';
@@ -586,7 +586,7 @@ function clearEditor() {
   elMeta.textContent = '';
 }
 
-/* Mengekspor semua file ke berkas JSON dan mengunduhnya. */
+/* Exports all files to JSON and downloads the result. */
 function exportJSON() {
   const data = JSON.stringify({
     version: 3,
@@ -606,7 +606,7 @@ function exportJSON() {
   URL.revokeObjectURL(a.href);
 }
 
-/* Mengimpor file dari JSON (gabung/replace menurut nama), lalu render. */
+/* Imports files from JSON (merge/replace by name), then renders. */
 function importJSON(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -668,7 +668,7 @@ elCode.addEventListener('input', () => {
 const elToggleSwitch = document.getElementById('toggleSwitch');
 const elToggleLabel = document.getElementById('toggleLabel');
 
-/* Menyetel status toggle ON/OFF dan (opsional) menyimpannya ke item aktif. */
+/* Sets the ON/OFF toggle and optionally saves it to the active item. */
 function setToggle(on, { persist = true } = {}) {
   const val = !!on;
   elToggleSwitch.dataset.on = String(val);
@@ -685,7 +685,7 @@ function setToggle(on, { persist = true } = {}) {
   }
 }
 
-/* Mengembalikan nilai boolean dari status toggle. */
+/* Returns the toggle state as a boolean. */
 function getToggleBoolean() {
   return elToggleSwitch?.dataset.on === 'true';
 }
@@ -784,7 +784,7 @@ if (elRunThis)
     bindOpenMatches();
   });
 
-/* Menjalankan satu file snippet pada dataset CSV, memperbarui UI, dan opsional membuka tabel hasil. */
+/* Runs one snippet file against the CSV dataset, updates the UI, and optionally opens the results table. */
 async function runOneFileInternal(fileId, { updateUI = false, openTable = false } = {}) {
   const f = fileById(fileId);
   if (!f) return;
@@ -825,13 +825,13 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
   }
 }
 
-/* Memasang handler klik untuk membuka hasil match dari setiap file. */
+/* Attaches click handlers that open matching results for each file. */
 function bindOpenMatches() {
   $$('#tbody [data-role="open-matches"]').forEach((a) => {
-    // Hapus listener lama untuk mencegah duplikasi
+    // Remove old listeners to prevent duplicates
     a.replaceWith(a.cloneNode(true));
   });
-  // Pasang listener baru ke elemen yang telah di-clone
+  // Attach new listeners to the cloned elements
   $$('#tbody [data-role="open-matches"]').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
@@ -841,7 +841,7 @@ function bindOpenMatches() {
   });
 }
 
-/* Membuka tabel hasil di area bawah berdasarkan file yang dipilih. (DIMODIFIKASI) */
+/* Opens the results table below for the selected file. (MODIFIED) */
 function openResultTable(fileId) {
   const rec = matchesCache.get(fileId);
   const f = fileById(fileId);
@@ -851,7 +851,7 @@ function openResultTable(fileId) {
     return;
   }
   const rows = rec.rows || [];
-  const cols = [ // Menambahkan kolom kosong untuk ikon salin
+  const cols = [ // Add an empty column for the copy icon
     '',
     'Time', 'Source', 'Policies', 'Channel', 'Destination',
     'File Name', 'Details', 'Size', 'Status'
@@ -861,8 +861,8 @@ function openResultTable(fileId) {
     .map((rRaw) => {
       const rc = ensureCamelRow(rRaw);
       const timeText = `ID ${safe(rc.ID)} | Incident ${safe(rc.IncidentTime)} | Event ${safe(rc.EventTime)}`;
-      // Menambahkan `data-row-json` pada <tr> untuk menyimpan data mentah
-      // Menambahkan <td> dengan tombol salin
+      // Add `data-row-json` to <tr> to store raw data
+      // Add a <td> with a copy button
       return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
         <td><button class="icon-btn" title="Copy row data" data-act="copy-row">📋</button></td>
         <td title="${timeText}">${escapeHtml(timeText)}</td>
@@ -892,7 +892,7 @@ function openResultTable(fileId) {
       </div>
     </section>`;
 
-  // (DITAMBAHKAN) Event listener untuk menangani klik pada tombol salin menggunakan event delegation
+  // (ADDED) Event listener that handles copy-button clicks through event delegation
   const table = wrap.querySelector('table');
   if (table) {
       table.addEventListener('click', (e) => {
@@ -926,40 +926,40 @@ if (firstFile) openEditor(firstFile.id);
 
 
 /* =======================================================================================
-$: Memilih elemen pertama yang cocok dengan selector.
-uid: Membuat ID acak pendek untuk item file.
-load: Memuat daftar item dari localStorage.
-save: Menyimpan daftar item ke localStorage.
-migrate: Memigrasikan data lama (v2) ke format baru jika kunci v3 belum ada.
-files: Mengembalikan semua item bertipe 'file'.
-fileById: Mencari file berdasarkan ID, atau null jika tidak ada
-applyFilter: Menerapkan pencarian teks pada nama dan isi kode file.
-getRowCell: Mengambil sel pada baris file tertentu untuk kolom kelas tertentu.
-parseCSVFile: Membaca satu file CSV (File) lalu mengembalikan rows sebagai array objek.
-parseCSV: Mem-parse isi teks CSV menjadi array objek (mendeteksi delimiter otomatis).
-detectDelimiter: Mendeteksi delimiter CSV terbaik dari sampel baris (koma, titik-koma, atau tab).
-countDelimOutsideQuotes: Menghitung jumlah delimiter di luar tanda kutip pada satu baris.
-splitCSVLine: Memecah satu baris CSV menjadi sel-sel dengan menghormati tanda kutip.
-secureCompilePredicate: Mengompilasi predicate JS secara aman (membatasi akses global berbahaya).
-normalizeFileList: Menormalkan daftar nama file menjadi format '; ' terpisah.
-ensureCamelRow: Mengubah satu row menjadi versi camelCase yang konsisten untuk pemrosesan.
-computeMatches: Mengevaluasi predicate per-batch agar UI tetap responsif; mengembalikan baris yang match.
-render: Merender daftar file ke tabel kiri dan memasang event handler baris.
-newFile: Membuat file baru kosong dan membukanya di editor.
-openEditor: Membuka editor untuk file ID tertentu dan mengisi field editor.
-saveCurrent: Menyimpan perubahan pada file yang sedang dibuka.
-deleteFile: Menghapus file berdasarkan ID dengan konfirmasi, lalu merender ulang.
-clearEditor: Mereset tampilan editor ke keadaan kosong.
-exportJSON: Mengekspor semua file ke berkas JSON dan mengunduhnya.
-importJSON: Mengimpor file dari JSON (gabung/replace menurut nama), lalu render.
-setToggle: Menyetel status toggle ON/OFF dan (opsional) menyimpannya ke item aktif.
-getToggleBoolean: Mengembalikan nilai boolean dari status toggle.
-getToggleName: Mengembalikan string nama status toggle ('ON'|'OFF').
-runOneFileInternal: Menjalankan satu file snippet pada dataset CSV, memperbarui UI, dan opsional membuka tabel hasil.
-bindOpenMatches: Memasang handler klik untuk membuka hasil match dari setiap file.
-openResultTable: Membuka tabel hasil di area bawah berdasarkan file yang dipilih.
-escapeHtml: Mengonversi karakter khusus menjadi entitas HTML aman. (terdefinisi dua kali pada snippet ini)
-safe: Mengubah nilai menjadi string aman untuk ditampilkan. (terdefinisi dua kali pada snippet ini)
+$: Selects the first element matching a selector.
+uid: Creates a short random ID for a file item.
+load: Loads the item list from localStorage.
+save: Saves the item list to localStorage.
+migrate: Migrates legacy data (v2) to the new format when the v3 key does not exist.
+files: Returns all items of type 'file'.
+fileById: Finds a file by ID, or returns null when none exists
+applyFilter: Applies text search to filenames and file contents.
+getRowCell: Gets the cell in a given file row for a specified class.
+parseCSVFile: Reads one CSV File and returns rows as an object array.
+parseCSV: Parses CSV text into an object array (automatically detects the delimiter).
+detectDelimiter: Detects the best CSV delimiter from sample rows (comma, semicolon, or tab).
+countDelimOutsideQuotes: Counts delimiters outside quotes in one row.
+splitCSVLine: Splits one CSV row into cells while respecting quotes.
+secureCompilePredicate: Compiles a JS predicate safely (restricts dangerous global access).
+normalizeFileList: Normalizes a filename list into a '; '-separated format.
+ensureCamelRow: Converts a row into a consistent camelCase version for processing.
+computeMatches: Evaluates a predicate in batches to keep the UI responsive; returns matching rows.
+render: Renders the file list in the left table and attaches row event handlers.
+newFile: Creates a new empty file and opens it in the editor.
+openEditor: Opens the editor for a given file ID and populates the editor fields.
+saveCurrent: Saves changes to the currently open file.
+deleteFile: Deletes a file by ID after confirmation, then rerenders.
+clearEditor: Resets the editor view to an empty state.
+exportJSON: Exports all files to JSON and downloads the result.
+importJSON: Imports files from JSON (merge/replace by name), then renders.
+setToggle: Sets the ON/OFF toggle and optionally saves it to the active item.
+getToggleBoolean: Returns the toggle state as a boolean.
+getToggleName: Returns the toggle-state name ('ON'|'OFF').
+runOneFileInternal: Runs one snippet file against the CSV dataset, updates the UI, and optionally opens the results table.
+bindOpenMatches: Attaches click handlers that open matching results for each file.
+openResultTable: Opens the results table below for the selected file.
+escapeHtml: Converts special characters to safe HTML entities. (defined twice in this snippet)
+safe: Converts a value to a display-safe string. (defined twice in this snippet)
 ======================================================================================= */
 
 </script>

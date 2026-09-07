@@ -531,7 +531,7 @@
 	}, 200);
 
   const INACTIVE_ICON = '🔍';
-  const ACTIVE_ICON   = '🔍✨'; // ganti ke simbol lain kalau mau
+  const ACTIVE_ICON   = '🔍✨'; // replace with another symbol if desired
 
   function updateFilterIcons() {
     document.querySelectorAll('.filter-ico').forEach((ico) => {
@@ -703,7 +703,7 @@ async function copyRowAsRichText(row){
     exc
   ];
 
-  // HTML: tiap pasangan header/value menjadi <tr> sendiri
+  // HTML: each header/value pair becomes its own <tr>
   const htmlRows = headers.map((h, i) => {
     return `<tr>
       <th scope="row" style="border:1px solid #ccc;padding:6px 8px;text-align:left;background:#f7f7f7;width:30%;">${escapeHtml(h)}</th>
@@ -718,7 +718,7 @@ async function copyRowAsRichText(row){
   </tbody>
 </table>`;
 
-  // Text: dua kolom (header \t value) per baris
+  // Text: two columns (header \t value) per row
   const text = headers.map((h,i) => `${h}\t${values[i]}`).join('\n');
 
   try{

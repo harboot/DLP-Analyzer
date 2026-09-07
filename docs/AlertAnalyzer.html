@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -76,34 +76,34 @@
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
 
-  // Menyetel cookie dengan max-age dan expires (kompatibel Safari)
+  // Sets a cookie with max-age and expires (Safari compatible)
   function setCookie(name, value, days = 7) {
     const maxAge = days * 24 * 60 * 60;
     const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
     document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; expires=${expires}; SameSite=Lax`;
   }
 
-  // Mengambil nilai cookie berdasarkan nama
+  // Gets a cookie value by name
   function getCookie(name) {
     const pattern = new RegExp('(?:^|; )' + encodeURIComponent(name) + '=([^;]*)');
     const match = document.cookie.match(pattern);
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-  // Menyimpan nilai ke cookie dan localStorage sebagai fallback
+  // Stores a value in a cookie with localStorage as a fallback
   function setSecret(name, value, days = 7) {
     try { setCookie(name, value, days); } catch (_) {}
     try { localStorage.setItem(name, value); } catch (_) {}
   }
 
-  // Mengambil nilai dari cookie atau localStorage sebagai fallback
+  // Gets a value from a cookie or localStorage as a fallback
   function getSecret(name) {
     return getCookie(name) ?? (() => {
       try { return localStorage.getItem(name); } catch (_) { return null; }
     })();
   }
 
-  // Menghasilkan kunci aman untuk id DOM
+  // Generates a safe key for a DOM ID
   function safeKey(s) {
     try {
       return btoa(unescape(encodeURIComponent(String(s)))).replace(/=+$/, '');
@@ -112,7 +112,7 @@
     }
   }
 
-  // Mem-parse waktu insiden Forcepoint ke objek Date
+  // Parses a Forcepoint incident time into a Date object
   function parseIncidentTime(s) {
     if (!s) return null;
     try {
@@ -125,12 +125,12 @@
     } catch { return null; }
   }
 
-  // Memformat objek Date menjadi yyyy-mm-dd
+  // Formats a Date object as yyyy-mm-dd
   function formatDateShort(d) {
     try { return d.toISOString().slice(0, 10); } catch { return ''; }
   }
 
-  // Menormalkan teks menjadi satu baris aman (tanpa newline/tab)
+  // Normalizes text into a safe single line (without newlines or tabs)
   function sanitizeForPlain(v) {
     return String(v ?? '')
       .replace(/`/g, '\u200B`')
@@ -139,12 +139,12 @@
       .trim();
   }
 
-  // Meng-escape karakter khusus HTML
+  // Escapes special HTML characters
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
-  // Menormalkan nilai untuk TSV (hapus tab/newline)
+  // Normalizes a value for TSV (removes tabs and newlines)
   function sanitizeForTSV(v) {
     return String(v ?? '')
       .replace(/\r?\n/g, ' ')
@@ -153,7 +153,7 @@
       .trim();
   }
 
-  // Menghasilkan pasangan [key,value] untuk satu baris data
+  // Generates [key, value] pairs for one data row
   function getRowCells(row) {
     return [
       ['ID', txt(row['ID'])],
@@ -166,7 +166,7 @@
     ];
   }
 
-  // Membuat HTML tabel untuk clipboard (Excel/Office)
+  // Builds an HTML table for the clipboard (Excel/Office)
   function buildRowClipboardHTML(row) {
     const cells = getRowCells(row);
     const head = `
@@ -179,14 +179,14 @@
     return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
   }
 
-  // Membuat TSV vertikal (key<TAB>value) untuk clipboard
+  // Builds vertical TSV (key<TAB>value) for the clipboard
   function buildRowClipboardTSV(row) {
     const cells = getRowCells(row);
     const lines = cells.map(([k, v]) => `${sanitizeForTSV(k)}\t${sanitizeForTSV(v)}`);
     return lines.join('\n') + '\n';
   }
 
-  // Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback)
+  // Copies one row to the clipboard as HTML and TSV (with fallback)
   async function copyRowToClipboard(row) {
     const html = buildRowClipboardHTML(row);
     const tsvText = buildRowClipboardTSV(row);
@@ -221,23 +221,23 @@
     }
   }
 
-  // Mengonversi nilai ke string sederhana
+  // Converts a value to a plain string
   function txt(v) { return v == null ? '' : String(v); }
 
-  // Menghapus bagian " GMT..." dari waktu
+  // Removes the " GMT..." portion from a time value
   function stripGMT(s) {
     if (!s) return '';
     const t = String(s);
     return t.includes(' GMT') ? t.split(' GMT')[0] : t;
   }
 
-  // Mengambil bagian tanggal saja dari "date, time"
+  // Extracts only the date portion from "date, time"
   function justDate(s) {
     if (!s) return '';
     return s.split(',')[0];
   }
 
-  // Menghasilkan HTML sel waktu dengan tooltip dan data-id
+  // Generates time-cell HTML with a tooltip and data ID
   function timeCellHTML(row) {
     const id = txt(row['ID']);
     const incD = escapeHtml(justDate(stripGMT(txt(row['Incident Time']))));
@@ -245,13 +245,13 @@
     return `<a href="#" class="link copy-id" data-id="${id}" title="${escapeHtml(tooltip)}">${incD}</a>`;
   }
 
-  // Memotong string ke panjang maksimum dengan elipsis
+  // Truncates a string to a maximum length with an ellipsis
   function clip(str, lim = 120) {
     const s = String(str ?? '');
     return s.length > lim ? s.slice(0, lim - 3) + '...' : s;
   }
 
-  // Membuat tooltip teks sederhana untuk informasi waktu
+  // Builds a plain-text tooltip for time information
   function timeCellPlainText(row) {
     const id = txt(row['ID']);
     const incF = stripGMT(txt(row['Incident Time']));
@@ -259,7 +259,7 @@
     return `ID: ${id}\nIncident: ${incF}\nEvent: ${evtF}`;
   }
 
-  // Menghasilkan peta frekuensi nilai dari array objek pada key tertentu
+  // Generates a value-frequency map from an object array for a given key
   function freqMap(arr, key) {
     const m = new Map();
     for (const r of arr) {
@@ -270,14 +270,14 @@
     return m;
   }
 
-  // Memastikan semua kolom penting tersedia pada satu baris data
+  // Ensures all required columns exist in a data row
   function ensureCols(row) {
     const o = {};
     for (const c of ALL_COLS) o[c] = row[c] ?? '';
     return o;
   }
 
-  // Menormalkan header objek (trim nama key)
+  // Normalizes object headers (trims key names)
   function sanitizeHeaders(row) {
     const clean = {};
     for (const k in row) {
@@ -297,7 +297,7 @@
     /^screenshot ?\d*\.(?:png|jpe?g)$/i
   ];
 
-  // Menormalkan spasi/whitespace umum pada string
+  // Normalizes common whitespace in a string
   function normalizeSpaces(s) {
     return String(s || '')
       .replace(/\u00A0/g, ' ')
@@ -306,7 +306,7 @@
       .trim();
   }
 
-  // Memecah daftar pada titik koma secara cerdas (abaikan dalam () atau [])
+  // Splits a semicolon-delimited list intelligently (ignores delimiters inside () or [])
   function smartSplit(listStr) {
     const s = String(listStr || '');
     const out = [];
@@ -329,43 +329,43 @@
     return out.flatMap(t => String(t).split(/\r?\n/));
   }
 
-  // Menghapus akhiran ukuran file dari token
+  // Removes a file-size suffix from a token
   function stripSizeSuffix(s) {
     return normalizeSpaces(s)
       .replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[\.,]\d+)?\s*(?:[KMGT]B)\s*\]?\s*\)?\s*$/i, '')
       .trim();
   }
 
-  // Mengecek apakah token memiliki ekstensi file
+  // Checks whether a token has a file extension
   function hasExtension(token) {
     return /\.[A-Za-z0-9]{1,8}$/.test(token);
   }
 
-  // Mengambil nama inti (tanpa ekstensi)
+  // Gets the core name (without an extension)
   function coreName(token) {
     const dot = token.lastIndexOf('.');
     return dot > 0 ? token.slice(0, dot) : token;
   }
 
-  // Menentukan apakah nama inti sebaiknya diabaikan (prefix noise umum)
+  // Determines whether a core name should be ignored (common noisy prefixes)
   function shouldIgnoreCore(core) {
     const lc = core.toLowerCase();
     return IGNORE_FILE_PREFIXES.some(p => lc.startsWith(p));
   }
 
-  // Menentukan apakah token nama file harus diabaikan (noise)
+  // Determines whether a filename token should be ignored (noise)
   function shouldIgnoreToken(token) {
     const t = normalizeSpaces(token);
     if (!t) return true;
     if (!hasExtension(t) && t.length <= 2) return true;
     if (IGNORE_PATTERNS.some(rx => rx.test(t))) return true;
-    if (/^(?:attachment|attached|lampiran)$/i.test(t)) return true;
+    if (/^(?:attachment|attached)$/i.test(t)) return true;
     const core = coreName(t);
     if (shouldIgnoreCore(core)) return true;
     return false;
   }
 
-  // Menormalkan daftar nama file: split, bersihkan, filter noise, dedup, gabungkan
+  // Normalizes a filename list: split, clean, filter noise, deduplicate, and join
   function normalizeFileList(fileNameCell) {
     const seen = new Set();
     const cleaned = smartSplit(fileNameCell)
@@ -394,7 +394,7 @@
     'com.hk', 'net.hk', 'org.hk', 'edu.hk', 'gov.hk'
   ]);
 
-// Mengambil base domain dari input email atau host, memperhitungkan public suffix umum.
+// Gets the base domain from an email or host, accounting for common public suffixes.
 function getBaseDomain(emailOrHost){
   if(!emailOrHost) return '';
   let host = String(emailOrHost);
@@ -409,7 +409,7 @@ function getBaseDomain(emailOrHost){
   return last2;
 }
 
-// Memecah string destinasi menjadi array token bersih (pisah ; dan ,).
+// Splits a destination string into clean tokens (separated by ; and ,).
 function splitDestParts(dest){
   return String(dest || '')
     .split(';').map(x => x.split(','))
@@ -418,12 +418,12 @@ function splitDestParts(dest){
     .filter(Boolean);
 }
 
-// Memeriksa apakah string menyerupai alamat email sederhana.
+// Checks whether a string resembles a basic email address.
 function isEmailLike(s){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s));
 }
 
-// Membekukan objek (hingga kedalaman tertentu) untuk mencegah modifikasi.
+// Freezes an object (to a limited depth) to prevent modification.
 function deepFreeze(obj, maxDepth = 3, _seen = new WeakSet()) {
   if (!obj || typeof obj !== 'object' || _seen.has(obj)) return obj;
   _seen.add(obj);
@@ -435,7 +435,7 @@ function deepFreeze(obj, maxDepth = 3, _seen = new WeakSet()) {
   return obj;
 }
 
-// Mengompilasi kode pengguna menjadi predicate aman dengan sandbox dan whitelist API.
+// Compiles user code into a safe predicate with a sandbox and API allowlist.
 function secureCompilePredicate(userCode, asExpressionFirst = true) {
   const SAFE_GLOBALS = {
     Math, Number, String, Boolean, RegExp, JSON, Date, Array, Object,
@@ -485,9 +485,9 @@ function secureCompilePredicate(userCode, asExpressionFirst = true) {
   return build(String(userCode || 'return false;'));
 }
 
-// Mengonversi dan menambahkan baris data ke state, lalu memperbarui tab dan rentang insiden.
+// Converts and appends data rows to state, then updates tabs and the incident range.
 function ingest(rows){
-  // Append rows agar beberapa file dalam satu aksi upload tergabung
+  // Append rows so files from one upload action are combined
   const mapped = rows.map(r => {
     const row = ensureCols(sanitizeHeaders(r));
     row['File Name'] = normalizeFileList(row['File Name']);
@@ -505,7 +505,7 @@ function ingest(rows){
   updateIncidentRange();
 }
 
-// Membangun definisi tab berdasarkan dataset (overview, custom, block, per channel, dan tab tersimpan).
+// Builds tab definitions from the dataset (overview, custom, blocked, per-channel, and saved tabs).
 function buildTabs(){
   const all = state.raw;
 
@@ -544,7 +544,7 @@ function buildTabs(){
   renderTabs();
 }
 
-// Merender tombol tab dan menghubungkan handler klik, lalu merender tab aktif dan ikon filter.
+// Renders tab buttons and click handlers, then renders the active tab and filter icons.
 function renderTabs(){
   const tabsEl = $('#tabs'); tabsEl.innerHTML = '';
   for(const t of state.tabs){
@@ -592,13 +592,13 @@ function renderTabs(){
   }
 }
 
-// Mengembalikan/menginisialisasi state per tab (filter, pagination, sorting).
+// Returns or initializes per-tab state (filters, pagination, and sorting).
 function getTabState(key){
   if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:50, sort:null});
   return state.tabState.get(key);
 }
 
-// Merender konten untuk tab aktif dan menyinkronkan ikon filter.
+// Renders content for the active tab and synchronizes filter icons.
 function renderActiveTab(){
   const panels = $('#panels'); panels.innerHTML = '';
   const tab = state.tabs.find(t=> t.key===state.activeTab);
@@ -620,7 +620,7 @@ function renderActiveTab(){
   }
 }
 
-// Memanggil API OpenAI untuk menghasilkan predicate JavaScript dari prompt pengguna.
+// Calls the OpenAI API to generate a JavaScript predicate from a user prompt.
 async function runChatbot(prompt){
   const preprompt = `
 Write a JavaScript predicate for the “Custom JS” tab.
@@ -693,7 +693,7 @@ Task instruction:
   return data.choices[0].message.content.trim();
 }
 
-// Menjalankan predicate per baris secara bertahap (chunked) untuk menjaga UI tetap responsif.
+// Runs a predicate over rows in chunks to keep the UI responsive.
 async function computeRuleMatchesChunked(rows, predicate, onProgress, CHUNK_SIZE = 600){
   const matches = [];
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
@@ -713,7 +713,7 @@ async function computeRuleMatchesChunked(rows, predicate, onProgress, CHUNK_SIZE
   return matches;
 }
 
-// Mengikat handler klik sekali pada kartu metrik/rule untuk membuka tab ad-hoc.
+// Binds click handlers once to metric/rule cards to open ad hoc tabs.
 function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
   if (cards.__boundClick) return;
   cards.__boundClick = true;
@@ -750,7 +750,7 @@ function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
   });
 }
 
-// Membuat hash ringan dataset untuk caching hasil rule.
+// Creates a lightweight dataset hash for caching rule results.
 function computeDatasetHash(rows){
   const keysrc = rows.slice(0, 50).map(r => `${txt(r['ID'])}|${txt(r['Incident Time'])}`).join('||');
   let h = 5381;
@@ -763,7 +763,7 @@ const RULE_CACHE_VERSION = 1;
 const CACHE_NS = 'dlp_rules_';
 const STORE   = sessionStorage;
 
-// Memuat cache hasil rule dari sessionStorage.
+// Loads cached rule results from sessionStorage.
 function loadRuleCache(hash){
   try{
     const raw = STORE.getItem(`${CACHE_NS}${hash}`);
@@ -771,7 +771,7 @@ function loadRuleCache(hash){
   }catch{ return null; }
 }
 
-// Menyimpan cache hasil rule ke sessionStorage (dengan fallback pembersihan).
+// Stores cached rule results in sessionStorage (with cleanup fallback).
 function saveRuleCache(hash, data){
   try{
     STORE.setItem(`${CACHE_NS}${hash}`, JSON.stringify(data));
@@ -780,7 +780,7 @@ function saveRuleCache(hash, data){
   }
 }
 
-// Menghapus semua entri cache rule di sessionStorage.
+// Removes all rule-cache entries from sessionStorage.
 function clearRuleCaches(){
   try{
     Object.keys(STORE).forEach(k=>{
@@ -789,9 +789,9 @@ function clearRuleCaches(){
   }catch{}
 }
 
-// Menghasilkan ID komposit stabil untuk sebuah baris (menghindari tabrakan multi-file).
+// Generates a stable composite ID for a row (avoids collisions across files).
 function getRowId(r){
-  // ID komposit supaya aman saat multi-file
+  // Composite ID to remain safe across multiple files
   const id   = txt(r['ID']).trim();
   const incT = stripGMT(txt(r['Incident Time'])).trim();
   const evT  = stripGMT(txt(r['Event Time'])).trim();
@@ -807,14 +807,14 @@ function getRowId(r){
   });
 }
 
-// Membangun indeks Map dari ID baris ke indeks array.
+// Builds a Map index from row IDs to array indices.
 function indexRowsById(rows){
   const m = new Map();
   rows.forEach((r, i) => m.set(getRowId(r), i));
   return m;
 }
 
-// Merender tampilan Overview: kartu metrik, tabel agregasi, dan chart volume harian.
+// Renders the Overview: metric cards, aggregate tables, and daily volume chart.
 function renderOverview(rows){
   const wrap = document.createElement('div');
   wrap.className = 'grid';
@@ -1011,7 +1011,7 @@ function renderOverview(rows){
   return wrap;
 }
 
-// Mengambil email valid pertama dari string.
+// Extracts the first valid email address from a string.
 function extractFirstEmail(s){
   const str = String(s || '');
   if (isEmailLike(str)) return str;
@@ -1019,7 +1019,7 @@ function extractFirstEmail(s){
   return m ? m[0] : '';
 }
 
-// Mengambil dan menormalkan local-part email.
+// Extracts and normalizes the email local part.
 function extractLocal(email){
   if (!email) return '';
   const ix = email.indexOf('@');
@@ -1031,7 +1031,7 @@ function extractLocal(email){
   return local;
 }
 
-// Menghitung panjang prefix yang sama di dua string.
+// Calculates the common-prefix length of two strings.
 function commonPrefixLen(a, b){
   const n = Math.min(a.length, b.length);
   let i = 0;
@@ -1039,7 +1039,7 @@ function commonPrefixLen(a, b){
   return i;
 }
 
-// Menghitung jarak Levenshtein dengan early-exit threshold.
+// Calculates Levenshtein distance with an early-exit threshold.
 function levenshtein(a, b, maxDist = 3){
   const n = a.length, m = b.length;
   if (Math.abs(n - m) > maxDist) return maxDist + 1;
@@ -1066,9 +1066,9 @@ function levenshtein(a, b, maxDist = 3){
   return v0[b.length];
 }
 
-// Menghitung skor kemiripan Jaro-Winkler.
+// Calculates the Jaro-Winkler similarity score.
 function jaroWinkler(s1, s2){
-  // Menghitung pasangan cocok dan transposisi untuk Jaro.
+  // Calculates matching pairs and transpositions for Jaro.
   function jaroMatch(a, b){
     const matchDist = Math.floor(Math.max(a.length, b.length) / 2) - 1;
     const aFlags = new Array(a.length).fill(false);
@@ -1104,7 +1104,7 @@ function jaroWinkler(s1, s2){
   return jaro + l * 0.1 * (1 - jaro);
 }
 
-// Menilai keserupaan local-part pengirim dan penerima (self-like).
+// Evaluates sender and recipient local-part similarity (self-like).
 function isSelfLike(fromEmail, toEmail, {useJaroWinkler = true} = {}){
   const a = extractLocal(fromEmail);
   const b = extractLocal(toEmail);
@@ -1123,7 +1123,7 @@ function isSelfLike(fromEmail, toEmail, {useJaroWinkler = true} = {}){
   return false;
 }
 
-// Rule: true jika ada penerima yang mirip dengan pengirim.
+// Rule: true when a recipient resembles the sender.
 function ruleSelfToSelf(r){
   const srcEmail = extractFirstEmail(txt(r['Source']));
   if (!srcEmail) return false;
@@ -1135,7 +1135,7 @@ function ruleSelfToSelf(r){
   return false;
 }
 
-// Rule: true jika domain penerima termasuk free mail.
+// Rule: true when a recipient domain is a free email provider.
 function ruleRecipientFreeMail(r){
   return splitDestParts(r['Destination']).some(d=>{
     const dom = getBaseDomain(d);
@@ -1143,7 +1143,7 @@ function ruleRecipientFreeMail(r){
   });
 }
 
-// Rule: true jika subject email kosong atau di bawah minimal pada channel email.
+// Rule: true when the email subject is empty or below the minimum length.
 function ruleShortOrEmptySubject(r, minLen = 10){
   const ch = txt(r['Channel']).toLowerCase();
   if (!ch.includes('email')) return false;
@@ -1151,7 +1151,7 @@ function ruleShortOrEmptySubject(r, minLen = 10){
   return s.length === 0 || s.length < minLen;
 }
 
-// Rule: true jika ada lampiran tanpa ekstensi.
+// Rule: true when an attachment has no extension.
 function ruleAttachmentNoExtension(r){
   return txt(r['File Name']).split(';').some(f=>{
     const fn = f.trim();
@@ -1159,7 +1159,7 @@ function ruleAttachmentNoExtension(r){
   });
 }
 
-// Ekstraksi core nama file yang dinormalisasi untuk deteksi urutan.
+// Extracts a normalized filename core for sequence detection.
 function filenameCoreStrict(s){
   let t = stripSizeSuffix(s || '').trim();
   if (!t) return '';
@@ -1176,7 +1176,7 @@ function filenameCoreStrict(s){
   return t;
 }
 
-// Menurunkan daftar core nama file unik dari sel.
+// Derives a list of unique filename cores from a cell.
 function fileCoresFromCell(cell){
   const cores = String(cell || '')
     .split(/[;,]/)
@@ -1187,7 +1187,7 @@ function fileCoresFromCell(cell){
   return Array.from(new Set(cores));
 }
 
-// Mengambil stem dan angka ekor (tail) di akhir nama file.
+// Extracts the stem and trailing number from a filename.
 function extractStemTail(name){
   const raw = stripSizeSuffix(name || '').trim();
   if (!raw) return null;
@@ -1205,9 +1205,9 @@ function extractStemTail(name){
   return { stem, tail };
 }
 
-// Membangun indeks stem→set tail numerik per sumber.
+// Builds a stem-to-numeric-tail-set index for each source.
 function buildSequentialIndex(rows){
-  // Dukung pemisah ;, newline, dan , untuk nama file multi
+  // Support ;, newline, and , separators for multiple filenames
   const idx = new Map();
   for (const r of rows){
     const src = txt(r['Source']).trim().toLowerCase();
@@ -1231,7 +1231,7 @@ function buildSequentialIndex(rows){
   return idx;
 }
 
-// Mengambil stem panas (tail unik ≥ threshold) per sumber.
+// Gets hot stems (unique tails ≥ threshold) for each source.
 function getHotStemsBySource(idx, threshold = 5){
   const hot = new Map();
   for (const [src, mapStem] of idx){
@@ -1245,7 +1245,7 @@ function getHotStemsBySource(idx, threshold = 5){
   return hot;
 }
 
-// Rule: true jika baris punya attachment dengan stem hot sumbernya.
+// Rule: true when a row has an attachment with a hot stem for its source.
 function ruleSequentialAttachments(r, hotBySrc){
   const src = txt(r['Source']).trim().toLowerCase();
   if (!src) return false;
@@ -1276,14 +1276,14 @@ const SENSITIVE_KEYWORDS = [
 
 const sensitiveRegex = new RegExp("\\b(" + SENSITIVE_KEYWORDS.join("|") + ")\\b", "i");
 
-// Rule: true jika ada keyword sensitif di subject, file name, atau policies.
+// Rule: true when sensitive keywords appear in the subject, filename, or policies.
 function ruleSensitiveKeywords(r){
   return sensitiveRegex.test(txt(r['Details'])) ||
          sensitiveRegex.test(txt(r['File Name'])) ||
          sensitiveRegex.test(txt(r['Policies']));
 }
 
-// Menghitung frekuensi domain tujuan per pengirim.
+// Calculates destination-domain frequency per sender.
 function buildSenderDomainCounts(rows){
   const m = new Map();
   for(const r of rows){
@@ -1300,7 +1300,7 @@ function buildSenderDomainCounts(rows){
   return m;
 }
 
-// Rule: true jika pengirim berulang ke domain yang sama > threshold.
+// Rule: true when a sender repeatedly sends to the same domain above the threshold.
 function ruleRepeatedDomainBySender(r, countsMap, threshold = 5){
   const src = txt(r['Source']).trim().toLowerCase();
   if(!src) return false;
@@ -1314,13 +1314,13 @@ function ruleRepeatedDomainBySender(r, countsMap, threshold = 5){
   return false;
 }
 
-// Rule: true jika domain tujuan bertld tidak umum (xyz/top/icu).
+// Rule: true when the destination domain uses an unusual TLD (xyz/top/icu).
 function ruleWeirdTLD(r){
   const dom = getBaseDomain(txt(r['Destination']));
   return dom && /\.(xyz|top|icu)$/i.test(dom);
 }
 
-// Rule: true jika insiden terjadi antara 00:00–04:59.
+// Rule: true when an incident occurs between 00:00 and 04:59.
 function ruleOutOfHours(r){
   const d = parseIncidentTime(r['Incident Time']);
   if(!d) return false;
@@ -1328,7 +1328,7 @@ function ruleOutOfHours(r){
   return h>=0 && h<5;
 }
 
-// Membuat elemen tabel sederhana berdasarkan header dan rows (non-clickable).
+// Builds a simple table element from headers and rows (not clickable).
 function makeSimpleTableEl(headers, rows){
   const tbl = document.createElement('table');
   const thead = document.createElement('thead');
@@ -1351,7 +1351,7 @@ function makeSimpleTableEl(headers, rows){
   return tbl;
 }
 
-// Membuat section tabel yang isinya dapat diklik untuk membuka filter drill-down.
+// Builds a table section whose contents open drill-down filters when clicked.
 function makeClickableTable(title, headers, rows, col){
   const sec = document.createElement('div'); sec.className = 'section';
   sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted">  </span></header>`;
@@ -1380,7 +1380,7 @@ function makeClickableTable(title, headers, rows, col){
   return sec;
 }
 
-// Mengagregasi jumlah baris per domain tujuan unik (berdasarkan base domain).
+// Aggregates row counts by unique destination domain (based on base domain).
 function aggregateDomains(rows){
   const m = new Map();
   for(const r of rows){
@@ -1394,7 +1394,7 @@ function aggregateDomains(rows){
   return Array.from(m.entries()).sort((a,b)=> b[1]-a[1]);
 }
 
-// Mengagregasi jumlah alert per hari (berdasarkan Incident Time, ISO yyyy-mm-dd).
+// Aggregates alert counts by day (based on Incident Time, ISO yyyy-mm-dd).
 function aggregateByDay(rows){
   const m = new Map();
   for(const r of rows){
@@ -1405,7 +1405,7 @@ function aggregateByDay(rows){
   return Array.from(m.entries()).sort((a,b)=> a[0].localeCompare(b[0]));
 }
 
-// Menggambar line chart responsif (SVG) dengan sumbu, grid, dan tooltip interaktif.
+// Draws a responsive SVG line chart with axes, grid, and interactive tooltips.
 function makeLineChart(pairs){
   const dates=pairs.map(p=>p[0]), values=pairs.map(p=>p[1]);
   const w=Math.max(600, document.querySelector('.wrap').clientWidth - 40);
@@ -1448,7 +1448,7 @@ function makeLineChart(pairs){
   return svg;
 }
 
-// Merender section tabel untuk sebuah tab lengkap dengan pager, export, copy, dan page size.
+// Renders a tab table section with pagination, export, copy, and page-size controls.
 function renderTableSection(tab){
   const sec = document.createElement('div'); sec.className = 'sectionx';
   sec.innerHTML = `<header><strong>${escapeHtml(tab.label)}</strong><span class="tiny muted"></span></header>`;
@@ -1475,7 +1475,7 @@ function renderTableSection(tab){
   return sec;
 }
 
-// Merender tab "Custom JS" beserta UI input API key, chatbot, editor predicate, dan hasil eksekusi.
+// Renders the Custom JS tab with API-key input, chatbot, predicate editor, and results.
 function renderCustomTab(tab){
   const wrap = document.createElement('div');
   wrap.className = 'section cjs-wrap';
@@ -1681,7 +1681,7 @@ function renderCustomTab(tab){
     resultMount.appendChild(section);
   });
 
-  const PREPROMPT = `Tulislah JavaScript predicate untuk tab “Custom JS”. Kode dieksekusi untuk setiap baris data dan harus mengembalikan boolean. Lingkungan eksekusi: Dataset penuh: rows (Array<Row>) Baris saat ini: row (Object), indeksnya i (Number) Batasan: Gunakan JavaScript murni ("use strict"). Jangan gunakan fetch, DOM, window, globalThis, Function, eval, storage API, atau library eksternal. Anda boleh menggunakan rows dan i untuk logika lintas baris, tetapi hasil akhir tetap boolean untuk baris saat ini. Field yang tersedia (camelCase, case-sensitive) + contoh: row.ID → "70100001" row.IncidentTime → "25 Aug. 2025, 09:01:00 AM GMT+0800" row.EventTime → "25 Aug. 2025, 08:59:12 AM GMT+0800" row.FileName → "contract_2025.pdf; image.png" row.Source → "SRC-USER-001" row.Policies → "Customer / Prospective Customer PII" row.Channel → "Network email" row.Destination → "alice@example.org" row.Details → "sample row …" {Details ini Email Subject} row.Status → "New" Parsing tanggal (contoh aman untuk ambil hari): const s = row.IncidentTime || row.EventTime || ""; const m = /^\\s*(\\d{1,2})\\s+[A-Za-z]{3,}.?/.exec(s); const day = m ? parseInt(m[1], 10) : NaN; Format keluaran: Hanya keluarkan kode JavaScript (fungsi anonymous biasa atau blok statements) yang hasil akhirnya boolean. Boleh multi-statement; akhiri dengan return ...; Perintah tugas:`;
+  const PREPROMPT = `Write a JavaScript predicate for the “Custom JS” tab. The code runs for each data row and must return a boolean. Execution context: the full dataset is rows (Array<Row>); the current row is row (Object), with index i (Number). Constraints: use plain JavaScript ("use strict"). Do not use fetch, the DOM, window, globalThis, Function, eval, storage APIs, or external libraries. You may use rows and i for cross-row logic, but the final result must still be a boolean for the current row. Available fields (camelCase and case-sensitive), with examples: row.ID → "70100001"; row.IncidentTime → "25 Aug. 2025, 09:01:00 AM GMT+0800"; row.EventTime → "25 Aug. 2025, 08:59:12 AM GMT+0800"; row.FileName → "contract_2025.pdf; image.png"; row.Source → "SRC-USER-001"; row.Policies → "Customer / Prospective Customer PII"; row.Channel → "Network email"; row.Destination → "alice@example.org"; row.Details → "sample row …" (Details is the email subject); row.Status → "New". Safe date parsing example for extracting the day: const s = row.IncidentTime || row.EventTime || ""; const m = /^\s*(\d{1,2})\s+[A-Za-z]{3,}.?/.exec(s); const day = m ? parseInt(m[1], 10) : NaN; Output format: return JavaScript code only (a regular anonymous function or a statement block) whose final result is boolean. Multiple statements are allowed; end with return ...;. Task:`
 
   function extractJS(text){
     if (!text) return '';
@@ -1691,7 +1691,7 @@ function renderCustomTab(tab){
 
   async function runChatbot(task){
     const apiKey = window.OPENAI_API_KEY || window.__OPENAI_API_KEY__ || '';
-    if (!apiKey) throw new Error('OPENAI_API_KEY tidak tersedia di window.');
+    if (!apiKey) throw new Error('OPENAI_API_KEY is not available on window.');
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -1720,7 +1720,7 @@ function renderCustomTab(tab){
   chatbotRunBtn.addEventListener('click', async ()=>{
     const task = String(chatbotTA.value || '').trim();
     if (!task){
-      chatbotStatus.textContent = 'Tugas kosong.';
+      chatbotStatus.textContent = 'The task is empty.';
       return;
     }
 
@@ -1730,13 +1730,13 @@ function renderCustomTab(tab){
     try {
       const code = await runChatbot(task);
       if (!code){
-        chatbotStatus.textContent = 'Model tidak mengembalikan kode.';
+        chatbotStatus.textContent = 'The model did not return any code.';
         return;
       }
       ta.value = code;
-      chatbotStatus.textContent = 'Menjalankan predicate...';
+      chatbotStatus.textContent = 'Running predicate...';
       runBtn.click();
-      chatbotStatus.textContent = 'Selesai.';
+      chatbotStatus.textContent = 'Done.';
     } catch(err){
       chatbotStatus.textContent = 'Chatbot error: ' + (err?.message || String(err));
     } finally {
@@ -1748,7 +1748,7 @@ function renderCustomTab(tab){
   return wrap;
 }
 
-// Merender tabel data untuk sebuah tab, termasuk filter, sort, pagination, dan metadata.
+// Renders a tab data table with filtering, sorting, pagination, and metadata.
 function renderDataTable(tab){
   const st = getTabState(tab.key);
   const rows = applyFiltersAndSort(tab.rows, st.filters, st.sort);
@@ -1863,7 +1863,7 @@ function renderDataTable(tab){
 const INACTIVE_ICON = '🔍';
 const ACTIVE_ICON = '🔍✨';
 
-// Memperbarui ikon filter pada header tabel sesuai state filter tab.
+// Updates table-header filter icons to match the tab filter state.
 function updateFilterIcons(tab, root){
   const st = getTabState(tab.key);
   let scope =
@@ -1881,7 +1881,7 @@ function updateFilterIcons(tab, root){
   });
 }
 
-// Membuka popover filter/sort untuk kolom tertentu dan menerapkan aksi pengguna.
+// Opens a filter/sort popover for a column and applies user actions.
 function openFilterPopover(anchor, tab, col){
   closePopovers();
   const th = anchor.closest('th');
@@ -1897,9 +1897,9 @@ function openFilterPopover(anchor, tab, col){
       <button class="btn btn-sort" title="Most" data-type="most" ${currentSort==='most'?'style="outline:1px solid var(--accent)"':''}>M</button>
       <button class="btn btn-sort" title="Less" data-type="less" ${currentSort==='less'?'style="outline:1px solid var(--accent)"':''}>L</button>
     </div>
-    <div><input type="text" placeholder="contains... (kosongkan untuk clear)"
+    <div><input type="text" placeholder="contains... (leave blank to clear)"
       value="${escapeHtml(currentFilter)}" style="width:100%" /></div>
-    <div class="tiny muted" style="margin-top:4px">Enter untuk apply filter • Esc untuk tutup</div>
+    <div class="tiny muted" style="margin-top:4px">Enter to apply filter • Esc to close</div>
   `;
   th.style.position = "relative";
   th.appendChild(pop);
@@ -1928,21 +1928,21 @@ function openFilterPopover(anchor, tab, col){
   });
 }
 
-// Menentukan posisi absolut popover relatif ke anchor.
+// Positions a popover absolutely relative to its anchor.
 function positionPopover(pop, anchor){
   const r = anchor.getBoundingClientRect();
   pop.style.left = (r.left + window.scrollX) + 'px';
   pop.style.top = (r.bottom + window.scrollY + 6) + 'px';
 }
 
-// Menutup semua popover filter yang sedang terbuka.
+// Closes all open filter popovers.
 function closePopovers(){
   $$('.filter-pop').forEach(p=> p.remove());
 }
 
 window.addEventListener('click', (e)=>{ if(!e.target.closest('.filter-pop') && !e.target.closest('.filter-icon')) closePopovers(); });
 
-// Menerapkan filter dan sorting pada array baris lalu mengembalikan hasilnya.
+// Applies filtering and sorting to a row array and returns the result.
 function applyFiltersAndSort(rows, filters, sort){
   let out = rows.slice();
   for(const k of Object.keys(filters||{})){
@@ -2017,7 +2017,7 @@ function applyFiltersAndSort(rows, filters, sort){
   return out;
 }
 
-// Memperbarui elemen pager (info halaman dan tombol navigasi) untuk tabel aktif.
+// Updates pager elements (page information and navigation buttons) for the active table.
 function updatePager(tab, sectionEl, tableEl){
   const pager = sectionEl.querySelector(`#pager-${safeKey(tab.key)}`);
   const st = getTabState(tab.key);
@@ -2034,19 +2034,19 @@ function updatePager(tab, sectionEl, tableEl){
   pager.appendChild(mk('⏭', ()=>{ st.page=pages; rerenderTabTable(tab,sectionEl); }, page>=pages));
 }
 
-// Merender ulang tabel pada section tab tertentu dan menyinkronkan pager.
+// Rerenders a table in a given tab section and synchronizes the pager.
 function rerenderTabTable(tab, sectionEl){
   const body = sectionEl.querySelector('.tablewrap'); body.innerHTML = '';
   const tbl = renderDataTable(tab); body.appendChild(tbl);
   updatePager(tab, sectionEl, tbl);
 }
 
-// Merender ulang tab aktif (digunakan setelah filter/sort berubah).
+// Rerenders the active tab (used after filters or sorting change).
 function rerenderActive(){
   renderActiveTab();
 }
 
-// Menormalkan nama file untuk dipakai sebagai nama unduhan yang aman.
+// Normalizes a filename for use as a safe download name.
 function sanitizeFileName(s){
   let out = '';
   for(let i=0;i<s.length;i++){
@@ -2056,7 +2056,7 @@ function sanitizeFileName(s){
   return out;
 }
 
-// Mengekspor tampilan tabel saat ini (halaman aktif) ke CSV.
+// Exports the current table view (active page) to CSV.
 function exportCurrentView(tab, tableEl){
   const rows = tableEl.__meta.pageRows; const cols = tableEl.__meta.visibleCols; const dq = '"', nl = '\n';
   const csv = [cols.join(',')].concat(
@@ -2072,7 +2072,7 @@ function exportCurrentView(tab, tableEl){
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-// Menyalin tampilan tabel saat ini (halaman aktif) sebagai TSV ke clipboard.
+// Copies the current table view (active page) to the clipboard as TSV.
 function copyCurrentView(tableEl){
   const cols = tableEl.__meta.visibleCols;
   const header = cols.join('\t');
@@ -2085,7 +2085,7 @@ function copyCurrentView(tableEl){
   navigator.clipboard.writeText(header+'\n'+rows);
 }
 
-// Menerapkan filter drill-down pada kumpulan baris untuk kolom/Domain tertentu.
+// Applies a drill-down filter to rows for a given column or domain.
 function applyDrillFilter(universe, filter){
   let rows = universe.slice();
   if(filter.col === 'Domain'){
@@ -2100,7 +2100,7 @@ function applyDrillFilter(universe, filter){
   return rows;
 }
 
-// Membuka tab drill-down baru berdasarkan kolom dan nilai yang dipilih.
+// Opens a new drill-down tab based on the selected column and value.
 function openFilterTab(col, value, fromTab){
   const universe = (fromTab ? fromTab.rows : state.raw);
   const rows = applyDrillFilter(universe, {col, value});
@@ -2112,7 +2112,7 @@ function openFilterTab(col, value, fromTab){
   renderTabs();
 }
 
-// Membuka tab ad-hoc baru berisi kumpulan rows yang diberikan.
+// Opens a new ad hoc tab containing the provided rows.
 function openAdHocTab(label, rows){
   const key = `adhoc::${safeKey(label)}::${Date.now()}`;
   const tab = { key, label, type:'drill', rows, closable:true, filter:null };
@@ -2121,7 +2121,7 @@ function openAdHocTab(label, rows){
   renderTabs();
 }
 
-// Memperbarui label rentang waktu Incident berdasarkan dataset yang dimuat.
+// Updates the incident time-range label from the loaded dataset.
 function updateIncidentRange(){
   const el = document.getElementById('rangeVal');
   if (!el) return;
@@ -2144,11 +2144,11 @@ function updateIncidentRange(){
   const min = formatDateShort(dates[0]);
   const max = formatDateShort(dates[dates.length-1]);
 
-  // Tampilkan gabungan nama file (diisi dari handler upload multi-file)
+  // Display the combined filenames (populated by the multi-file upload handler)
   el.textContent = (currentFilename ? currentFilename + ': ' : '') + `${min} – ${max}`;
 }
 
-// Mem-parse file CSV menggunakan Papa.parse dan mengembalikan array objek.
+// Parses a CSV file with Papa.parse and returns an object array.
 function parseCSV(file){
   return new Promise((resolve, reject)=>{
     Papa.parse(file, {
@@ -2242,7 +2242,7 @@ function svgFilter(){
   return '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2l-7 8v5l-4 1v-6L3 6z"/></svg>';
 }
 
-// Delegasi: semua klik pada .copy-id
+// Delegation: all clicks on .copy-id
 document.addEventListener('click', e=>{
   const a = e.target.closest('.copy-id');
   if(a){
@@ -2256,7 +2256,7 @@ document.addEventListener('click', e=>{
   }
 });
 
-// Delegasi: semua klik pada .copy-cell
+// Delegation: all clicks on .copy-cell
 document.addEventListener('click', e=>{
   const a = e.target.closest('.copy-cell');
   if(a){
@@ -2271,102 +2271,102 @@ document.addEventListener('click', e=>{
 });
 
 /* =======================================================================================
-setCookie: Menyetel cookie dengan max-age dan expires (kompatibel Safari).
-getCookie: Mengambil nilai cookie berdasarkan nama.
-setSecret: Menyimpan nilai ke cookie dan localStorage sebagai fallback.
-getSecret: Mengambil nilai dari cookie atau localStorage sebagai fallback.
-safeKey: Menghasilkan kunci aman untuk id DOM.
-parseIncidentTime: Mem-parse waktu insiden Forcepoint ke objek Date.
-formatDateShort: Memformat objek Date menjadi yyyy-mm-dd.
-sanitizeForPlain: Menormalkan teks menjadi satu baris aman (tanpa newline/tab).
-escapeHtml: Meng-escape karakter khusus HTML.
-sanitizeForTSV: Menormalkan nilai untuk TSV (hapus tab/newline).
-getRowCells: Menghasilkan pasangan [key,value] untuk satu baris data.
-buildRowClipboardHTML: Membuat HTML tabel untuk clipboard (Excel/Office).
-buildRowClipboardTSV: Membuat TSV vertikal (key<TAB>value) untuk clipboard.
-copyRowToClipboard: Menyalin satu baris ke clipboard sebagai HTML + TSV (dengan fallback).
-txt: Mengonversi nilai ke string sederhana.
-stripGMT: Menghapus bagian " GMT..." dari waktu.
-justDate: Mengambil bagian tanggal saja dari "date, time".
-timeCellHTML: Menghasilkan HTML sel waktu dengan tooltip dan data-id.
-clip: Memotong string ke panjang maksimum dengan elipsis.
-timeCellPlainText: Membuat tooltip teks sederhana untuk informasi waktu.
-freqMap: Menghasilkan peta frekuensi nilai dari array objek pada key tertentu.
-ensureCols: Memastikan semua kolom penting tersedia pada satu baris data.
-sanitizeHeaders: Menormalkan header objek (trim nama key).
-normalizeSpaces: Menormalkan spasi/whitespace umum pada string.
-smartSplit: Memecah daftar pada titik koma secara cerdas (abaikan dalam () atau []).
-stripSizeSuffix: Menghapus akhiran ukuran file dari token.
-hasExtension: Mengecek apakah token memiliki ekstensi file.
-coreName: Mengambil nama inti (tanpa ekstensi).
-shouldIgnoreCore: Menentukan apakah nama inti sebaiknya diabaikan (prefix noise umum).
-shouldIgnoreToken: Menentukan apakah token nama file harus diabaikan (noise).
-normalizeFileList: Menormalkan daftar nama file: split, bersihkan, filter noise, dedup, gabungkan.
-getBaseDomain: Mengambil base domain dari input email atau host, memperhitungkan public suffix umum.
-splitDestParts: Memecah string destinasi menjadi array token bersih (pisah ; dan ,).
-isEmailLike: Memeriksa apakah string menyerupai alamat email sederhana.
-deepFreeze: Membekukan objek (hingga kedalaman tertentu) untuk mencegah modifikasi.
-secureCompilePredicate: Mengompilasi kode pengguna menjadi predicate aman dengan sandbox dan whitelist API.
-ingest: Mengonversi dan menambahkan baris data ke state, lalu memperbarui tab dan rentang insiden.
-buildTabs: Membangun definisi tab berdasarkan dataset (overview, custom, block, per channel, dan tab tersimpan).
-renderTabs: Merender tombol tab dan menghubungkan handler klik, lalu merender tab aktif dan ikon filter.
-getTabState: Mengembalikan/menginisialisasi state per tab (filter, pagination, sorting).
-renderActiveTab: Merender konten untuk tab aktif dan menyinkronkan ikon filter.
-runChatbot: Memanggil API OpenAI untuk menghasilkan predicate JavaScript dari prompt pengguna.
-computeRuleMatchesChunked: Menjalankan predicate per baris secara bertahap (chunked) untuk menjaga UI tetap responsif.
-bindCardsClickOnce: Mengikat handler klik sekali pada kartu metrik/rule untuk membuka tab ad-hoc.
-computeDatasetHash: Membuat hash ringan dataset untuk caching hasil rule.
-loadRuleCache: Memuat cache hasil rule dari sessionStorage.
-saveRuleCache: Menyimpan cache hasil rule ke sessionStorage (dengan fallback pembersihan).
-clearRuleCaches: Menghapus semua entri cache rule di sessionStorage.
-getRowId: Menghasilkan ID komposit stabil untuk sebuah baris (menghindari tabrakan multi-file).
-indexRowsById: Membangun indeks Map dari ID baris ke indeks array.
-renderOverview: Merender tampilan Overview: kartu metrik, tabel agregasi, dan chart volume harian.
-extractFirstEmail: Mengambil email valid pertama dari string.
-extractLocal: Mengambil dan menormalkan local-part email.
-commonPrefixLen: Menghitung panjang prefix yang sama di dua string.
-levenshtein: Menghitung jarak Levenshtein dengan early-exit threshold.
-jaroWinkler: Menghitung skor kemiripan Jaro-Winkler.
-isSelfLike: Menilai keserupaan local-part pengirim dan penerima (self-like).
-ruleSelfToSelf: Rule: true jika ada penerima yang mirip dengan pengirim.
-ruleRecipientFreeMail: Rule: true jika domain penerima termasuk free mail.
-ruleShortOrEmptySubject: Rule: true jika subject email kosong atau di bawah minimal pada channel email.
-ruleAttachmentNoExtension: Rule: true jika ada lampiran tanpa ekstensi.
-filenameCoreStrict: Ekstraksi core nama file yang dinormalisasi untuk deteksi urutan.
-fileCoresFromCell: Menurunkan daftar core nama file unik dari sel.
-extractStemTail: Mengambil stem dan angka ekor (tail) di akhir nama file.
-buildSequentialIndex: Membangun indeks stem→set tail numerik per sumber.
-getHotStemsBySource: Mengambil stem panas (tail unik ≥ threshold) per sumber.
-ruleSequentialAttachments: Rule: true jika baris punya attachment dengan stem hot sumbernya.
-ruleSensitiveKeywords: Rule: true jika ada keyword sensitif di subject, file name, atau policies.
-buildSenderDomainCounts: Menghitung frekuensi domain tujuan per pengirim.
-ruleRepeatedDomainBySender: Rule: true jika pengirim berulang ke domain yang sama > threshold.
-ruleWeirdTLD: Rule: true jika domain tujuan bertld tidak umum (xyz/top/icu).
-ruleOutOfHours: Rule: true jika insiden terjadi antara 00:00–04:59.
-makeSimpleTableEl: Membuat elemen tabel sederhana berdasarkan header dan rows (non-clickable).
-makeClickableTable: Membuat section tabel yang isinya dapat diklik untuk membuka filter drill-down.
-aggregateDomains: Mengagregasi jumlah baris per domain tujuan unik (berdasarkan base domain).
-aggregateByDay: Mengagregasi jumlah alert per hari (berdasarkan Incident Time, ISO yyyy-mm-dd).
-makeLineChart: Menggambar line chart responsif (SVG) dengan sumbu, grid, dan tooltip interaktif.
-renderTableSection: Merender section tabel untuk sebuah tab lengkap dengan pager, export, copy, dan page size.
-renderCustomTab: Merender tab "Custom JS" beserta UI input API key, chatbot, editor predicate, dan hasil eksekusi.
-renderDataTable: Merender tabel data untuk sebuah tab, termasuk filter, sort, pagination, dan metadata.
-updateFilterIcons: Memperbarui ikon filter pada header tabel sesuai state filter tab.
-openFilterPopover: Membuka popover filter/sort untuk kolom tertentu dan menerapkan aksi pengguna.
-positionPopover: Menentukan posisi absolut popover relatif ke anchor.
-closePopovers: Menutup semua popover filter yang sedang terbuka.
-applyFiltersAndSort: Menerapkan filter dan sorting pada array baris lalu mengembalikan hasilnya.
-updatePager: Memperbarui elemen pager (info halaman dan tombol navigasi) untuk tabel aktif.
-rerenderTabTable: Merender ulang tabel pada section tab tertentu dan menyinkronkan pager.
-rerenderActive: Merender ulang tab aktif (digunakan setelah filter/sort berubah).
-sanitizeFileName: Menormalkan nama file untuk dipakai sebagai nama unduhan yang aman.
-exportCurrentView: Mengekspor tampilan tabel saat ini (halaman aktif) ke CSV.
-copyCurrentView: Menyalin tampilan tabel saat ini (halaman aktif) sebagai TSV ke clipboard.
-applyDrillFilter: Menerapkan filter drill-down pada kumpulan baris untuk kolom/Domain tertentu.
-openFilterTab: Membuka tab drill-down baru berdasarkan kolom dan nilai yang dipilih.
-openAdHocTab: Membuka tab ad-hoc baru berisi kumpulan rows yang diberikan.
-updateIncidentRange: Memperbarui label rentang waktu Incident berdasarkan dataset yang dimuat.
-parseCSV: Mem-parse file CSV menggunakan Papa.parse dan mengembalikan array objek.
+setCookie: Sets a cookie with max-age and expires (Safari compatible).
+getCookie: Gets a cookie value by name.
+setSecret: Stores a value in a cookie with localStorage as a fallback.
+getSecret: Gets a value from a cookie or localStorage as a fallback.
+safeKey: Generates a safe key for a DOM ID.
+parseIncidentTime: Parses a Forcepoint incident time into a Date object.
+formatDateShort: Formats a Date object as yyyy-mm-dd.
+sanitizeForPlain: Normalizes text into a safe single line (without newlines or tabs).
+escapeHtml: Escapes special HTML characters.
+sanitizeForTSV: Normalizes a value for TSV (removes tabs and newlines).
+getRowCells: Generates [key, value] pairs for one data row.
+buildRowClipboardHTML: Builds an HTML table for the clipboard (Excel/Office).
+buildRowClipboardTSV: Builds vertical TSV (key<TAB>value) for the clipboard.
+copyRowToClipboard: Copies one row to the clipboard as HTML and TSV (with fallback).
+txt: Converts a value to a plain string.
+stripGMT: Removes the " GMT..." portion from a time value.
+justDate: Extracts only the date portion from "date, time".
+timeCellHTML: Generates time-cell HTML with a tooltip and data ID.
+clip: Truncates a string to a maximum length with an ellipsis.
+timeCellPlainText: Builds a plain-text tooltip for time information.
+freqMap: Generates a value-frequency map from an object array for a given key.
+ensureCols: Ensures all required columns exist in a data row.
+sanitizeHeaders: Normalizes object headers (trims key names).
+normalizeSpaces: Normalizes common whitespace in a string.
+smartSplit: Splits a semicolon-delimited list intelligently (ignores delimiters inside () or []).
+stripSizeSuffix: Removes a file-size suffix from a token.
+hasExtension: Checks whether a token has a file extension.
+coreName: Gets the core name (without an extension).
+shouldIgnoreCore: Determines whether a core name should be ignored (common noisy prefixes).
+shouldIgnoreToken: Determines whether a filename token should be ignored (noise).
+normalizeFileList: Normalizes a filename list: split, clean, filter noise, deduplicate, and join.
+getBaseDomain: Gets the base domain from an email or host, accounting for common public suffixes.
+splitDestParts: Splits a destination string into clean tokens (separated by ; and ,).
+isEmailLike: Checks whether a string resembles a basic email address.
+deepFreeze: Freezes an object (to a limited depth) to prevent modification.
+secureCompilePredicate: Compiles user code into a safe predicate with a sandbox and API allowlist.
+ingest: Converts and appends data rows to state, then updates tabs and the incident range.
+buildTabs: Builds tab definitions from the dataset (overview, custom, blocked, per-channel, and saved tabs).
+renderTabs: Renders tab buttons and click handlers, then renders the active tab and filter icons.
+getTabState: Returns or initializes per-tab state (filters, pagination, and sorting).
+renderActiveTab: Renders content for the active tab and synchronizes filter icons.
+runChatbot: Calls the OpenAI API to generate a JavaScript predicate from a user prompt.
+computeRuleMatchesChunked: Runs a predicate over rows in chunks to keep the UI responsive.
+bindCardsClickOnce: Binds click handlers once to metric/rule cards to open ad hoc tabs.
+computeDatasetHash: Creates a lightweight dataset hash for caching rule results.
+loadRuleCache: Loads cached rule results from sessionStorage.
+saveRuleCache: Stores cached rule results in sessionStorage (with cleanup fallback).
+clearRuleCaches: Removes all rule-cache entries from sessionStorage.
+getRowId: Generates a stable composite ID for a row (avoids collisions across files).
+indexRowsById: Builds a Map index from row IDs to array indices.
+renderOverview: Renders the Overview: metric cards, aggregate tables, and daily volume chart.
+extractFirstEmail: Extracts the first valid email address from a string.
+extractLocal: Extracts and normalizes the email local part.
+commonPrefixLen: Calculates the common-prefix length of two strings.
+levenshtein: Calculates Levenshtein distance with an early-exit threshold.
+jaroWinkler: Calculates the Jaro-Winkler similarity score.
+isSelfLike: Evaluates sender and recipient local-part similarity (self-like).
+ruleSelfToSelf: Rule: true when a recipient resembles the sender.
+ruleRecipientFreeMail: Rule: true when a recipient domain is a free email provider.
+ruleShortOrEmptySubject: Rule: true when the email subject is empty or below the minimum length.
+ruleAttachmentNoExtension: Rule: true when an attachment has no extension.
+filenameCoreStrict: Extracts a normalized filename core for sequence detection.
+fileCoresFromCell: Derives a list of unique filename cores from a cell.
+extractStemTail: Extracts the stem and trailing number from a filename.
+buildSequentialIndex: Builds a stem-to-numeric-tail-set index for each source.
+getHotStemsBySource: Gets hot stems (unique tails ≥ threshold) for each source.
+ruleSequentialAttachments: Rule: true when a row has an attachment with a hot stem for its source.
+ruleSensitiveKeywords: Rule: true when sensitive keywords appear in the subject, filename, or policies.
+buildSenderDomainCounts: Calculates destination-domain frequency per sender.
+ruleRepeatedDomainBySender: Rule: true when a sender repeatedly sends to the same domain above the threshold.
+ruleWeirdTLD: Rule: true when the destination domain uses an unusual TLD (xyz/top/icu).
+ruleOutOfHours: Rule: true when an incident occurs between 00:00 and 04:59.
+makeSimpleTableEl: Builds a simple table element from headers and rows (not clickable).
+makeClickableTable: Builds a table section whose contents open drill-down filters when clicked.
+aggregateDomains: Aggregates row counts by unique destination domain (based on base domain).
+aggregateByDay: Aggregates alert counts by day (based on Incident Time, ISO yyyy-mm-dd).
+makeLineChart: Draws a responsive SVG line chart with axes, grid, and interactive tooltips.
+renderTableSection: Renders a tab table section with pagination, export, copy, and page-size controls.
+renderCustomTab: Renders the Custom JS tab with API-key input, chatbot, predicate editor, and results.
+renderDataTable: Renders a tab data table with filtering, sorting, pagination, and metadata.
+updateFilterIcons: Updates table-header filter icons to match the tab filter state.
+openFilterPopover: Opens a filter/sort popover for a column and applies user actions.
+positionPopover: Positions a popover absolutely relative to its anchor.
+closePopovers: Closes all open filter popovers.
+applyFiltersAndSort: Applies filtering and sorting to a row array and returns the result.
+updatePager: Updates pager elements (page information and navigation buttons) for the active table.
+rerenderTabTable: Rerenders a table in a given tab section and synchronizes the pager.
+rerenderActive: Rerenders the active tab (used after filters or sorting change).
+sanitizeFileName: Normalizes a filename for use as a safe download name.
+exportCurrentView: Exports the current table view (active page) to CSV.
+copyCurrentView: Copies the current table view (active page) to the clipboard as TSV.
+applyDrillFilter: Applies a drill-down filter to rows for a given column or domain.
+openFilterTab: Opens a new drill-down tab based on the selected column and value.
+openAdHocTab: Opens a new ad hoc tab containing the provided rows.
+updateIncidentRange: Updates the incident time-range label from the loaded dataset.
+parseCSV: Parses a CSV file with Papa.parse and returns an object array.
 ======================================================================================= */
 
 </script>

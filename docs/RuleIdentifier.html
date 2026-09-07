@@ -73,7 +73,7 @@ let totalRules = 0;
 
 const stat = { total: 0, processed: 0, identified: 0, unidentified: 0, noClassifiers: 0 };
 
-// REPLACE isi fungsi refreshKPIs
+// REPLACE the refreshKPIs function body
 function refreshKPIs(){
   $('#kpi-total-alerts').textContent = stat.total;
   $('#kpi-total-rules').textContent  = totalRules;
@@ -131,10 +131,10 @@ function parseCSV(text){
 function rowsToObjects(rows){
   if (!rows.length) return { header: [], rows: [] };
 
-  // 1) Ambil header mentah
+  // 1) Get the raw header
   let header = rows[0].map(h => (h ?? '').trim());
 
-  // 2) Buang kolom kosong di ekor (header kosong DAN semua data kosong)
+  // 2) Remove trailing empty columns (empty header AND all data empty)
   let end = header.length - 1;
   while (end >= 0) {
     const headEmpty = (header[end] || '').trim() === '';
@@ -148,11 +148,11 @@ function rowsToObjects(rows){
     }
   }
 
-  // 3) Normalisasi panjang setiap row ke panjang header
+  // 3) Normalize each row length to the header length
   const out = [];
   for (let r = 1; r < rows.length; r++) {
     const rw = rows[r] ?? [];
-    if (rw.every(c => (c ?? '').trim() === '')) continue; // skip baris kosong
+    if (rw.every(c => (c ?? '').trim() === '')) continue; // skip empty rows
     const o = {};
     for (let c = 0; c < header.length; c++) {
       const key = header[c] || `col_${c}`;
@@ -234,13 +234,13 @@ drop.addEventListener('drop', async e => {
   e.preventDefault();
   drop.classList.remove('drag');
   const files = await collectDroppedCSVFiles(e.dataTransfer); // supports folders
-  await handleFiles(files);  // <-- fungsi kamu yang sudah ada
+  await handleFiles(files);  // <-- the existing function
   fileAll.value = '';        // reset input so next selection always fires
 });
 
 fileAll.addEventListener('change', async e => {
   const files = [...e.target.files].filter(isCSVFile); // works with folder picker
-  await handleFiles(files);  // <-- fungsi kamu yang sudah ada
+  await handleFiles(files);  // <-- the existing function
   fileAll.value = '';        // avoid stale value blocking next change
 });
 
@@ -371,7 +371,7 @@ function evalRelationExpr(expr, hits){
 /* ----------------------------- Matcher ------------------------------ */
 function buildPolicyIndex(policies){
   return policies
-    .filter(hasNonEmptyClassifiers) // ← skip kosong
+    .filter(hasNonEmptyClassifiers) // ← skip empty values
     .map(p => {
       const relation = (p['Relation']||'').toString().trim() || 'AND';
       const classifiers = splitClassifiers(p['Classifiers']);
@@ -420,7 +420,7 @@ function createRowWithRule(rowObj, alertHeader, ruleJoined){
 }
 
 function buildCSV(header, rows){
-  // Escape nilai jika mengandung koma, kutip, atau newline (CR/LF)
+  // Escape values containing commas, quotes, or newlines (CR/LF)
   const esc = v => {
     const s = (v ?? '').toString();
     if (/[",\r\n]/.test(s)) {
@@ -432,10 +432,10 @@ function buildCSV(header, rows){
   const lines = [];
   lines.push(header.map(esc).join(','));          // header
   for (const r of rows) {
-    lines.push(header.map(h => esc(r[h])).join(',')); // rows mengikuti urutan header
+    lines.push(header.map(h => esc(r[h])).join(',')); // rows follow header order
   }
 
-  // ⚠️ CRLF agar friendly di Excel + BOM supaya encoding terbaca UTF-8
+  // ⚠️ Use CRLF for Excel compatibility and a BOM so encoding is detected as UTF-8
   const csv = '\uFEFF' + lines.join('\r\n');
   return csv;
 }
@@ -557,11 +557,11 @@ async function processAll(){
   const outHeader = insertRuleHeader(alertsHeader);
   const outRows = [];
 
-  // 🔧 Tuning di sini
-  const BATCH = 50;                // lebih kecil = UI lebih halus
-  const DELAY_BETWEEN_BATCH_MS = 60;// jeda antar-batch
-  const YIELD_EVERY = 50;           // optional: yield di tengah batch
-  const YIELD_MS = 0;               // 0 = hanya menyerahkan kontrol ke UI
+  // 🔧 Tune here
+  const BATCH = 50;                // smaller values produce a smoother UI
+  const DELAY_BETWEEN_BATCH_MS = 60;// delay between batches
+  const YIELD_EVERY = 50;           // optional: yield in the middle of a batch
+  const YIELD_MS = 0;               // 0 = only yield control to the UI
 
   const countMap = {};
 	stat.processed = 0;
@@ -574,7 +574,7 @@ async function processAll(){
   for (let i = 0; i < alertsRows.length; i += BATCH) {
     const chunk = alertsRows.slice(i, i + BATCH);
 
-    // beri jeda antar-batch (bisa 0 kalau tidak perlu)
+    // pause between batches (can be 0 when unnecessary)
     if (DELAY_BETWEEN_BATCH_MS > 0) await sleep(DELAY_BETWEEN_BATCH_MS);
 
     for (let j = 0; j < chunk.length; j++) {
@@ -589,7 +589,7 @@ async function processAll(){
 
       stat.processed++;
 
-      // optional: serahkan kontrol ke UI tiap N item
+      // optional: yield control to the UI every N items
       if (YIELD_EVERY > 0 && ((j + 1) % YIELD_EVERY === 0)) {
         await sleep(YIELD_MS);
       }
