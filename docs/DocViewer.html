@@ -1,106 +1,84 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DLP Analyzer — Document Viewer</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 </head>
 <body class="page-doc-viewer tool-page">
   <div class="wrap">
     <header class="page-header">
       <h1>Document Viewer</h1>
-      <p class="page-description">Open and display local document contents for quick review in the browser.</p>
+      <p class="page-description">Quickly inspect files with missing or unclear extensions. Processing stays in your browser.</p>
       <div class="input-guide" aria-label="Input guide">
-        <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Text, CSV, JSON, HTML, PDF, and image files supported by your browser.</div>
-        <div class="input-guide-item"><span class="input-guide-label">Required input</span>No data columns are required; select the complete document you want to review.</div>
+        <div class="input-guide-item"><span class="input-guide-label">Document text</span>TXT, JSON, XML, HTML, CSV, RTF, DOCX, PPTX, XLSX, OpenDocument, and PDF.</div>
+        <div class="input-guide-item"><span class="input-guide-label">Other previews</span>ZIP contents, PDF pages, and browser-supported image formats.</div>
       </div>
     </header>
 
     <div class="panel">
       <div class="row">
         <div class="row-left">
-          <label class="drop" title="Select a document">
-            <input id="documentInput" type="file" accept="text/*,.csv,.json,.pdf,image/*" />
-            Select Document
+          <label class="drop" id="dropper" title="Select or drop a document">
+            <input id="file" type="file">
+            <strong>Choose a file</strong> or drop it here
           </label>
-          <button class="btn" id="loadSampleBtn">Load sample</button>
-          <button class="btn" id="clearBtn">Clear</button>
+          <button class="btn" id="clearBtn" type="button">Clear</button>
         </div>
-        <div class="row-right"><span id="documentStatus" class="muted-sm" role="status" aria-live="polite">No document loaded.</span></div>
+        <div class="row-right tiny muted">File type is detected from its contents when possible.</div>
       </div>
     </div>
+    <div id="status" class="soft doc-status" role="status" aria-live="polite">Ready.</div>
 
-    <section class="section" style="margin-top:14px">
-      <header><strong id="documentName">Document preview</strong></header>
-      <div class="panel" id="previewPanel">
-        <pre id="textPreview" style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-height:240px"></pre>
-        <iframe id="filePreview" title="Document preview" style="display:none;width:100%;height:70vh;border:0"></iframe>
-        <img id="imagePreview" alt="Uploaded document preview" style="display:none;max-width:100%;height:auto" />
+    <div class="topgrid">
+      <section class="section hidden" id="metaBox">
+        <header><strong>File info</strong></header>
+        <div class="panel section-panel">
+          <div class="kv mono">
+            <span class="pill" id="fn"></span><span class="pill" id="fs"></span>
+            <span class="pill" id="ft"></span><span class="pill" id="fm"></span>
+          </div>
+          <div class="kv mono"><code class="pill" title="First 32 bytes in hexadecimal" id="magic">magic: </code></div>
+          <div class="kv mono hidden" id="zipBrief">
+            <span class="pill" id="zipEnc">zip-encrypted: ?</span><span class="pill" id="zipCount">zip-entries: ?</span>
+            <span class="pill" id="zip64">zip64: ?</span><span class="pill" id="zipType">doc-type: ?</span>
+          </div>
+          <div class="kv mono hidden" id="imgBrief"><span class="pill" id="imgDim">image: ?</span></div>
+          <div class="kv mono"><span class="pill" id="fromLabel" title="Source of the current text preview">source: none</span></div>
+        </div>
+      </section>
+
+      <section class="section hidden" id="zipBox">
+        <header><strong>ZIP contents</strong></header>
+        <div class="panel section-panel"><div class="ziplist" id="zipList"></div></div>
+      </section>
+    </div>
+
+    <section class="section hidden" id="viewBox">
+      <header class="preview-header">
+        <strong>Preview</strong>
+        <div class="row-right">
+          <div class="searchbar hidden" id="zipSearchBar">
+            <label class="sr-only" for="zipSearch">Search ZIP text entries</label>
+            <input id="zipSearch" type="search" placeholder="Search text entries in ZIP">
+            <button class="btn" id="zipSearchBtn" type="button">Search</button>
+          </div>
+          <button class="btn hidden" id="restoreBtn" type="button" title="Restore the initial automatic preview">Restore initial</button>
+        </div>
+      </header>
+      <div class="panel section-panel">
+        <div class="imgwrap hidden" id="imgWrap"><img id="img" alt="Document preview"></div>
+        <pre class="out mono hidden" id="text"></pre>
+        <div id="pdfImgGallery" class="pdf-grid hidden"></div>
+        <div id="pdfEmbedWrap" class="embedwrap hidden"><embed id="pdfEmbed" type="application/pdf"></div>
+        <div class="panel hidden" id="note"></div>
       </div>
     </section>
   </div>
-  <script>
-    const input = document.getElementById('documentInput');
-    const textPreview = document.getElementById('textPreview');
-    const filePreview = document.getElementById('filePreview');
-    const imagePreview = document.getElementById('imagePreview');
-    const status = document.getElementById('documentStatus');
-    const name = document.getElementById('documentName');
-    let objectUrl = '';
-
-    function clearPreview() {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = '';
-      textPreview.textContent = '';
-      textPreview.style.display = 'block';
-      filePreview.style.display = 'none';
-      filePreview.removeAttribute('src');
-      imagePreview.style.display = 'none';
-      imagePreview.removeAttribute('src');
-      name.textContent = 'Document preview';
-      status.textContent = 'No document loaded.';
-      input.value = '';
-    }
-
-    async function showFile(file) {
-      clearPreview();
-      name.textContent = file.name;
-      status.textContent = `${file.name} (${file.size.toLocaleString()} bytes)`;
-      if (file.type.startsWith('image/')) {
-        objectUrl = URL.createObjectURL(file);
-        imagePreview.src = objectUrl;
-        imagePreview.style.display = 'block';
-        textPreview.style.display = 'none';
-      } else if (file.type === 'application/pdf') {
-        objectUrl = URL.createObjectURL(file);
-        filePreview.src = objectUrl;
-        filePreview.style.display = 'block';
-        textPreview.style.display = 'none';
-      } else {
-        textPreview.textContent = await file.text();
-      }
-    }
-
-    input.addEventListener('change', () => {
-      if (input.files[0]) showFile(input.files[0]).catch(error => {
-        status.textContent = `Unable to display the document: ${error.message}`;
-      });
-    });
-    document.getElementById('loadSampleBtn').addEventListener('click', async (event) => {
-      const button = event.currentTarget;
-      button.disabled = true;
-      try {
-        const response = await fetch('sample/document.txt');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        await showFile(new File([await response.blob()], 'document.txt', { type: 'text/plain' }));
-      } catch (error) {
-        status.textContent = `Unable to load the sample document: ${error.message}`;
-      } finally {
-        button.disabled = false;
-      }
-    });
-    document.getElementById('clearBtn').addEventListener('click', clearPreview);
-  </script>
+  <footer>hendryadrian.com</footer>
+  <script src="js/doc-viewer.js"></script>
 </body>
 </html>

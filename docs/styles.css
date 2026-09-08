@@ -118,6 +118,60 @@ body.page-keyword-generator .wrap {
   padding: 0;
 }
 
+/* Shared controls and content shells used by the utility pages. Page scopes below
+   may override these defaults when a tool needs a denser layout. */
+:where(body.tool-page) .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+:where(body.tool-page) .row,:where(body.tool-page) .row-left,:where(body.tool-page) .row-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+:where(body.tool-page) .row{justify-content:space-between}
+:where(body.tool-page) .drop{border:1.5px dashed #2a3b52;border-radius:12px;padding:10px 14px;text-align:center;cursor:pointer;background:#0e141e}
+:where(body.tool-page) .drop:hover,:where(body.tool-page) .drop.drag{border-color:var(--accent)}
+:where(body.tool-page) .drop input[type="file"]{display:none}
+:where(body.tool-page) .btn{background:linear-gradient(180deg,#1f2a3b,#172233);border:1px solid #2b3d55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+:where(body.tool-page) .btn:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15) inset}
+:where(body.tool-page) .btn:disabled{opacity:.6;cursor:not-allowed}
+:where(body.tool-page) .tiny{font-size:12px}
+:where(body.tool-page) .soft{color:#b9c7da}
+:where(body.tool-page) .ok{color:var(--accent2)}
+:where(body.tool-page) .warn{color:var(--warn)}
+:where(body.tool-page) .danger{color:var(--danger)}
+:where(body.tool-page) .section{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:14px}
+:where(body.tool-page) .section>header{display:flex;justify-content:space-between;align-items:center;background:#0f1521;padding:10px 12px;border-bottom:1px solid var(--line)}
+:where(body.tool-page) .kv{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+:where(body.tool-page) .pill{display:inline-flex;gap:6px;align-items:center;background:#0e141e;border:1px solid #1f2a3b;border-radius:999px;padding:4px 8px;font-size:12px}
+:where(body.tool-page) code.pill{border-radius:8px}
+:where(body.tool-page) .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+:where(body.tool-page) .hidden{display:none!important}
+:where(body.tool-page) .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-top:16px}
+
+/* File-preview components extend the shared utility-page layout. */
+body.page-doc-viewer .doc-status{margin-top:10px}
+body.page-doc-viewer .section-panel{border:0;border-radius:0}
+body.page-doc-viewer .kv{margin:8px 0}
+body.page-doc-viewer .topgrid>.section{height:320px;display:flex;flex-direction:column;margin-top:0}
+body.page-doc-viewer .topgrid .section-panel{flex:1;min-height:0;display:flex;flex-direction:column}
+body.page-doc-viewer .ziplist{flex:1;min-height:0;overflow:auto;border:1px solid #1f2a3b;border-radius:12px}
+body.page-doc-viewer .ziprow{display:grid;grid-template-columns:minmax(0,1fr) 100px 80px;gap:8px;width:100%;padding:8px 10px;border:0;border-bottom:1px solid #1f2a3b;background:transparent;color:var(--text);font:inherit;text-align:left}
+body.page-doc-viewer button.ziprow:not(:disabled){cursor:pointer}
+body.page-doc-viewer button.ziprow:not(:disabled):hover{background:#0c131e}
+body.page-doc-viewer .ziprow.head{position:sticky;top:0;background:#0f1521;font-weight:700;z-index:2}
+body.page-doc-viewer .ziprow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.page-doc-viewer .preview-header{gap:10px}
+body.page-doc-viewer .searchbar{display:flex;gap:8px;align-items:center}
+body.page-doc-viewer .searchbar input{min-width:260px;padding:8px 10px;border-radius:10px;border:1px solid #2b3d55;background:#0e141e;color:var(--text)}
+body.page-doc-viewer pre.out{background:#0e141e;border:1px solid #1f2a3b;border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:68vh;margin:0}
+body.page-doc-viewer .imgwrap img{max-width:100%;height:auto;display:block;border:1px solid #1f2a3b;border-radius:12px}
+body.page-doc-viewer .embedwrap embed{width:100%;height:72vh;border:1px solid #1f2a3b;border-radius:12px}
+body.page-doc-viewer #note{margin-top:10px;background:#0e141e;border-color:#1f2a3b;color:#cfe2ff}
+body.page-doc-viewer .pdf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+body.page-doc-viewer .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:760px){
+  body.page-doc-viewer .topgrid{grid-template-columns:1fr}
+  body.page-doc-viewer .topgrid>.section{height:auto;max-height:320px}
+  body.page-doc-viewer .preview-header{align-items:flex-start}
+  body.page-doc-viewer .searchbar input{min-width:140px;width:100%}
+}
+
 @media (max-width: 700px) {
   body.tool-page .wrap {
     width: min(100% - 20px, 1400px);
