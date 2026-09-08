@@ -14,8 +14,14 @@
 
 <body class="page-card-manager tool-page">
   <div class="wrap">
-    <h1>JS Snippet Manager</h1>
-    <p class="sub">Store JavaScript snippets. Create files, edit, rename, delete, import/export JSON, and run filters on CSV.</p>
+    <header class="page-header">
+      <h1>JS Snippet Manager</h1>
+      <p class="page-description">Menyimpan, mengedit, mengimpor, dan mengekspor snippet JavaScript, lalu menjalankan filter tersebut pada data alert DLP.</p>
+      <div class="input-guide" aria-label="Panduan input">
+        <div class="input-guide-item"><span class="input-guide-label">File yang diunggah</span>CSV alert Forcepoint DLP untuk dianalisis. JSON hasil ekspor Snippet Manager bersifat opsional untuk memulihkan koleksi snippet.</div>
+        <div class="input-guide-item"><span class="input-guide-label">Kolom CSV yang diperlukan</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
+      </div>
+    </header>
 
     <div class="panel">
       <div class="row">

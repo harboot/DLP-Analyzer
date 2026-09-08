@@ -11,8 +11,14 @@
 </head>
 <body class="page-rule-identifier tool-page">
   <div class="wrap">
-    <h1>DLP Alerts ↔ Policies Matcher</h1>
-    <p class="sub">Upload CSV files for <b>DLP Alerts</b> and <b>DLP Policies</b> with a single uploader. We’ll validate structure, process in batches, add <i>Rule Name</i> after <i>Policies</i> for output, render a bar chart, and keep a live log.</p>
+    <header class="page-header">
+      <h1>DLP Alerts ↔ Policies Matcher</h1>
+      <p class="page-description">Mencocokkan classifier pada alert dengan rule kebijakan DLP, menambahkan <em>Rule Name</em> ke hasil, lalu menyediakan grafik, log proses, dan CSV hasil.</p>
+      <div class="input-guide" aria-label="Panduan input">
+        <div class="input-guide-item"><span class="input-guide-label">File yang diunggah</span>Dua jenis CSV: ekspor <strong>DLP Alerts</strong> dan ekspor <strong>DLP Policies</strong>. File atau folder dapat dipilih sekaligus.</div>
+        <div class="input-guide-item"><span class="input-guide-label">Kolom yang diperlukan</span>Alerts: <code>Violation Triggers, Policies</code><br>Policies: <code>Rule Name, Relation, Classifiers</code></div>
+      </div>
+    </header>
 
     <div class="panel">
       <div class="row">

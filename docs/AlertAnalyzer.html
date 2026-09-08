@@ -13,11 +13,17 @@
 
 <body class="page-alert-analyzer tool-page">
 <div class="wrap">
+  <header class="page-header">
+    <h1>Forcepoint DLP Alerts Analyzer</h1>
+    <p class="page-description">Menganalisis alert Forcepoint DLP, mengelompokkan aktivitas terkait, serta menampilkan ringkasan, temuan risiko, filter, grafik, dan hasil ekspor.</p>
+    <div class="input-guide" aria-label="Panduan input">
+      <div class="input-guide-item"><span class="input-guide-label">File yang diunggah</span>CSV hasil ekspor incident/alert Forcepoint DLP. Beberapa file CSV dapat digabungkan dalam satu kali unggah.</div>
+      <div class="input-guide-item"><span class="input-guide-label">Kolom yang diperlukan</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
+    </div>
+  </header>
   <div class="panel">
     <div class="row">
-      <div class="row-left">
-        <h1 style="margin:0">Forcepoint DLP Alerts Analyzer</h1>
-      </div>
+      <div class="row-left"></div>
       <div class="row-right">
         <span id="rangeLabel" class=""><span id="rangeVal">–</span></span>
         <label class="drop" id="drop">
