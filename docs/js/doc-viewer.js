@@ -5,7 +5,7 @@
   const input = byId('file');
   const status = byId('status');
   const textOutput = byId('text');
-  const state = { url: '', zip: null, initialText: '', initialSource: '' };
+  const state = { url: '', zip: null, initialText: '', initialSource: '', searchDocuments: [] };
   const textExtensions = /\.(?:txt|csv|json|xml|html?|md|log|ini|yaml|yml|js|css|rtf)$/i;
   const zipTextExtensions = /\.(?:txt|csv|json|xml|html?|md|log|ini|yaml|yml|js|css|rtf)$/i;
 
@@ -44,14 +44,16 @@
   }
   function reset() {
     if (state.url) URL.revokeObjectURL(state.url);
-    Object.assign(state, { url: '', zip: null, initialText: '', initialSource: '' });
+    Object.assign(state, { url: '', zip: null, initialText: '', initialSource: '', searchDocuments: [] });
     input.value = '';
-    ['metaBox', 'zipBox', 'viewBox', 'zipBrief', 'imgBrief', 'imgWrap', 'text', 'pdfImgGallery', 'pdfEmbedWrap', 'note', 'restoreBtn', 'zipSearchBar'].forEach(id => show(byId(id), false));
+    ['metaBox', 'zipBox', 'viewBox', 'searchBox', 'zipBrief', 'imgBrief', 'imgWrap', 'text', 'pdfImgGallery', 'pdfEmbedWrap', 'note', 'restoreBtn', 'searchResults'].forEach(id => show(byId(id), false));
     byId('zipList').replaceChildren();
     byId('pdfImgGallery').replaceChildren();
     byId('img').removeAttribute('src');
     byId('pdfEmbed').removeAttribute('src');
-    byId('zipSearch').value = '';
+    byId('documentSearch').value = '';
+    byId('searchResults').textContent = '';
+    byId('searchSummary').textContent = 'Enter a keyword to search this file.';
     setStatus('Ready.');
   }
   function setText(value, source, remember = false) {
@@ -94,7 +96,7 @@
     const entries = Object.values(zip.files);
     const names = entries.map(entry => entry.name);
     const type = classifyZip(names);
-    show(byId('zipBrief')); show(byId('zipBox')); show(byId('zipSearchBar'));
+    show(byId('zipBrief')); show(byId('zipBox')); show(byId('searchBox'));
     byId('zipEnc').textContent = `zip-encrypted: ${entries.some(entry => entry._data && entry._data.encrypted) ? 'yes' : 'no'}`;
     byId('zipCount').textContent = `zip-entries: ${entries.length}`;
     byId('zip64').textContent = `zip64: ${bytes.some((byte, index) => byte === 0x50 && bytes[index + 1] === 0x4b && bytes[index + 2] === 0x06 && bytes[index + 3] === 0x06) ? 'yes' : 'no'}`;
@@ -135,21 +137,45 @@
       list.append(row);
     }
   }
-  async function searchZip() {
-    const query = byId('zipSearch').value.trim().toLocaleLowerCase();
-    if (!query || !state.zip) { setStatus('Enter text to search inside the ZIP.', 'warn'); return; }
-    setStatus('Searching ZIP text entries…');
+  function contextSnippet(line, matchIndex, queryLength, radius = 80) {
+    const compact = line.replace(/\s+/g, ' ').trim();
+    const adjustedIndex = line.slice(0, matchIndex).replace(/\s+/g, ' ').trimStart().length;
+    const start = Math.max(0, adjustedIndex - radius);
+    const end = Math.min(compact.length, adjustedIndex + queryLength + radius);
+    return `${start ? '…' : ''}${compact.slice(start, end)}${end < compact.length ? '…' : ''}`;
+  }
+  function findMatches(documents, rawQuery) {
+    const query = rawQuery.toLocaleLowerCase();
     const matches = [];
+    documents.forEach(document => {
+      document.content.split(/\r?\n/).forEach((line, index) => {
+        const matchIndex = line.toLocaleLowerCase().indexOf(query);
+        if (matchIndex !== -1) matches.push(`${document.name}:${index + 1}\n${contextSnippet(line, matchIndex, rawQuery.length)}`);
+      });
+    });
+    return matches;
+  }
+  async function searchableDocuments() {
+    if (!state.zip) return state.searchDocuments;
+    const documents = [];
     for (const entry of Object.values(state.zip.files)) {
       if (entry.dir || (!zipTextExtensions.test(entry.name) && !/\.xml$/i.test(entry.name))) continue;
-      try {
-        const content = await entry.async('text');
-        const lines = content.split(/\r?\n/);
-        lines.forEach((line, index) => { if (line.toLocaleLowerCase().includes(query)) matches.push(`${entry.name}:${index + 1}: ${line.trim()}`); });
-      } catch (_) { /* Unsupported or encrypted entries are skipped. */ }
+      try { documents.push({ name: entry.name, content: await entry.async('text') }); }
+      catch (_) { /* Unsupported or encrypted entries are skipped. */ }
     }
-    setText(matches.join('\n') || `No matches found for “${byId('zipSearch').value.trim()}”.`, 'ZIP search results');
-    setStatus(`${matches.length.toLocaleString()} matching line${matches.length === 1 ? '' : 's'} found.`, matches.length ? 'ok' : 'warn');
+    return documents;
+  }
+  async function searchDocument() {
+    const rawQuery = byId('documentSearch').value.trim();
+    if (!rawQuery) { setStatus('Enter a keyword to search.', 'warn'); return; }
+    setStatus('Searching document text…');
+    const matches = findMatches(await searchableDocuments(), rawQuery);
+    const results = byId('searchResults');
+    results.textContent = matches.join('\n\n') || `No matches found for “${rawQuery}”.`;
+    show(results);
+    const summary = `${matches.length.toLocaleString()} matching line${matches.length === 1 ? '' : 's'} found.`;
+    byId('searchSummary').textContent = summary;
+    setStatus(summary, matches.length ? 'ok' : 'warn');
   }
   async function previewPdf(bytes) {
     state.url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
@@ -166,6 +192,8 @@
       pages.push(`--- Page ${pageNumber} ---\n${content.items.map(item => item.str).join(' ')}`);
     }
     state.initialText = pages.join('\n\n'); state.initialSource = 'PDF text';
+    state.searchDocuments = pages.map((content, index) => ({ name: `Page ${index + 1}`, content }));
+    show(byId('searchBox'));
     byId('fromLabel').textContent = `source: PDF (${pdf.numPages} pages; browser viewer shown)`;
     setStatus(`PDF loaded: ${pdf.numPages} page${pdf.numPages === 1 ? '' : 's'} and text extracted.`, 'ok');
   }
@@ -195,6 +223,8 @@
       let content = new TextDecoder('utf-8').decode(bytes);
       if (/\.html?$/i.test(file.name)) content = new DOMParser().parseFromString(content, 'text/html').body.textContent.trim();
       setText(content, detected === 'Unknown' ? 'plain text' : detected, true);
+      state.searchDocuments = [{ name: file.name, content }];
+      show(byId('searchBox'));
     } else {
       setText('No safe browser preview is available for this binary format.', detected);
       show(byId('note')); byId('note').textContent = 'The file was read locally, but its contents were not sent anywhere.';
@@ -204,8 +234,8 @@
 
   input.addEventListener('change', () => openFile(input.files[0]).catch(error => setStatus(`Unable to display the file: ${error.message}`, 'danger')));
   byId('clearBtn').addEventListener('click', reset);
-  byId('zipSearchBtn').addEventListener('click', () => searchZip().catch(error => setStatus(`Search failed: ${error.message}`, 'danger')));
-  byId('zipSearch').addEventListener('keydown', event => { if (event.key === 'Enter') byId('zipSearchBtn').click(); });
+  byId('documentSearchBtn').addEventListener('click', () => searchDocument().catch(error => setStatus(`Search failed: ${error.message}`, 'danger')));
+  byId('documentSearch').addEventListener('keydown', event => { if (event.key === 'Enter') byId('documentSearchBtn').click(); });
   byId('restoreBtn').addEventListener('click', () => setText(state.initialText, state.initialSource));
   const dropper = byId('dropper');
   ['dragenter', 'dragover'].forEach(type => dropper.addEventListener(type, event => { event.preventDefault(); dropper.classList.add('drag'); }));

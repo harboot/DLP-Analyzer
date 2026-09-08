@@ -156,8 +156,13 @@ body.page-doc-viewer button.ziprow:not(:disabled):hover{background:#0c131e}
 body.page-doc-viewer .ziprow.head{position:sticky;top:0;background:#0f1521;font-weight:700;z-index:2}
 body.page-doc-viewer .ziprow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.page-doc-viewer .preview-header{gap:10px}
+body.page-doc-viewer #viewBox{margin-top:16px}
+body.page-doc-viewer #searchBox{margin-top:16px}
+body.page-doc-viewer .search-header{gap:12px;flex-wrap:wrap}
+body.page-doc-viewer .search-panel{display:grid;gap:12px}
 body.page-doc-viewer .searchbar{display:flex;gap:8px;align-items:center}
-body.page-doc-viewer .searchbar input{min-width:260px;padding:8px 10px;border-radius:10px;border:1px solid #2b3d55;background:#0e141e;color:var(--text)}
+body.page-doc-viewer .searchbar input{flex:1;min-width:260px;padding:8px 10px;border-radius:10px;border:1px solid #2b3d55;background:#0e141e;color:var(--text)}
+body.page-doc-viewer #searchResults{max-height:42vh}
 body.page-doc-viewer pre.out{background:#0e141e;border:1px solid #1f2a3b;border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:68vh;margin:0}
 body.page-doc-viewer .imgwrap img{max-width:100%;height:auto;display:block;border:1px solid #1f2a3b;border-radius:12px}
 body.page-doc-viewer .embedwrap embed{width:100%;height:72vh;border:1px solid #1f2a3b;border-radius:12px}
