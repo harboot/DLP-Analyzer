@@ -33,6 +33,62 @@ body.tool-page h1 {
   letter-spacing: -0.02em;
 }
 
+/* A consistent introduction block used at the top of every tool page. */
+body.tool-page .page-header {
+  margin-bottom: 16px;
+}
+
+body.tool-page .page-header h1 {
+  margin: 0 0 6px;
+}
+
+body.tool-page .page-header .page-description {
+  max-width: 960px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+body.tool-page .input-guide {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.65fr) minmax(0, 1.35fr);
+  gap: 16px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+body.tool-page .input-guide-item {
+  min-width: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+body.tool-page .input-guide-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body.tool-page .input-guide code {
+  color: var(--accent2);
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  body.tool-page .input-guide {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 body.tool-page .sub,
 body.tool-page .muted {
   color: var(--muted);

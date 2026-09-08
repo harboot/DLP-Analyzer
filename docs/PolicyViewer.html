@@ -9,8 +9,14 @@
 </head>
 <body class="page-policy-viewer tool-page">
 <div class="wrap">
-  <h1 title="Forcepoint DLP – Policy Viewer">Forcepoint DLP – Policy Viewer</h1>
-  <p class="sub">Upload exported JSON (“Forcepoint DLP Extracted Policies”). The app validates schema and lists rules in a single table.</p>
+  <header class="page-header">
+    <h1 title="Forcepoint DLP – Policy Viewer">Forcepoint DLP – Policy Viewer</h1>
+    <p class="page-description">Memvalidasi dan menampilkan policy serta rule Forcepoint DLP dalam tabel yang dapat dicari, difilter, disalin, dan diekspor.</p>
+    <div class="input-guide" aria-label="Panduan input">
+      <div class="input-guide-item"><span class="input-guide-label">File yang diunggah</span>File JSON “Forcepoint DLP Extracted Policies”, baik satu per satu, beberapa file, maupun satu folder.</div>
+      <div class="input-guide-item"><span class="input-guide-label">Data yang diperlukan</span>Bukan CSV. JSON wajib memiliki objek <code>policy</code> dan array <code>policy.rules</code>, <code>severity_action.rules</code>, serta <code>source_destination.rules</code>.</div>
+    </div>
+  </header>
 
   <div class="panel">
     <div class="row">
