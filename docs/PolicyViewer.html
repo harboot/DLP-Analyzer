@@ -11,10 +11,10 @@
 <div class="wrap">
   <header class="page-header">
     <h1 title="Forcepoint DLP – Policy Viewer">Forcepoint DLP – Policy Viewer</h1>
-    <p class="page-description">Memvalidasi dan menampilkan policy serta rule Forcepoint DLP dalam tabel yang dapat dicari, difilter, disalin, dan diekspor.</p>
-    <div class="input-guide" aria-label="Panduan input">
-      <div class="input-guide-item"><span class="input-guide-label">File yang diunggah</span>File JSON “Forcepoint DLP Extracted Policies”, baik satu per satu, beberapa file, maupun satu folder.</div>
-      <div class="input-guide-item"><span class="input-guide-label">Data yang diperlukan</span>Bukan CSV. JSON wajib memiliki objek <code>policy</code> dan array <code>policy.rules</code>, <code>severity_action.rules</code>, serta <code>source_destination.rules</code>.</div>
+    <p class="page-description">Validate and display Forcepoint DLP policies and rules in a searchable, filterable, copyable, and exportable table.</p>
+    <div class="input-guide" aria-label="Input guide">
+      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>“Forcepoint DLP Extracted Policies” JSON files, selected individually, as multiple files, or as one folder.</div>
+      <div class="input-guide-item"><span class="input-guide-label">Required data</span>This is not CSV data. Each JSON file must contain a <code>policy</code> object and the <code>policy.rules</code>, <code>severity_action.rules</code>, and <code>source_destination.rules</code> arrays.</div>
     </div>
   </header>
 
@@ -534,7 +534,7 @@
   /* ===================== Filter popovers (fixed on body, not clipped) ===================== */
 	const debouncedRender = debounce(()=>{
 	  render();
-	  updateFilterIcons();   // panggil setelah render
+	  updateFilterIcons();   // call after rendering
 	}, 200);
 
   const INACTIVE_ICON = '🔍';
