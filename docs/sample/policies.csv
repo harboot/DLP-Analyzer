@@ -1,0 +1,4 @@
+Rule Name,Relation,Classifiers
+Customer PII Rule,1 AND 2,Customer Number;Email Address
+Financial Records Rule,1,Financial Statement
+Employee Data Rule,1 OR 2,Employee ID;National ID

@@ -1,0 +1,9 @@
+DLP Analyzer sample document
+
+This sample demonstrates the Document Viewer without requiring a local upload.
+It contains a short security review summary, example findings, and next steps.
+
+Findings:
+- Review external email destinations.
+- Confirm that blocked incidents have an assigned owner.
+- Validate policy exceptions before the next audit.

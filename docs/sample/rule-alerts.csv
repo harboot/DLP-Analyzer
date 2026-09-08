@@ -1,0 +1,3 @@
+ID,Policies,Violation Triggers,Source,Destination
+9001,Sample Data Protection Policy,Customer Number; Email Address,analyst@example.com,external@example.net
+9002,Sample Data Protection Policy,Financial Statement,finance@example.com,partner@example.org

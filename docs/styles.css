@@ -1,4 +1,4 @@
-/* Shared DLP Tools stylesheet. Page-specific rules are scoped to prevent tool layouts from leaking into one another. */
+/* Shared DLP Analyzer stylesheet. Page-specific rules are scoped to prevent tool layouts from leaking into one another. */
 :root {
   --bg: #0b0f14;
   --panel: #121823;

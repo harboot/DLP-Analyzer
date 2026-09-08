@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Custom Rule</title>
+<title>DLP Analyzer — Custom Rule</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -31,6 +31,7 @@
           <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
           <button class="btn" id="btnUpload" title="Upload CSV">📤 Upload</button>
+          <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
           <button class="btn" id="btnRunAll" title="Run enabled snippets on loaded CSV">✅ RUN ALL</button>
           <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
@@ -654,8 +655,7 @@ btnUpload.addEventListener('click', () => {
   csvInput.click();
 });
 
-csvInput.addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files || []);
+async function loadCsvFiles(files) {
   const out = document.getElementById('onNames');
   if (!files.length) return;
   matchesCache.clear();
@@ -688,8 +688,26 @@ csvInput.addEventListener('change', async (e) => {
   } catch (err) {
     csvNameEl.textContent = '';
     out.textContent = 'CSV error: ' + (err?.message || String(err));
+  }
+}
+
+csvInput.addEventListener('change', async (e) => {
+  await loadCsvFiles(Array.from(e.target.files || []));
+  csvInput.value = '';
+});
+
+$('#btnLoadSample').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const response = await fetch('sample/alerts.csv');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const file = new File([await response.blob()], 'alerts.csv', { type: 'text/csv' });
+    await loadCsvFiles([file]);
+  } catch (error) {
+    document.getElementById('onNames').textContent = `Unable to load the sample data: ${error.message}`;
   } finally {
-    csvInput.value = '';
+    button.disabled = false;
   }
 });
 

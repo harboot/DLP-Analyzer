@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DLP Alerts ↔ Policies Matcher</title>
+<title>DLP Analyzer — Rule Identifier</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
@@ -29,6 +29,7 @@
           <input id="file-all" type="file" accept=".csv,text/csv" multiple webkitdirectory />
         </div>
         <div class="row" style="gap:10px">
+          <button class="btn" id="btn-load-sample">Load sample</button>
           <button class="btn" id="btn-process" disabled>Process in Worker</button>
           <button class="btn" id="btn-reset">Reset</button>
           <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
@@ -591,6 +592,24 @@ function hardReset(){
 
 /* ----------------------------- Bindings ----------------------------- */
 $('#btn-process').addEventListener('click', processAll);
+$('#btn-load-sample').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    hardReset();
+    const paths = ['sample/rule-alerts.csv', 'sample/policies.csv'];
+    const files = await Promise.all(paths.map(async path => {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
+      return new File([await response.blob()], path.split('/').pop(), { type: 'text/csv' });
+    }));
+    await handleFiles(files);
+  } catch (error) {
+    logLine(`Unable to load the sample data: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
 $('#btn-reset').addEventListener('click', hardReset);
 
 /* ------------------------------ Init -------------------------------- */

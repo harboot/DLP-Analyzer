@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Keyword Generator — Email Analysis</title>
+  <title>DLP Analyzer — Keyword Generator</title>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -34,6 +34,7 @@
           <label><input type="radio" name="mode" value="content" /> Document Content</label>
         </div>
         <button class="btn" id="genBtn">Generate Keywords</button>
+        <button class="btn" id="loadSampleBtn">Load sample</button>
         <button class="btn" id="clearBtn">Clear</button>
         <div id="loadingIndicator" class="loading-container" style="display: none;">
           <div class="loading"></div>
@@ -108,5 +109,27 @@ Billable | BPI Non-Voice
 
   <script src="js/dlp-utils.js"></script>
   <script src="js/KG_script.js"></script>
+  <script>
+    document.getElementById('loadSampleBtn').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const [subjects, rules] = await Promise.all([
+          fetch('sample/keywords.txt'),
+          fetch('sample/keyword-rules.txt')
+        ]);
+        if (!subjects.ok || !rules.ok) throw new Error('A sample file could not be retrieved.');
+        document.getElementById('subjects').value = await subjects.text();
+        document.getElementById('rules').value = await rules.text();
+        document.getElementById('genBtn').click();
+      } catch (error) {
+        const container = document.getElementById('errorContainer');
+        container.textContent = `Unable to load the sample data: ${error.message}`;
+        container.style.display = 'block';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
