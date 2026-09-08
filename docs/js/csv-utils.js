@@ -26,8 +26,29 @@
     });
   }
 
+  function isExcelFile(file) {
+    return /\.xlsx$/i.test(String(file?.name || '')) ||
+      file?.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  }
+
+  async function parseExcelFile(file) {
+    if (!global.XLSX) {
+      throw new Error('Excel support requires lib/xlsx.full.min.js.');
+    }
+
+    const workbook = global.XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    if (!firstSheetName) return [];
+
+    return global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+      defval: '',
+      raw: false
+    });
+  }
+
   global.CSVUtils = Object.freeze({
     parseFile(file, options) {
+      if (isExcelFile(file)) return parseExcelFile(file);
       return parse(file, Object.assign({ header: true }, options));
     },
     parseText(text, options) {
