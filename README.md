@@ -2,7 +2,7 @@
 
 A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. It is a companion analysis utility, not an official Forcepoint product.
 
-Processing happens in the browser: uploaded CSV contents are not sent to an application server. The three CSV-based tools use one shared Papa Parse integration (`csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface.
+Processing happens in the browser: uploaded CSV contents are not sent to an application server. The three CSV-based tools use one shared Papa Parse integration (`docs/js/csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface.
 
 ## Forcepoint DLP compatibility
 
@@ -31,23 +31,25 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
 └── docs/
     ├── DLP_Tools.html           # Main page and tool navigation
     ├── AlertAnalyzer.html       # DLP alert analysis interface
-    ├── AlertAnalyzer.worker.js  # Alert rules and analysis worker
     ├── CardManager.html         # Custom Rule interface
     ├── RuleIdentifier.html      # Alert and policy matching interface
-    ├── RuleIdentifier.worker.js # Policy matching worker
     ├── PolicyViewer.html        # DLP policy viewer
     ├── DocViewer.html           # Local document viewer
     ├── KeywordGenerator.html    # Keyword generator interface
-    ├── KG_script.js             # Keyword Generator logic
-    ├── ai.js                    # AI-assisted JavaScript filter generation
-    ├── csv.js                   # Alert ingestion and tab construction
-    ├── csv-utils.js             # Shared Papa Parse wrapper
-    ├── dlp-utils.js             # Shared DOM and output-safety helpers
-    ├── rules.js                 # Alert Analyzer rule execution
-    ├── storage.js               # Expiring secrets and rule-result cache
-    ├── ui.js                    # Alert Analyzer rendering and interaction
-    ├── utils.js                 # Alert Analyzer data helpers and state
     ├── styles.css               # Shared application styles
+    ├── js/                      # Shared and page-specific browser logic
+    │   ├── KG_script.js         # Keyword Generator logic
+    │   ├── ai.js                # AI-assisted filter generation
+    │   ├── csv.js               # Alert ingestion and tab construction
+    │   ├── csv-utils.js         # Shared Papa Parse wrapper
+    │   ├── dlp-utils.js         # Shared DOM and output-safety helpers
+    │   ├── rules.js             # Alert Analyzer rule execution
+    │   ├── storage.js           # Expiring secrets and rule-result cache
+    │   ├── ui.js                # Alert Analyzer rendering and interaction
+    │   └── utils.js             # Alert Analyzer data helpers and state
+    ├── worker/                  # CPU-intensive background processing
+    │   ├── AlertAnalyzer.worker.js
+    │   └── RuleIdentifier.worker.js
     └── rules/                   # Declarative JSON risk-rule packs
         ├── destination-risk.json
         ├── filename-risk.json
@@ -57,7 +59,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
 
 ## Shared browser utilities
 
-Pages should load `dlp-utils.js` before their page-specific script and reuse the
+Pages should load `js/dlp-utils.js` before their page-specific script and reuse the
 frozen `DLPUtils` namespace instead of defining equivalent helpers again. The
 namespace currently provides `query`, `queryAll`, `toText`, `escapeHtml`, and
 `sanitizeForTSV`. Keeping these small, general-purpose helpers shared ensures

@@ -109,6 +109,15 @@ body.tool-page :focus-visible {
   outline-offset: 2px;
 }
 
+/* Keep utility pages aligned with the shared tool-page content grid. */
+body.page-doc-viewer .wrap,
+body.page-keyword-generator .wrap {
+  width: min(1400px, calc(100% - 32px));
+  max-width: none;
+  margin: 24px auto;
+  padding: 0;
+}
+
 @media (max-width: 700px) {
   body.tool-page .wrap {
     width: min(100% - 20px, 1400px);
@@ -334,6 +343,16 @@ body.tool-page :focus-visible {
       resize:vertical
     }
     .cjs-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(76,201,240,.15)}
+    .ai-filter-generator{margin-top:12px;padding:0}
+    .ai-filter-generator>summary{
+      cursor:pointer;
+      padding:10px 12px;
+      background:#0f1521;
+      font-weight:700;
+      list-style-position:inside
+    }
+    .ai-filter-generator[open]>summary{border-bottom:1px solid var(--line)}
+    .ai-filter-generator>summary::marker{color:var(--accent)}
     .textinput{
       padding:6px 8px;
       border:1px solid var(--line);
@@ -478,10 +497,18 @@ body.tool-page :focus-visible {
     }
 
     .wrap {
-      width: 90vw;
-      max-width: 90vw;
+      width: min(1400px, calc(100% - 32px));
+      max-width: none;
       margin: 24px auto;
       padding: 0;
+    }
+
+    .page-footer {
+      width: 100%;
+      margin: 24px auto;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
     }
 
     h1 {

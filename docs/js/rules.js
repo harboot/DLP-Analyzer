@@ -85,7 +85,7 @@ function evaluateRule(row, rule, indexes){
 // Executes built-in rules or user predicates without blocking rendering/input.
 function runAnalyzerWorker(type, rows, options = {}, onProgress){
   return new Promise((resolve, reject) => {
-    const worker = new Worker('AlertAnalyzer.worker.js');
+    const worker = new Worker('worker/AlertAnalyzer.worker.js');
     worker.onmessage = ({data}) => {
       if (data.type === 'progress' && onProgress) onProgress(data.processed, data.total);
       else if (data.type === 'complete') { worker.terminate(); resolve(data.result); }
