@@ -69,7 +69,7 @@ page-specific parsing and rendering logic should remain in each tool's script.
 ## Page functions
 
 - **DLP Analyzer** provides a single navigation page that loads each analyzer and utility.
-- **Alert Analyzer** imports DLP alert CSV files, groups matching activity into 10-minute incident clusters, and presents summaries, JSON rule-pack findings, filters, charts, and exports. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
+- **Alert Analyzer** imports DLP alert CSV files, groups user activity by source, channel, and normalized destination into sessions separated by a 10-minute sliding gap, and presents summaries, original-alert details, JSON rule-pack findings, filters, charts, and exports. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
 - **Custom Rule** generates JavaScript predicates with optional OpenAI assistance, stores reusable rules, imports or exports rule collections, and runs enabled rules against uploaded CSV data.
 - **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts.
 - **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details.
