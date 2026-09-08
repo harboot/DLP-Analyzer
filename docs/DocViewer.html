@@ -61,11 +61,6 @@
       <header class="preview-header">
         <strong>Preview</strong>
         <div class="row-right">
-          <div class="searchbar hidden" id="zipSearchBar">
-            <label class="sr-only" for="zipSearch">Search ZIP text entries</label>
-            <input id="zipSearch" type="search" placeholder="Search text entries in ZIP">
-            <button class="btn" id="zipSearchBtn" type="button">Search</button>
-          </div>
           <button class="btn hidden" id="restoreBtn" type="button" title="Restore the initial automatic preview">Restore initial</button>
         </div>
       </header>
@@ -75,6 +70,21 @@
         <div id="pdfImgGallery" class="pdf-grid hidden"></div>
         <div id="pdfEmbedWrap" class="embedwrap hidden"><embed id="pdfEmbed" type="application/pdf"></div>
         <div class="panel hidden" id="note"></div>
+      </div>
+    </section>
+
+    <section class="section hidden" id="searchBox">
+      <header class="search-header">
+        <strong>Search</strong>
+        <span class="tiny muted" id="searchSummary" aria-live="polite">Enter a keyword to search this file.</span>
+      </header>
+      <div class="panel section-panel search-panel">
+        <div class="searchbar">
+          <label class="sr-only" for="documentSearch">Search document text</label>
+          <input id="documentSearch" type="search" placeholder="Search for a keyword">
+          <button class="btn" id="documentSearchBtn" type="button">Search</button>
+        </div>
+        <pre class="out mono hidden" id="searchResults" aria-label="Search results"></pre>
       </div>
     </section>
   </div>
