@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="csv-utils.js"></script>
-  <script src="dlp-utils.js"></script>
+  <script src="js/csv-utils.js"></script>
+  <script src="js/dlp-utils.js"></script>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -22,22 +22,6 @@
         <div class="input-guide-item"><span class="input-guide-label">Required CSV columns</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
       </div>
     </header>
-
-    <section class="section cjs-card" aria-labelledby="aiFilterTitle">
-      <header><strong id="aiFilterTitle">AI Filter Generator</strong></header>
-      <div class="editor">
-        <div class="cjs-chatrow">
-          <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
-          <label class="muted-sm">Save for (days) <input id="apikey-retention-days" class="textinput" type="number" min="1" max="90" value="90" style="width:80px" /></label>
-          <button class="btn" id="save-apikey">Save API key</button>
-        </div>
-        <div class="cjs-chatrow">
-          <input id="chatbot-input" class="textinput" type="text" placeholder="Describe a filter, for example: file size greater than 1 MB" />
-          <button class="btn" id="chatbot-run">Generate filter</button>
-        </div>
-        <div id="chatbot-status" class="status" aria-live="polite"></div>
-      </div>
-    </section>
 
     <div class="panel">
       <div class="row">
@@ -111,15 +95,31 @@
         </div>
       </section>
     </div>
-  </div>
 
-  <div id="resultWrap">
-    <output id="onNames" class="muted-sm">Upload the CSV first, then press RUN ALL or RUN on a specific file…</output>
+    <div id="resultWrap">
+      <output id="onNames" class="muted-sm">Upload the CSV first, then press RUN ALL or RUN on a specific file…</output>
+    </div>
+
+    <details class="section cjs-card ai-filter-generator">
+      <summary id="aiFilterTitle">AI Filter Generator</summary>
+      <div class="editor" aria-labelledby="aiFilterTitle">
+        <div class="cjs-chatrow">
+          <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
+          <label class="muted-sm">Save for (days) <input id="apikey-retention-days" class="textinput" type="number" min="1" max="90" value="90" style="width:80px" /></label>
+          <button class="btn" id="save-apikey">Save API key</button>
+        </div>
+        <div class="cjs-chatrow">
+          <input id="chatbot-input" class="textinput" type="text" placeholder="Describe a filter, for example: file size greater than 1 MB" />
+          <button class="btn" id="chatbot-run">Generate filter</button>
+        </div>
+        <div id="chatbot-status" class="status" aria-live="polite"></div>
+      </div>
+    </details>
   </div>
 
 <script>let openAiApiKey = '';</script>
-<script src="storage.js"></script>
-<script src="ai.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ai.js"></script>
 <script>
 
 const LS_KEY = 'jsSnippetItems:v3';
