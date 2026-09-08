@@ -150,20 +150,14 @@ function renderOverview(rows){
     }
   };
 
-  const ruleDefs = [
-    {key:'self',       label:'Email Sent to Self'},
-    {key:'freemail',   label:'Recipient Free Mail'},
-    {key:'shortsubj',  label:'Short Subject'},
-    {key:'noext',      label:'Attachment No Ext'},
-    {key:'seqfiles',   label:'Sequential Attachments'},
-    {key:'sensitive',  label:'Sensitive Keywords'},
-    {key:'repeatdom',  label:'Repeated Domains'},
-    {key:'weirdtld',   label:'Weird TLD Dest'},
-    {key:'outofhours', label:'Out-of-Hours'}
-  ];
+  const ruleDefs = [];
 
   let ruleHtml = '';
-  for (const def of ruleDefs) {
+
+  (async () => {
+    const loadedRules = await getRuleDefinitions();
+    ruleDefs.push(...loadedRules);
+    for (const def of ruleDefs) {
     ruleHtml += `
       <div class="card" title="${escapeHtml(cardTooltips[def.key] || def.label)}">
         <h3>${escapeHtml(def.label)}</h3>
@@ -172,10 +166,9 @@ function renderOverview(rows){
           <span class="spin" aria-label="Loading"></span>
         </a></b>
       </div>`;
-  }
-  cards.insertAdjacentHTML('beforeend', ruleHtml);
+    }
+    cards.insertAdjacentHTML('beforeend', ruleHtml);
 
-  (async () => {
     const datasetHash = computeDatasetHash(rows);
     const cached = loadRuleCache(datasetHash);
     const idIndex = indexRowsById(rows);
@@ -189,7 +182,7 @@ function renderOverview(rows){
       a.classList.remove('muted-num');
     }
 
-    if (cached && cached.version === 1) {
+    if (cached && cached.version === 2) {
       for (const def of ruleDefs) {
         const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
         if (!a) continue;
@@ -202,7 +195,7 @@ function renderOverview(rows){
     const idsByRule = {};
     let indicesByRule;
     try {
-      indicesByRule = await runAnalyzerWorker('rules', rows, {}, processed => {
+      indicesByRule = await runAnalyzerWorker('rules', rows, {rules: ruleDefs}, processed => {
         for (const def of ruleDefs) {
           const span = cards.querySelector(`a.metric[data-rule="${def.key}"] .temp-count`);
           if (span) span.textContent = `${processed}/${rows.length}`;
@@ -214,7 +207,7 @@ function renderOverview(rows){
     }
     const fallbackMatches = indicesByRule
       ? null
-      : await computeBuiltInRuleMatchesChunked(rows);
+      : await computeBuiltInRuleMatchesChunked(rows, null, 600, ruleDefs);
     for (const def of ruleDefs) {
       const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
       if (!a) continue;
@@ -234,7 +227,7 @@ function renderOverview(rows){
     }
 
     const payload = {
-      version: 1,
+      version: 2,
       counts: Object.fromEntries(Object.keys(idsByRule).map(k => [k, idsByRule[k].length])),
       idsByRule
     };
@@ -651,7 +644,9 @@ function renderDataTable(tab){
 
   const tbl = document.createElement('table');
 
-  const visibleCols = VISIBLE_COLS;
+  const visibleCols = tab.type === 'clusters'
+    ? [ICON_COL, 'Time', 'Alert Count', 'Source', 'Policies', 'Destination', 'File Name', 'Details']
+    : VISIBLE_COLS;
 
   const thead = document.createElement('thead');
   const trh = document.createElement('tr');
@@ -681,6 +676,7 @@ function renderDataTable(tab){
 
     const cells = {
       'Time'       : '',
+      'Alert Count': txt(r['Alert Count']),
       'Source'     : txt(r['Source']).trim(),
       'Policies'   : txt(r['Policies']),
       'Channel'    : txt(r['Channel']),

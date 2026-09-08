@@ -7,7 +7,8 @@ const ICON_COL = '__Copy';
 
   const HEADER_LABELS = {
     [ICON_COL]: '',
-    Time: 'Time',
+    Time: 'First / Last Seen',
+    'Alert Count': 'Alerts',
     Source: 'Source',
     Policies: 'Policies',
     Channel: 'Channel',
