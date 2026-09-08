@@ -1,0 +1,6 @@
+{
+  "pack": "Destination risk",
+  "rules": [
+    { "key": "weirdtld", "label": "Weird TLD Dest", "operator": "destination-regex", "pattern": "\\.(xyz|top|icu)$", "flags": "i", "tooltip": "Destination uses an unusual top-level domain." }
+  ]
+}

@@ -36,6 +36,47 @@ function ingest(rows){
   updateIncidentRange();
 }
 
+
+// Groups identical Source + Destination + File + Policy activity into 10-minute sessions.
+function groupIncidentClusters(rows, windowMinutes = 10){
+  const windowMs = windowMinutes * 60 * 1000;
+  const groups = new Map();
+  const normalize = value => txt(value).trim().toLowerCase().replace(/\s+/g, ' ');
+  for (const row of rows) {
+    const key = ['Source', 'Destination', 'File Name', 'Policies'].map(field => normalize(row[field])).join('\u001f');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  const clusters = [];
+  for (const groupedRows of groups.values()) {
+    groupedRows.sort((a, b) => (a.incidentDate?.getTime() || 0) - (b.incidentDate?.getTime() || 0));
+    let current = [];
+    const flush = () => {
+      if (!current.length) return;
+      const first = current[0], last = current[current.length - 1];
+      clusters.push({
+        ...first,
+        'ID': current.map(row => txt(row.ID)).filter(Boolean).join(', '),
+        'Incident Time': txt(first['Incident Time']),
+        'Event Time': txt(last['Incident Time']),
+        'Details': `${current.length} alert${current.length === 1 ? '' : 's'} grouped within ${windowMinutes} minutes`,
+        'Alert Count': current.length,
+        clusterRows: current,
+        clusterLastDate: last.incidentDate
+      });
+    };
+    for (const row of groupedRows) {
+      const firstInCluster = current[0];
+      if (firstInCluster && (!firstInCluster.incidentDate || !row.incidentDate || row.incidentDate - firstInCluster.incidentDate > windowMs)) {
+        flush(); current = [];
+      }
+      current.push(row);
+    }
+    flush();
+  }
+  return clusters.sort((a, b) => (b.incidentDate?.getTime() || 0) - (a.incidentDate?.getTime() || 0));
+}
+
 // Builds tab definitions from the dataset (overview, custom, blocked, per-channel, and saved tabs).
 function buildTabs(){
   const all = state.raw;
@@ -58,6 +99,8 @@ function buildTabs(){
   const closables = state.tabs.filter(t=> t.closable);
   state.tabs = [];
   state.tabs.push({key:'overview', label:'Overview', type:'overview', rows: all});
+  const clusters = groupIncidentClusters(all, 10);
+  state.tabs.push({key:'clusters', label:`Activity Clusters (${clusters.length})`, type:'clusters', rows: clusters});
   state.tabs.push({key:'custom', label:'Custom JS', type:'custom', rows: all});
 
   if(blocks.length) state.tabs.push({key:'block', label:`Action: Block (${blocks.length})`, type:'block', rows: blocks});

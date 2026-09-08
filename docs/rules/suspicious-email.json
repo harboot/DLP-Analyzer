@@ -1,0 +1,9 @@
+{
+  "pack": "Suspicious email",
+  "rules": [
+    { "key": "self", "label": "Email Sent to Self", "operator": "self-like", "tooltip": "Sender and recipient addresses look like the same person." },
+    { "key": "freemail", "label": "Recipient Free Mail", "operator": "destination-domain-in", "values": ["gmail.com", "yahoo.com", "protonmail.com", "proton.me", "icloud.com"], "tooltip": "Recipient uses a public free-mail provider." },
+    { "key": "shortsubj", "label": "Short Subject", "operator": "short-email-subject", "minLength": 15, "tooltip": "Email subject is empty or shorter than 15 characters." },
+    { "key": "outofhours", "label": "Out-of-Hours", "operator": "hour-range", "start": 0, "end": 5, "tooltip": "Incident occurred between midnight and 05:00." }
+  ]
+}

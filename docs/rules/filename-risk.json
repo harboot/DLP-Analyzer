@@ -1,0 +1,8 @@
+{
+  "pack": "Filename risk",
+  "rules": [
+    { "key": "noext", "label": "Attachment No Ext", "operator": "file-without-extension", "tooltip": "At least one attachment has no file extension." },
+    { "key": "seqfiles", "label": "Sequential Attachments", "operator": "sequential-files", "minimumDistinct": 5, "tooltip": "A source used at least five sequential filenames with the same stem." },
+    { "key": "sensitive", "label": "Sensitive Keywords", "operator": "text-regex", "fields": ["Details", "File Name", "Policies"], "pattern": "\\b(confidential|salary|client[_\\s-]?list|password|secret|api[_\\s-]?key|credit[_\\s-]?card)\\b", "flags": "i", "tooltip": "Subject, filename, or policy contains a sensitive keyword." }
+  ]
+}

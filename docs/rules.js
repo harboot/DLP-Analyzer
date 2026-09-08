@@ -1,47 +1,85 @@
 /* Alert Analyzer: rules */
 
-// Evaluates every built-in rule in one row pass (after one shared index pass).
-async function computeBuiltInRuleMatchesChunked(rows, onProgress, CHUNK_SIZE = 600){
-  const senderDomains = new Map();
-  const sequential = new Map();
-  for (const row of rows) {
-    for (const domain of row.destinationDomains) {
-      const key = `${row.sourceLower}|${domain}`;
-      senderDomains.set(key, (senderDomains.get(key) || 0) + 1);
-    }
-    for (const token of row.fileTokens) {
-      const part = extractStemTail(token);
-      if (!part || part.tail == null) continue;
-      const key = `${row.sourceLower}|${part.stem}`;
-      if (!sequential.has(key)) sequential.set(key, new Set());
-      sequential.get(key).add(part.tail);
-    }
+const RULE_PACK_URLS = [
+  'rules/suspicious-email.json',
+  'rules/filename-risk.json',
+  'rules/destination-risk.json',
+  'rules/volume-risk.json'
+];
+
+let ruleDefinitionsPromise;
+
+// Loads declarative rule packs. Adding a rule only requires updating a JSON pack.
+function getRuleDefinitions(){
+  if (!ruleDefinitionsPromise) {
+    ruleDefinitionsPromise = Promise.all(RULE_PACK_URLS.map(async url => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Unable to load rule pack ${url}: ${response.status}`);
+      const pack = await response.json();
+      if (!Array.isArray(pack.rules)) throw new Error(`Invalid rule pack: ${url}`);
+      return pack.rules;
+    })).then(packs => packs.flat());
   }
-  const hotStems = new Set(
-    Array.from(sequential).filter(([, tails]) => tails.size >= 5).map(([key]) => key)
-  );
-  const matches = Object.fromEntries(
-    ['self','freemail','shortsubj','noext','seqfiles','sensitive','repeatdom','weirdtld','outofhours']
-      .map(key => [key, []])
-  );
+  return ruleDefinitionsPromise;
+}
+
+// Worker-free fallback using the same declarative packs and evaluator.
+async function computeBuiltInRuleMatchesChunked(rows, onProgress, CHUNK_SIZE = 600, suppliedRules){
+  const rules = suppliedRules || await getRuleDefinitions();
+  const indices = buildRuleIndexes(rows, rules);
+  const matches = Object.fromEntries(rules.map(rule => [rule.key, []]));
   for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
     const end = Math.min(start + CHUNK_SIZE, rows.length);
     for (let i = start; i < end; i++) {
-      const row = rows[i];
-      if (ruleSelfToSelf(row)) matches.self.push(row);
-      if (ruleRecipientFreeMail(row)) matches.freemail.push(row);
-      if (ruleShortOrEmptySubject(row, 15)) matches.shortsubj.push(row);
-      if (ruleAttachmentNoExtension(row)) matches.noext.push(row);
-      if (ruleSequentialAttachments(row, hotStems)) matches.seqfiles.push(row);
-      if (ruleSensitiveKeywords(row)) matches.sensitive.push(row);
-      if (ruleRepeatedDomainBySender(row, senderDomains)) matches.repeatdom.push(row);
-      if (ruleWeirdTLD(row)) matches.weirdtld.push(row);
-      if (ruleOutOfHours(row)) matches.outofhours.push(row);
+      for (const rule of rules) if (evaluateRule(rows[i], rule, indices)) matches[rule.key].push(rows[i]);
     }
     if (onProgress) onProgress(end, rows.length);
     await new Promise(resolve => setTimeout(resolve, 0));
   }
   return matches;
+}
+
+function buildRuleIndexes(rows, rules){
+  const domainCounts = new Map(), sequences = new Map();
+  for (const row of rows) {
+    for (const domain of row.destinationDomains) {
+      const key = `${row.sourceLower}|${domain}`;
+      domainCounts.set(key, (domainCounts.get(key) || 0) + 1);
+    }
+    for (const token of row.fileTokens) {
+      const part = extractStemTail(token);
+      if (!part || part.tail == null) continue;
+      const key = `${row.sourceLower}|${part.stem}`;
+      if (!sequences.has(key)) sequences.set(key, new Set());
+      sequences.get(key).add(part.tail);
+    }
+  }
+  return {domainCounts, sequences};
+}
+
+function evaluateRule(row, rule, indexes){
+  switch (rule.operator) {
+    case 'self-like': return ruleSelfToSelf(row);
+    case 'destination-domain-in': return row.destinationDomains.some(domain => rule.values.includes(domain));
+    case 'short-email-subject': return ruleShortOrEmptySubject(row, rule.minLength);
+    case 'hour-range': return row.incidentHour != null && row.incidentHour >= rule.start && row.incidentHour < rule.end;
+    case 'file-without-extension': return ruleAttachmentNoExtension(row);
+    case 'sequential-files': return row.fileTokens.some(token => {
+      const part = extractStemTail(token);
+      return part && (indexes.sequences.get(`${row.sourceLower}|${part.stem}`)?.size || 0) >= rule.minimumDistinct;
+    });
+    case 'text-regex': {
+      const regex = new RegExp(rule.pattern, rule.flags || '');
+      return rule.fields.some(field => regex.test(txt(row[field])));
+    }
+    case 'destination-regex': {
+      const regex = new RegExp(rule.pattern, rule.flags || '');
+      return row.destinationDomains.some(domain => regex.test(domain));
+    }
+    case 'source-domain-volume': return row.destinationDomains.some(domain =>
+      (indexes.domainCounts.get(`${row.sourceLower}|${domain}`) || 0) > rule.threshold);
+    default: console.warn(`Unknown rule operator: ${rule.operator}`); return false;
+  }
 }
 
 // Executes built-in rules or user predicates without blocking rendering/input.

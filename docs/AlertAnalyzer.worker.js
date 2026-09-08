@@ -68,8 +68,8 @@ function stemTail(value) {
   return !stem || ignored(stem) ? null : {stem, tail: Number(match[2])};
 }
 
-// Builds both dataset-level indexes together, then evaluates all rules in one alert pass.
-function analyze(rows) {
+// Evaluates declarative rule definitions supplied by the UI.
+function analyze(rows, rules) {
   const domainCounts = new Map(), sequences = new Map();
   for (const row of rows) {
     for (const domain of row.destinationDomains) {
@@ -84,21 +84,35 @@ function analyze(rows) {
       sequences.get(key).add(part.tail);
     }
   }
-  const hotStems = new Set([...sequences].filter(([, tails]) => tails.size >= 5).map(([key]) => key));
-  const result = Object.fromEntries(['self','freemail','shortsubj','noext','seqfiles','sensitive','repeatdom','weirdtld','outofhours'].map(key => [key, []]));
-
+  const result = Object.fromEntries(rules.map(rule => [rule.key, []]));
   rows.forEach((row, index) => {
-    const destinations = splitDestParts(row.Destination);
-    const email = extractFirstEmail(row.Source);
-    if (email && destinations.some(destination => isEmailLike(destination) && selfLike(email, destination))) result.self.push(index);
-    if (row.destinationDomains.some(domain => freeMailDomains.has(domain))) result.freemail.push(index);
-    if (row.channelLower.includes('email') && txt(row.Details).trim().length < 15) result.shortsubj.push(index);
-    if (row.fileTokens.some(file => !file.includes('.'))) result.noext.push(index);
-    if (row.fileTokens.some(file => { const part = stemTail(file); return part && hotStems.has(`${row.sourceLower}|${part.stem}`); })) result.seqfiles.push(index);
-    if (sensitive.test(`${txt(row.Details)} ${txt(row['File Name'])} ${txt(row.Policies)}`)) result.sensitive.push(index);
-    if (row.destinationDomains.some(domain => (domainCounts.get(`${row.sourceLower}|${domain}`) || 0) > 5)) result.repeatdom.push(index);
-    if (row.destinationDomains.some(domain => /\.(xyz|top|icu)$/i.test(domain))) result.weirdtld.push(index);
-    if (row.incidentHour != null && row.incidentHour >= 0 && row.incidentHour < 5) result.outofhours.push(index);
+    for (const rule of rules) {
+      let matched = false;
+      switch (rule.operator) {
+        case 'self-like': {
+          const email = extractFirstEmail(row.Source);
+          matched = Boolean(email && splitDestParts(row.Destination).some(destination => isEmailLike(destination) && selfLike(email, destination)));
+          break;
+        }
+        case 'destination-domain-in': matched = row.destinationDomains.some(domain => rule.values.includes(domain)); break;
+        case 'short-email-subject': matched = row.channelLower.includes('email') && txt(row.Details).trim().length < rule.minLength; break;
+        case 'hour-range': matched = row.incidentHour != null && row.incidentHour >= rule.start && row.incidentHour < rule.end; break;
+        case 'file-without-extension': matched = row.fileTokens.some(file => !file.includes('.')); break;
+        case 'sequential-files': matched = row.fileTokens.some(file => { const part = stemTail(file); return part && (sequences.get(`${row.sourceLower}|${part.stem}`)?.size || 0) >= rule.minimumDistinct; }); break;
+        case 'text-regex': {
+          const regex = new RegExp(rule.pattern, rule.flags || '');
+          matched = rule.fields.some(field => regex.test(txt(row[field])));
+          break;
+        }
+        case 'destination-regex': {
+          const regex = new RegExp(rule.pattern, rule.flags || '');
+          matched = row.destinationDomains.some(domain => regex.test(domain));
+          break;
+        }
+        case 'source-domain-volume': matched = row.destinationDomains.some(domain => (domainCounts.get(`${row.sourceLower}|${domain}`) || 0) > rule.threshold); break;
+      }
+      if (matched) result[rule.key].push(index);
+    }
     if ((index + 1) % 5000 === 0) self.postMessage({type: 'progress', processed: index + 1, total: rows.length});
   });
   return result;
@@ -124,7 +138,7 @@ function custom(rows, code) {
 
 self.onmessage = ({data}) => {
   try {
-    const result = data.type === 'custom' ? custom(data.rows, data.code) : analyze(data.rows);
+    const result = data.type === 'custom' ? custom(data.rows, data.code) : analyze(data.rows, data.rules || []);
     self.postMessage({type:'complete', result});
   } catch (error) {
     self.postMessage({type:'error', message:error.message || String(error)});

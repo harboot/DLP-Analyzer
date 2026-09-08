@@ -1,0 +1,6 @@
+{
+  "pack": "Volume risk",
+  "rules": [
+    { "key": "repeatdom", "label": "Repeated Domains", "operator": "source-domain-volume", "threshold": 5, "tooltip": "The same source sent more than five alerts to one destination domain." }
+  ]
+}
