@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DLP Analyzer — Alert Analyzer</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="lib/xlsx.full.min.js"></script>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
 
@@ -17,8 +18,8 @@
     <h1>Forcepoint DLP Alerts Analyzer</h1>
     <p class="page-description">Analyze Forcepoint DLP alerts, group related activity, and review summaries, risk findings, filters, charts, and exports.</p>
     <div class="input-guide" aria-label="Input guide">
-      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP incident or alert CSV exports. Multiple CSV files can be combined in one upload.</div>
-      <div class="input-guide-item"><span class="input-guide-label">Required CSV columns</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
+      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP incident or alert CSV and XLSX exports. Multiple files can be combined in one upload.</div>
+      <div class="input-guide-item"><span class="input-guide-label">Required columns</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
     </div>
   </header>
   <div class="panel">
@@ -27,8 +28,8 @@
       <div class="row-right">
         <span id="rangeLabel" class=""><span id="rangeVal">–</span></span>
         <label class="drop" id="drop">
-          <input id="file" type="file" multiple accept=".csv,text/csv" />
-          <strong>Drop</strong> a CSV here or click to select
+          <input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          <strong>Drop</strong> CSV or XLSX files here, or click to select
         </label>
         <button id="demoBtn" class="btn">Load sample</button>
       </div>

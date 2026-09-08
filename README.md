@@ -1,8 +1,8 @@
 # DLP Analyzer
 
-A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. It is a companion analysis utility, not an official Forcepoint product.
+A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. The Alert Analyzer also accepts XLSX incident exports directly. It is a companion analysis utility, not an official Forcepoint product.
 
-Processing happens in the browser: uploaded CSV contents are not sent to an application server. The three CSV-based tools use one shared Papa Parse integration (`docs/js/csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface.
+Processing happens in the browser: uploaded file contents are not sent to an application server. The CSV-based tools use one shared Papa Parse integration (`docs/js/csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface. XLSX files are read locally with a local SheetJS browser build (`docs/lib/xlsx.full.min.js`).
 
 ## Forcepoint DLP compatibility
 
@@ -69,7 +69,7 @@ page-specific parsing and rendering logic should remain in each tool's script.
 ## Page functions
 
 - **DLP Analyzer** provides a single navigation page that loads each analyzer and utility.
-- **Alert Analyzer** imports DLP alert CSV files, groups user activity by source, channel, and normalized destination into sessions separated by a 10-minute sliding gap, and presents summaries, original-alert details, JSON rule-pack findings, filters, charts, and exports. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
+- **Alert Analyzer** imports DLP alert CSV or XLSX files, groups user activity by source, channel, and normalized destination into sessions separated by a 10-minute sliding gap, and presents summaries, original-alert details, JSON rule-pack findings, filters, charts, and exports. For XLSX workbooks, the first worksheet is imported. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
 - **Custom Rule** generates JavaScript predicates with optional OpenAI assistance, stores reusable rules, imports or exports rule collections, and runs enabled rules against uploaded CSV data.
 - **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts.
 - **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details.
