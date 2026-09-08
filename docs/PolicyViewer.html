@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Forcepoint DLP – Policy Viewer</title>
+<title>DLP Analyzer — Policy Viewer</title>
   <script src="js/dlp-utils.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -29,6 +29,7 @@
           <input id="folderInput" type="file" webkitdirectory directory multiple />
           Select Folder
         </label>
+        <button class="btn" id="loadSampleBtn" title="Load a sample DLP policy">Load sample</button>
         <button class="btn" id="toggleLog" title="Show/Hide load log">Show Log</button>
         <button class="btn" id="exportCsv" title="Export filtered rows (no exception details)">Export CSV (filtered)</button>
         <button class="btn" id="toggleDisabled" title="Toggle visibility of disabled Policy/Rule">Hide Disabled</button>
@@ -79,6 +80,7 @@
   /* ===================== Setup refs ===================== */
   const fileInput = document.getElementById('fileInput');
   const folderInput = document.getElementById('folderInput');
+  const loadSampleBtn = document.getElementById('loadSampleBtn');
   const rulesBody = document.getElementById('rulesBody');
   const logOut = document.getElementById('logOut');
   const logPanel = document.getElementById('logPanel');
@@ -230,6 +232,20 @@
 
   fileInput.addEventListener('change', e => addFiles(e.target.files));
   folderInput.addEventListener('change', e => addFiles(e.target.files));
+  loadSampleBtn.addEventListener('click', async () => {
+    loadSampleBtn.disabled = true;
+    try {
+      const response = await fetch('sample/policy.json');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      addFiles([new File([await response.blob()], 'policy.json', { type: 'application/json' })]);
+    } catch (error) {
+      log(`Unable to load the sample policy: ${error.message}`);
+      logPanel.style.display = 'block';
+      toggleLog.textContent = 'Hide Log';
+    } finally {
+      loadSampleBtn.disabled = false;
+    }
+  });
 
   /* ===================== Sort (policyLevel ASC) ===================== */
   function applyDefaultSort(){

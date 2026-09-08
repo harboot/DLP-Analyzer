@@ -1,0 +1,19 @@
+{
+  "policy": {
+    "policy_name": "Sample Data Protection Policy",
+    "enabled": "true",
+    "policy_level": { "level": 1 },
+    "rules": [
+      { "rule_name": "Customer PII Rule", "enabled": "true", "condition_relation_type": "ALL", "classifiers": [{ "classifier_name": "Customer Number" }, { "classifier_name": "Email Address" }], "exception_rules": { "exception_rules": [] } },
+      { "rule_name": "Financial Records Rule", "enabled": "true", "condition_relation_type": "ANY", "classifiers": [{ "classifier_name": "Financial Statement" }], "exception_rules": { "exception_rules": [] } }
+    ]
+  },
+  "severity_action": { "rules": [
+    { "rule_name": "Customer PII Rule", "classifier_details": [{ "selected": "true", "severity_type": "HIGH", "action_plan": "Block" }] },
+    { "rule_name": "Financial Records Rule", "classifier_details": [{ "selected": "true", "severity_type": "MEDIUM", "action_plan": "Audit" }] }
+  ] },
+  "source_destination": { "rules": [
+    { "rule_name": "Customer PII Rule", "rule_source": { "resources": [] }, "rule_destination": { "channels": [{ "enabled": "true", "channel_type": "Network Email" }] } },
+    { "rule_name": "Financial Records Rule", "rule_source": { "resources": [] }, "rule_destination": { "channels": [{ "enabled": "true", "channel_type": "Web" }] } }
+  ] }
+}
