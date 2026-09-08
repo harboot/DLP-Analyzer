@@ -1,11 +1,11 @@
-/* Alert Analyzer: ai */
+/* Custom Rule: AI predicate generation */
 
 // Calls the OpenAI API to generate a JavaScript predicate from a user prompt.
 async function runChatbot(prompt){
   if (!openAiApiKey) throw new Error('An OpenAI API Key has not been saved.');
 
   const preprompt = `
-Write a JavaScript predicate for the “Custom JS” tab.
+Write a JavaScript predicate for Custom Rule.
 The code is executed for each data row and must return a boolean.
 
 Execution environment:

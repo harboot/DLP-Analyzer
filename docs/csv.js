@@ -77,7 +77,7 @@ function groupIncidentClusters(rows, windowMinutes = 10){
   return clusters.sort((a, b) => (b.incidentDate?.getTime() || 0) - (a.incidentDate?.getTime() || 0));
 }
 
-// Builds tab definitions from the dataset (overview, custom, blocked, per-channel, and saved tabs).
+// Builds tab definitions from the dataset (overview, blocked, per-channel, and saved tabs).
 function buildTabs(){
   const all = state.raw;
 
@@ -101,8 +101,6 @@ function buildTabs(){
   state.tabs.push({key:'overview', label:'Overview', type:'overview', rows: all});
   const clusters = groupIncidentClusters(all, 10);
   state.tabs.push({key:'clusters', label:`Activity Clusters (${clusters.length})`, type:'clusters', rows: clusters});
-  state.tabs.push({key:'custom', label:'Custom JS', type:'custom', rows: all});
-
   if(blocks.length) state.tabs.push({key:'block', label:`Action: Block (${blocks.length})`, type:'block', rows: blocks});
 
   Array.from(byCh.entries()).sort((a,b)=> b[1].length - a[1].length).forEach(([ch,rows])=>{
