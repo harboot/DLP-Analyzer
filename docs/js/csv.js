@@ -37,87 +37,6 @@ function ingest(rows){
 }
 
 
-// Normalizes a destination for session identity without discarding meaningful subdomains.
-function normalizeClusterDestination(value, channel){
-  const channelLower = txt(channel).trim().toLowerCase();
-  const emailAddresses = txt(value).toLowerCase().match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || [];
-  if (channelLower.includes('email') && emailAddresses.length) {
-    return Array.from(new Set(emailAddresses)).sort().join('; ');
-  }
-  const normalized = splitDestParts(value).map(part => {
-    const raw = part.trim().toLowerCase();
-    const emailMatch = raw.match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-    if (emailMatch && (channelLower.includes('email') || isEmailLike(emailMatch[0]))) {
-      return emailMatch[0].toLowerCase();
-    }
-
-    try {
-      const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`;
-      const hostname = new URL(candidate).hostname.toLowerCase().replace(/\.$/, '');
-      return hostname.replace(/^www\./, '');
-    } catch {
-      return raw.replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '');
-    }
-  }).filter(Boolean);
-  return Array.from(new Set(normalized)).sort().join('; ');
-}
-
-function aggregateClusterValues(rows, field){
-  const seen = new Set();
-  const values = [];
-  for (const row of rows) {
-    for (const value of txt(row[field]).split(/[;\n]/).map(item => item.trim()).filter(Boolean)) {
-      const key = value.toLowerCase();
-      if (!seen.has(key)) { seen.add(key); values.push(value); }
-    }
-  }
-  return values.join('; ');
-}
-
-// Groups Source + Channel + normalized Destination activity into 10-minute sessions.
-function groupIncidentClusters(rows, windowMinutes = 10){
-  const windowMs = windowMinutes * 60 * 1000;
-  const groups = new Map();
-  const normalize = value => txt(value).trim().toLowerCase().replace(/\s+/g, ' ');
-  for (const row of rows) {
-    const normalizedDestination = normalizeClusterDestination(row['Destination'], row['Channel']);
-    const key = [normalize(row['Source']), normalize(row['Channel']), normalizedDestination].join('\u001f');
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(row);
-  }
-  const clusters = [];
-  for (const groupedRows of groups.values()) {
-    groupedRows.sort((a, b) => (a.incidentDate?.getTime() || 0) - (b.incidentDate?.getTime() || 0));
-    let current = [];
-    const flush = () => {
-      if (!current.length) return;
-      const first = current[0], last = current[current.length - 1];
-      clusters.push({
-        ...first,
-        'ID': current.map(row => txt(row.ID)).filter(Boolean).join(', '),
-        'Incident Time': txt(first['Incident Time']),
-        'Event Time': txt(last['Incident Time']),
-        'Destination': normalizeClusterDestination(first['Destination'], first['Channel']),
-        'Policies': aggregateClusterValues(current, 'Policies'),
-        'File Name': aggregateClusterValues(current, 'File Name'),
-        'Details': 'View original alerts',
-        'Alert Count': current.length,
-        clusterRows: current,
-        clusterLastDate: last.incidentDate
-      });
-    };
-    for (const row of groupedRows) {
-      const previous = current[current.length - 1];
-      if (previous && (!previous.incidentDate || !row.incidentDate || row.incidentDate - previous.incidentDate > windowMs)) {
-        flush(); current = [];
-      }
-      current.push(row);
-    }
-    flush();
-  }
-  return clusters.sort((a, b) => (b.incidentDate?.getTime() || 0) - (a.incidentDate?.getTime() || 0));
-}
-
 // Builds tab definitions from the dataset (overview, blocked, per-channel, and saved tabs).
 function buildTabs(){
   const all = state.raw;
@@ -140,8 +59,7 @@ function buildTabs(){
   const closables = state.tabs.filter(t=> t.closable);
   state.tabs = [];
   state.tabs.push({key:'overview', label:'Overview', type:'overview', rows: all});
-  const clusters = groupIncidentClusters(all, 10);
-  state.tabs.push({key:'clusters', label:`Activity Clusters (${clusters.length})`, type:'clusters', rows: clusters});
+  state.tabs.push({key:'all-alerts', label:`All Alerts (${all.length})`, type:'alerts', rows: all});
   if(blocks.length) state.tabs.push({key:'block', label:`Action: Block (${blocks.length})`, type:'block', rows: blocks});
 
   Array.from(byCh.entries()).sort((a,b)=> b[1].length - a[1].length).forEach(([ch,rows])=>{

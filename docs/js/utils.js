@@ -8,7 +8,6 @@ const ICON_COL = '__Copy';
   const HEADER_LABELS = {
     [ICON_COL]: '',
     Time: 'First / Last Seen',
-    'Alert Count': 'Alerts',
     Source: 'Source',
     Policies: 'Policies',
     Channel: 'Channel',
@@ -181,11 +180,6 @@ const ICON_COL = '__Copy';
   // Generates time-cell HTML with a tooltip and data ID
   function timeCellHTML(row) {
     const id = txt(row['ID']);
-    if (Array.isArray(row.clusterRows)) {
-      const first = escapeHtml(stripGMT(txt(row['Incident Time'])));
-      const last = escapeHtml(stripGMT(txt(row['Event Time'])));
-      return `<span class="cluster-time"><span>${first}</span><small>${last}</small></span>`;
-    }
     const incD = escapeHtml(justDate(stripGMT(txt(row['Incident Time']))));
     const tooltip = timeCellPlainText(row);
     return `<a href="#" class="link copy-id" data-id="${id}" title="${escapeHtml(tooltip)}">${incD}</a>`;
@@ -202,7 +196,6 @@ const ICON_COL = '__Copy';
     const id = txt(row['ID']);
     const incF = stripGMT(txt(row['Incident Time']));
     const evtF = stripGMT(txt(row['Event Time']));
-    if (Array.isArray(row.clusterRows)) return `First seen: ${incF}\nLast seen: ${evtF}`;
     return `ID: ${id}\nIncident: ${incF}\nEvent: ${evtF}`;
   }
 

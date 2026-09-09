@@ -825,7 +825,7 @@ function openResultTable(fileId) {
     'Time', 'Source', 'Policies', 'Channel', 'Destination',
     'File Name', 'Details', 'Size', 'Status'
   ];
-  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column"' : ''}>${index === 0 ? 'Copy' : escapeHtml(h)}</th>`).join('');
+  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column" aria-label="Copy row"' : ''}>${index === 0 ? '' : escapeHtml(h)}</th>`).join('');
   let page = 1;
   let pageSize = 50;
 

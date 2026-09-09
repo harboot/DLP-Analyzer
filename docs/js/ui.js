@@ -423,9 +423,7 @@ function renderDataTable(tab){
 
   const tbl = document.createElement('table');
 
-  const visibleCols = tab.type === 'clusters'
-    ? [ICON_COL, 'Time', 'Alert Count', 'Source', 'Channel', 'Destination', 'Policies', 'File Name', 'Details']
-    : VISIBLE_COLS;
+  const visibleCols = VISIBLE_COLS;
 
   const thead = document.createElement('thead');
   const trh = document.createElement('tr');
@@ -455,7 +453,6 @@ function renderDataTable(tab){
 
     const cells = {
       'Time'       : '',
-      'Alert Count': txt(r['Alert Count']),
       'Source'     : txt(r['Source']).trim(),
       'Policies'   : txt(r['Policies']),
       'Channel'    : txt(r['Channel']),
@@ -490,25 +487,6 @@ function renderDataTable(tab){
         td.classList.add('timecell');
         td.innerHTML = timeCellHTML(r);
         td.title     = timeCellPlainText(r);
-      } else if (col === 'Details' && Array.isArray(r.clusterRows)) {
-        const details = document.createElement('details');
-        details.className = 'cluster-alerts';
-        const summary = document.createElement('summary');
-        summary.textContent = `View ${r.clusterRows.length} original alert${r.clusterRows.length === 1 ? '' : 's'}`;
-        details.appendChild(summary);
-        const list = document.createElement('div');
-        list.className = 'cluster-alert-list';
-        for (const alert of r.clusterRows) {
-          const item = document.createElement('button');
-          item.type = 'button';
-          item.className = 'cluster-alert-item';
-          item.textContent = `${txt(alert.ID) || 'No ID'} — ${stripGMT(txt(alert['Incident Time']))} — ${txt(alert['Policies']) || 'No policy'} — ${txt(alert['File Name']) || 'No file'}`;
-          item.title = 'Copy original alert details';
-          item.addEventListener('click', () => copyRowToClipboard(alert));
-          list.appendChild(item);
-        }
-        details.appendChild(list);
-        td.appendChild(details);
       } else if (col === 'Source' || col === 'Destination' || col === 'Policies' || col === 'Status' || col === 'File Name' || col === 'Details' || col === 'Channel'){
         const full  = cells[col];
         const shown = cells[col];
