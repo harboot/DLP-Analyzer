@@ -52,7 +52,7 @@
       <table id="rulesTable" class="rules-cols">
         <thead>
           <tr>
-            <th class="copy-column" title="Copy row as rich text (HTML table)">Copy</th>
+            <th class="copy-column" title="Copy row as rich text (HTML table)" aria-label="Copy row"></th>
             <th><div class="th-wrap" title="Policy Name header">Policy Name <span class="filter-ico" data-col="policy" title="Filter Policy Name">🔍</span></div></th>
             <th><div class="th-wrap" title="Rule Name header">Rule Name <span class="filter-ico" data-col="rule" title="Filter Rule Name">🔍</span></div></th>
             <th><div class="th-wrap" title="Relation header">Relation <span class="filter-ico" data-col="relation" title="Filter Relation">🔍</span></div></th>
@@ -717,7 +717,9 @@ function exportCsv(){
 async function copyRowAsRichText(row){
   const sevWord = (row.severity || '').toLowerCase();
   const sChar = sevWord==='high' ? 'HIGH' : sevWord==='medium' ? 'MEDIUM' : sevWord==='low' ? 'LOW' : '';
-  const exc = (row.exceptions && row.exceptions.length) ? 'Show' : 'N/A';
+  const exc = (row.exceptions && row.exceptions.length)
+    ? row.exceptions.map(exception => exception?.exception_rule_name || '(unnamed)').join('; ')
+    : 'N/A';
 
   const headers = ['Policy Name','Rule Name','Relation','Classifiers','Severity','Action','Source','Channel','Exception'];
   const values  = [
