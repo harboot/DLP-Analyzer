@@ -197,16 +197,16 @@ async function copyRowToClipboard(row, targetButton) {
       document.execCommand('copy');
       ta.remove();
     }
-    // Provide visual feedback on the clicked button
+    DLPUtils.showCopyPreview(getRowCells(row));
     if (targetButton) {
-        targetButton.textContent = '✅';
-        setTimeout(() => { targetButton.textContent = '📋'; }, 1500);
+      targetButton.title = 'Copied row data';
+      setTimeout(() => { targetButton.title = 'Copy row data'; }, 1500);
     }
   } catch (e) {
     console.error('Copy failed:', e);
     if (targetButton) {
-        targetButton.textContent = '❌';
-        setTimeout(() => { targetButton.textContent = '📋'; }, 1500);
+      targetButton.title = 'Failed to copy row data';
+      setTimeout(() => { targetButton.title = 'Copy row data'; }, 1500);
     }
   }
 }
@@ -825,7 +825,7 @@ function openResultTable(fileId) {
     'Time', 'Source', 'Policies', 'Channel', 'Destination',
     'File Name', 'Details', 'Size', 'Status'
   ];
-  const headerHTML = cols.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
+  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column"' : ''}>${index === 0 ? 'Copy' : escapeHtml(h)}</th>`).join('');
   let page = 1;
   let pageSize = 50;
 
@@ -841,7 +841,7 @@ function openResultTable(fileId) {
       // Add `data-row-json` to <tr> to store raw data
       // Add a <td> with a copy button
       return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
-        <td><button class="icon-btn" title="Copy row data" data-act="copy-row">📋</button></td>
+        <td class="copy-column"><button class="icon-copy" title="Copy row data" aria-label="Copy row data" data-act="copy-row">${DLPUtils.copyIconSvg()}</button></td>
         <td title="${timeText}">${escapeHtml(timeText)}</td>
         <td title="${safe(rc.Source)}">${escapeHtml(safe(rc.Source))}</td>
         <td title="${safe(rc.Policies)}">${escapeHtml(safe(rc.Policies))}</td>

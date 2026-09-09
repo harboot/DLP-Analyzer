@@ -474,9 +474,8 @@ function renderDataTable(tab){
         const btn = document.createElement('button');
         btn.className = 'icon-copy';
         btn.title = 'Copy this row';
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-		  <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-		</svg>`;
+        btn.setAttribute('aria-label', 'Copy this row');
+        btn.innerHTML = DLPUtils.copyIconSvg();
         btn.addEventListener('click', async (e)=>{
           e.preventDefault();
           btn.disabled = true;

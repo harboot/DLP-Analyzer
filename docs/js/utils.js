@@ -156,6 +156,7 @@ const ICON_COL = '__Copy';
           ta.remove();
         }
       }
+      DLPUtils.showCopyPreview(getRowCells(row));
     } catch (e) {
       console.error('Copy failed:', e);
     }
