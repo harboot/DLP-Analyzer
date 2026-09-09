@@ -1,3 +1,5 @@
+![DLP-Analyzer — browser-based tools for analyzing Data Loss Prevention (DLP)](./docs/assets/dlp_analyzer_github_banner.png)
+
 # DLP Analyzer
 
 A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. The Alert Analyzer also accepts XLSX incident exports directly. It is a companion analysis utility, not an official Forcepoint product.
