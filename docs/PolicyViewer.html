@@ -30,19 +30,16 @@
           Select Folder
         </label>
         <button class="btn" id="loadSampleBtn" title="Load a sample DLP policy">Load sample</button>
-        <button class="btn" id="toggleLog" title="Show/Hide load log">Show Log</button>
         <button class="btn" id="exportCsv" title="Export filtered rows (no exception details)">Export CSV (filtered)</button>
         <button class="btn" id="toggleDisabled" title="Toggle visibility of disabled Policy/Rule">Hide Disabled</button>
       </div>
       <div class="row-right">
         <!-- Counters -->
         <span class="counter c-block" id="cntBlocked" title="Rules with action containing 'block'">Blocked (0)</span>
+        <span class="counter c-block" id="cntBlockedAll" title="Rules with a blocking main or exception action">Blocked All (0)</span>
         <span class="counter c-disab" id="cntDisabled" title="Rules disabled (rule.enabled == false)">Disabled (0)</span>
         <span class="counter c-exc" id="cntException" title="Rules that have exceptions">Exception (0)</span>
       </div>
-    </div>
-    <div class="log-panel" id="logPanel">
-      <pre id="logOut"></pre>
     </div>
   </div>
 
@@ -55,7 +52,7 @@
       <table id="rulesTable" class="rules-cols">
         <thead>
           <tr>
-            <th title="Copy row as rich text (HTML table)">Copy</th>
+            <th class="copy-column" title="Copy row as rich text (HTML table)">Copy</th>
             <th><div class="th-wrap" title="Policy Name header">Policy Name <span class="filter-ico" data-col="policy" title="Filter Policy Name">🔍</span></div></th>
             <th><div class="th-wrap" title="Rule Name header">Rule Name <span class="filter-ico" data-col="rule" title="Filter Rule Name">🔍</span></div></th>
             <th><div class="th-wrap" title="Relation header">Relation <span class="filter-ico" data-col="relation" title="Filter Relation">🔍</span></div></th>
@@ -73,6 +70,11 @@
       </table>
     </div>
   </section>
+
+  <details class="log-details" id="logPanel">
+    <summary>Load log</summary>
+    <pre id="logOut"></pre>
+  </details>
 </div>
 
 <script>
@@ -83,14 +85,13 @@
   const loadSampleBtn = document.getElementById('loadSampleBtn');
   const rulesBody = document.getElementById('rulesBody');
   const logOut = document.getElementById('logOut');
-  const logPanel = document.getElementById('logPanel');
-  const toggleLog = document.getElementById('toggleLog');
   const exportCsvBtn = document.getElementById('exportCsv');
   const toggleDisabledBtn = document.getElementById('toggleDisabled');
   const countInfo = document.getElementById('countInfo');
 
   // counters
   const cntBlocked = document.getElementById('cntBlocked');
+  const cntBlockedAll = document.getElementById('cntBlockedAll');
   const cntDisabled = document.getElementById('cntDisabled');
   const cntException = document.getElementById('cntException');
 
@@ -240,8 +241,6 @@
       addFiles([new File([await response.blob()], 'policy.json', { type: 'application/json' })]);
     } catch (error) {
       log(`Unable to load the sample policy: ${error.message}`);
-      logPanel.style.display = 'block';
-      toggleLog.textContent = 'Hide Log';
     } finally {
       loadSampleBtn.disabled = false;
     }
@@ -293,14 +292,20 @@
 
   /* ===================== Counters ===================== */
   function updateCounters(){
-    // Blocked: action contains "block" (case-insensitive)
-    const blocked = flatRows.filter(r => (r.action||'').toLowerCase().includes('block')).length;
+    const hasBlockAction = action => String(action || '').toLowerCase().includes('block');
+    // Blocked only considers the main rule action.
+    const blocked = flatRows.filter(r => hasBlockAction(r.action)).length;
+    // Blocked All counts each rule once when its main action or at least one exception action blocks.
+    const blockedAll = flatRows.filter(r => hasBlockAction(r.action) || safeArr(r.exceptions).some(exception => {
+      return hasBlockAction(pickSeverityAndAction(exception?.severity_action || {}).action);
+    })).length;
     // Disabled: rule disabled only (per requirement)
     const disabled = flatRows.filter(r => !r.ruleEnabled).length;
     // Exception: rules that have at least one exception
     const exc = flatRows.filter(r => Array.isArray(r.exceptions) && r.exceptions.length>0).length;
 
     cntBlocked.textContent = `Blocked (${blocked})`;
+    cntBlockedAll.textContent = `Blocked All (${blockedAll})`;
     cntDisabled.textContent = `Disabled (${disabled})`;
     cntException.textContent = `Exception (${exc})`;
   }
@@ -323,11 +328,12 @@
 
       // (1) Copy icon column
       const tdCopy = document.createElement('td');
+      tdCopy.className = 'copy-column';
       tdCopy.title = 'Copy this row as rich text';
       const copyBtn = document.createElement('button');
       copyBtn.className = 'icon-copy';
       copyBtn.setAttribute('aria-label','Copy row');
-      copyBtn.textContent = '⧉';
+      copyBtn.innerHTML = DLPUtils.copyIconSvg();
       copyBtn.addEventListener('click', ()=> copyRowAsRichText(row));
       tdCopy.appendChild(copyBtn);
       tr.appendChild(tdCopy);
@@ -754,6 +760,7 @@ async function copyRowAsRichText(row){
     } else {
       await navigator.clipboard.writeText(text);
     }
+    DLPUtils.showCopyPreview(headers.map((header, index) => [header, values[index]]));
   } catch(err){
     console.error(err);
     alert('Failed to copy. Your browser may restrict clipboard access.');
@@ -763,13 +770,6 @@ async function copyRowAsRichText(row){
 const escapeHtml = DLPUtils.escapeHtml;
 
   /* ===================== Init ===================== */
-  toggleLog.addEventListener('click', ()=> {
-    logPanel.style.display = (logPanel.style.display === 'none' || !logPanel.style.display) ? 'block' : 'none';
-    toggleLog.textContent = (logPanel.style.display === 'block') ? 'Hide Log' : 'Show Log';
-  });
-
-  logPanel.style.display = 'none';
-
   document.addEventListener('keydown', (e)=>{
     if(e.key==='Escape'){
       const pop = document.querySelector('.filter-pop');
