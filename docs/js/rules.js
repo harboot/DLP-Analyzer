@@ -319,7 +319,7 @@ function ruleShortOrEmptySubject(r, minLen = 10){
 
 // Rule: true when an attachment has no extension.
 function ruleAttachmentNoExtension(r){
-  return r.fileTokens.some(fileName => !fileName.includes('.'));
+  return r.fileTokens.some(fileName => !hasExtension(stripSizeSuffix(fileName)));
 }
 
 // Extracts the stem and trailing number from a filename.
@@ -354,22 +354,39 @@ function ruleSequentialAttachments(r, hotStems){
 }
 
 const SENSITIVE_KEYWORDS = [
+  'extract(?:ion)?',
+  'export',
+  'dump',
+  'backup',
+  'customer[_\\s-]?list',
+  'employee[_\\s-]?list',
+  'payroll',
   'confidential',
+  'restricted',
   'salary',
   'client[_\\s-]?list',
+  'credential',
   'password',
   'secret',
+  'database',
+  'db[_\\s-]?dump',
+  'account[_\\s-]?list',
+  'user[_\\s-]?list',
+  'master[_\\s-]?list',
+  'migration',
+  'bulk',
+  'batch',
+  'archive',
   'api[_\\s-]?key',
   'credit[_\\s-]?card'
 ];
 
 const sensitiveRegex = new RegExp("\\b(" + SENSITIVE_KEYWORDS.join("|") + ")\\b", "i");
 
-// Rule: true when sensitive keywords appear in the subject, filename, or policies.
+// Rule: true when sensitive keywords appear in the details or filename.
 function ruleSensitiveKeywords(r){
   return sensitiveRegex.test(txt(r['Details'])) ||
-         sensitiveRegex.test(txt(r['File Name'])) ||
-         sensitiveRegex.test(txt(r['Policies']));
+         sensitiveRegex.test(txt(r['File Name']));
 }
 
 // Rule: true when a sender repeatedly sends to the same domain above the threshold.
