@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>DLP Analyzer — Custom Rule</title>
+<title>DLP Analyzer — Risk Scoring</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
+  <script src="js/risk-scoring.js"></script>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -15,10 +16,10 @@
 <body class="page-card-manager tool-page">
   <div class="wrap">
     <header class="page-header">
-      <h1>Custom Rule</h1>
-      <p class="page-description">Create, generate, save, import, and export JavaScript predicates, then run them against DLP alert data.</p>
+      <h1>Risk Scoring</h1>
+      <p class="page-description">Combine weighted Boolean rules to rank DLP alerts by risk.</p>
       <div class="input-guide" aria-label="Input guide">
-        <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP alert CSV files for analysis. An exported Custom Rule JSON file is optional when restoring a rule collection.</div>
+        <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP alert CSV files for analysis. An exported Risk Scoring JSON file is optional when restoring a rule collection.</div>
         <div class="input-guide-item"><span class="input-guide-label">Required CSV columns</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
       </div>
     </header>
@@ -26,13 +27,13 @@
     <div class="panel">
       <div class="row">
         <div class="row-left">
-          <button class="btn" id="btnNewFile" title="New file">➕📄 New File</button>
+          <button class="btn" id="btnNewFile" title="New rule">➕ New Rule</button>
           <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
           <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
           <button class="btn" id="btnUpload" title="Upload CSV">📤 Upload</button>
           <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
-          <button class="btn" id="btnRunAll" title="Run enabled snippets on loaded CSV">✅ RUN ALL</button>
+          <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
           <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
         <div class="row-right">
@@ -45,7 +46,7 @@
     <div class="layout">
       <section class="section" aria-label="Items">
         <header>
-          <strong>Items</strong>
+          <strong>Rules</strong>
           <div class="right"><span class="muted-sm">Total: <span id="count">0</span></span></div>
         </header>
         <div class="list">
@@ -53,6 +54,7 @@
             <thead>
               <tr>
                 <th class="name"></th>
+                <th class="weight">Weight</th>
                 <th class="matches"></th>
                 <th class="actions"></th>
               </tr>
@@ -64,13 +66,19 @@
 
       <section class="section" aria-label="Editor">
         <header>
-          <strong id="editorTitle">Edit File</strong>
+          <strong id="editorTitle">Edit Rule</strong>
           <div class="right"><span id="currentPath" class="muted-sm"></span></div>
         </header>
         <div class="editor">
           <label>
-            <div class="muted-sm">File name</div>
-            <input id="inpName" class="textinput" placeholder="e.g. util-formatDate.js" />
+            <div class="muted-sm">Rule name</div>
+            <input id="inpName" class="textinput" placeholder="e.g. Large external transfer" />
+          </label>
+
+          <label>
+            <div class="muted-sm">Risk weight</div>
+            <input id="inpWeight" class="textinput" type="number" min="0" step="1" value="1" aria-describedby="weightHelp" />
+            <div id="weightHelp" class="muted-sm">Added to an alert's risk score when this rule returns true.</div>
           </label>
 
           <label>
@@ -84,13 +92,13 @@
           <div class="right" style="justify-content:space-between">
             <div class="status" id="meta">&nbsp;</div>
             <div class="right">
-              <button class="btn" id="btnRunThis" title="Run this snippet on loaded CSV">▶️ RUN</button>
+              <button class="btn" id="btnRunThis" title="Run this rule on loaded CSV">▶️ RUN</button>
               <div class="toggle" id="editorToggle" title="Toggle ON/OFF">
                 <span class="label" id="toggleLabel">OFF</span>
                 <div class="switch" id="toggleSwitch" data-on="false" aria-pressed="false" role="button"></div>
               </div>
               <button class="icon-btn" id="btnSave" title="Save">💾</button>
-              <button class="icon-btn" id="btnDelete" title="Delete file">🗑️</button>
+              <button class="icon-btn" id="btnDelete" title="Delete rule">🗑️</button>
             </div>
           </div>
         </div>
@@ -98,11 +106,11 @@
     </div>
 
     <div id="resultWrap">
-      <output id="onNames" class="muted-sm">Upload the CSV first, then press RUN ALL or RUN on a specific file…</output>
+      <output id="onNames" class="muted-sm">Upload a CSV, then press RUN ALL to rank alerts by combined risk or RUN to inspect one rule.</output>
     </div>
 
     <details class="section cjs-card ai-filter-generator">
-      <summary id="aiFilterTitle">AI Filter Generator</summary>
+      <summary id="aiFilterTitle">AI Rule Generator</summary>
       <div class="editor" aria-labelledby="aiFilterTitle">
         <div class="cjs-chatrow">
           <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
@@ -110,8 +118,8 @@
           <button class="btn" id="save-apikey">Save API key</button>
         </div>
         <div class="cjs-chatrow">
-          <input id="chatbot-input" class="textinput" type="text" placeholder="Describe a filter, for example: file size greater than 1 MB" />
-          <button class="btn" id="chatbot-run">Generate filter</button>
+          <input id="chatbot-input" class="textinput" type="text" placeholder="Describe a rule, for example: file size greater than 1 MB" />
+          <button class="btn" id="chatbot-run">Generate rule</button>
         </div>
         <div id="chatbot-status" class="status" aria-live="polite"></div>
       </div>
@@ -123,7 +131,7 @@
 <script src="js/ai.js"></script>
 <script>
 
-const LS_KEY = 'jsSnippetItems:v3';
+const LS_KEY = 'jsSnippetItems:v4';
 
 /* Selects the first element matching a selector. */
 const $ = DLPUtils.query;
@@ -231,14 +239,14 @@ function save(items) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
-/* Migrates legacy data (v2) to the new format when the v3 key does not exist. */
+/* Migrates legacy data to weighted rules when the v4 key does not exist. */
 (function migrate() {
   try {
     if (localStorage.getItem(LS_KEY)) return;
-    const v2 = JSON.parse(localStorage.getItem('jsSnippetItems:v2') || '[]');
-    const onlyFiles = (Array.isArray(v2) ? v2 : [])
+    const legacy = JSON.parse(localStorage.getItem('jsSnippetItems:v3') || localStorage.getItem('jsSnippetItems:v2') || '[]');
+    const onlyFiles = (Array.isArray(legacy) ? legacy : [])
       .filter((x) => x && x.type === 'file')
-      .map((x) => ({ id: x.id || uid(), type: 'file', name: x.name, code: x.code || '' }));
+      .map((x) => ({ id: x.id || uid(), type: 'file', name: x.name, code: x.code || '', enabled: !!x.enabled, weight: RiskScoring.normalizeWeight(x.weight) }));
     if (onlyFiles.length) localStorage.setItem(LS_KEY, JSON.stringify(onlyFiles));
   } catch {}
 })();
@@ -250,7 +258,8 @@ if (items.length === 0) {
     type: 'file',
     name: 'example.js',
     code: "// example: accept rows with Status=New\nreturn (row.Status||'')==='New';",
-    enabled: false
+    enabled: false,
+    weight: RiskScoring.DEFAULT_WEIGHT
   });
   save(items);
 }
@@ -264,6 +273,7 @@ const elTitle = $('#editorTitle');
 const elPath = $('#currentPath');
 const elName = $('#inpName');
 const elCode = $('#inpCode');
+const elWeight = $('#inpWeight');
 const elMeta = $('#meta');
 const elRunThis = $('#btnRunThis');
 
@@ -295,7 +305,7 @@ $('#save-apikey').addEventListener('click', () => {
 chatbotRunButton.addEventListener('click', async () => {
   const task = chatbotInput.value.trim();
   if (!task) {
-    chatbotStatus.textContent = 'Describe the filter you want to generate.';
+    chatbotStatus.textContent = 'Describe the rule you want to generate.';
     return;
   }
   chatbotRunButton.disabled = true;
@@ -305,13 +315,13 @@ chatbotRunButton.addEventListener('click', async () => {
     const code = await runChatbot(task);
     if (!code) throw new Error('The model did not return any code.');
     elCode.value = code;
-    chatbotStatus.textContent = 'Filter generated. Choose a name, review the code, and save it.';
+    chatbotStatus.textContent = 'Rule generated. Choose a name and weight, review the code, and save it.';
     elCode.focus();
   } catch (error) {
     chatbotStatus.textContent = `Generator error: ${error?.message || String(error)}`;
   } finally {
     chatbotRunButton.disabled = false;
-    chatbotRunButton.textContent = 'Generate filter';
+    chatbotRunButton.textContent = 'Generate rule';
   }
 });
 
@@ -400,6 +410,7 @@ function ensureCamelRow(r) {
 async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800, onProgress } = {}) {
   const rows = normalizedRows;
   const out = [];
+  const indices = [];
   for (let start = 0; start < rows.length; start += chunk) {
     const end = Math.min(rows.length, start + chunk);
     for (let i = start; i < end; i++) {
@@ -409,12 +420,15 @@ async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800,
       } catch (_) {
         ok = false;
       }
-      if (ok) out.push(rawRows[i]);
+      if (ok) {
+        out.push(rawRows[i]);
+        indices.push(i);
+      }
     }
     onProgress && onProgress(out.length, end, rows.length);
     await new Promise((r) => setTimeout(r, 0));
   }
-  return out;
+  return { rows: out, indices };
 }
 
 /* Renders the file list in the left table and attaches row event handlers. */
@@ -423,11 +437,13 @@ function render() {
   const rows = [];
   fileList.forEach((fl) => {
     if (typeof fl.enabled !== 'boolean') fl.enabled = false;
+    fl.weight = RiskScoring.normalizeWeight(fl.weight);
     const tr = document.createElement('tr');
     tr.className = 'file';
     tr.setAttribute('data-id', fl.id);
     tr.innerHTML = `
-      <td class="name" title="${fl.name}">${fl.enabled ? '✅ ' : '📄 '}${fl.name}</td>
+      <td class="name" title="${escapeHtml(fl.name)}">${fl.enabled ? '✅ ' : '📄 '}${escapeHtml(fl.name)}</td>
+      <td class="weight" title="Risk weight">${fl.weight}</td>
       <td class="matches" data-role="matches"><span class="badge" title="RUN to compute">—</span></td>
       <td class="actions">
         <button class="icon-btn" title="Delete" data-act="del" data-id="${fl.id}">🗑️</button>
@@ -454,10 +470,10 @@ function render() {
 
 /* Creates a new empty file and opens it in the editor. */
 function newFile() {
-  let name = 'untitled.js';
+  let name = 'Untitled rule';
   let i = 1;
-  while (items.some((x) => x.type === 'file' && x.name === name)) name = `untitled-${i++}.js`;
-  const f = { id: uid(), type: 'file', name, code: '', enabled: false };
+  while (items.some((x) => x.type === 'file' && x.name === name)) name = `Untitled rule ${i++}`;
+  const f = { id: uid(), type: 'file', name, code: '', enabled: false, weight: RiskScoring.DEFAULT_WEIGHT };
   items.push(f);
   save(items);
   render();
@@ -470,9 +486,10 @@ function openEditor(id) {
   if (!file) return;
   currentFileId = id;
   if (typeof file.enabled !== 'boolean') file.enabled = false;
-  elTitle.textContent = 'Edit File';
+  elTitle.textContent = 'Edit Rule';
   elName.value = file.name;
   elCode.value = file.code || '';
+  elWeight.value = RiskScoring.normalizeWeight(file.weight);
   elPath.textContent = file.name;
   elMeta.textContent = 'Ready';
   elName.focus();
@@ -482,23 +499,30 @@ function openEditor(id) {
 /* Saves changes to the currently open file. */
 function saveCurrent() {
   if (!currentFileId) {
-    alert('No file selected.');
+    alert('No rule selected.');
     return;
   }
   const file = fileById(currentFileId);
   if (!file) return;
   const newName = elName.value.trim();
   if (!newName) {
-    alert('File name is required.');
+    alert('Rule name is required.');
     elName.focus();
     return;
   }
   if (items.find((x) => x.type === 'file' && x.id !== file.id && x.name === newName)) {
-    alert('A file with the same name already exists.');
+    alert('A rule with the same name already exists.');
+    return;
+  }
+  const weight = Number(elWeight.value);
+  if (!Number.isFinite(weight) || weight < 0) {
+    alert('Risk weight must be zero or greater.');
+    elWeight.focus();
     return;
   }
   file.name = newName;
   file.code = elCode.value;
+  file.weight = weight;
   save(items);
   render();
   elPath.textContent = file.name;
@@ -509,7 +533,7 @@ function saveCurrent() {
 function deleteFile(id) {
   const file = fileById(id);
   if (!file) return;
-  if (!confirm(`Delete file "${file.name}"?`)) return;
+  if (!confirm(`Delete rule "${file.name}"?`)) return;
   items = items.filter((x) => !(x.type === 'file' && x.id === id));
   if (currentFileId === id) {
     currentFileId = null;
@@ -524,6 +548,7 @@ function clearEditor() {
   elTitle.textContent = 'Editor';
   elName.value = '';
   elCode.value = '';
+  elWeight.value = RiskScoring.DEFAULT_WEIGHT;
   elPath.textContent = '';
   elMeta.textContent = '';
 }
@@ -531,19 +556,20 @@ function clearEditor() {
 /* Exports all files to JSON and downloads the result. */
 function exportJSON() {
   const data = JSON.stringify({
-    version: 3,
+    version: 4,
     items: files().map((f) => ({
       id: f.id,
       name: f.name,
       code: f.code,
       type: 'file',
-      enabled: !!f.enabled
+      enabled: !!f.enabled,
+      weight: RiskScoring.normalizeWeight(f.weight)
     }))
   }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `snippets-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+  a.download = `risk-scoring-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -563,6 +589,7 @@ function importJSON(file) {
         if (m) {
           m.code = it.code || '';
           m.enabled = !!it.enabled;
+          m.weight = RiskScoring.normalizeWeight(it.weight);
           updated++;
         } else {
           items.push({
@@ -570,7 +597,8 @@ function importJSON(file) {
             type: 'file',
             name: it.name,
             code: it.code || '',
-            enabled: !!it.enabled
+            enabled: !!it.enabled,
+            weight: RiskScoring.normalizeWeight(it.weight)
           });
           added++;
         }
@@ -604,6 +632,9 @@ elName.addEventListener('input', () => {
   elMeta.textContent = 'Unsaved changes';
 });
 elCode.addEventListener('input', () => {
+  elMeta.textContent = 'Unsaved changes';
+});
+elWeight.addEventListener('input', () => {
   elMeta.textContent = 'Unsaved changes';
 });
 
@@ -683,7 +714,7 @@ async function loadCsvFiles(files) {
     matchesCache.clear();
     $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
     out.textContent = totalRows ?
-      'CSV loaded. Press RUN ALL or open a file and press RUN for that file.' :
+      'CSV loaded. Press RUN ALL or open a rule and press RUN for that rule.' :
       'CSV loaded with 0 parsed data rows.';
   } catch (err) {
     csvNameEl.textContent = '';
@@ -721,7 +752,7 @@ btnRunAll.addEventListener('click', async () => {
   $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
   const enabledFiles = files().filter((f) => !!f.enabled).sort((a, b) => a.name.localeCompare(b.name));
   if (enabledFiles.length === 0) {
-    out.textContent = 'No items are ON. Toggle ON first, then RUN ALL.';
+    out.textContent = 'No rules are ON. Toggle at least one rule ON, then press RUN ALL.';
     return;
   }
   for (const fl of enabledFiles) {
@@ -735,14 +766,14 @@ btnRunAll.addEventListener('click', async () => {
     await runOneFileInternal(fl.id, { updateUI: true });
   }
   bindOpenMatches();
-  out.textContent = 'Done. Click the Matches number to see the results.';
+  openRiskTable(enabledFiles);
 });
 
 if (elRunThis)
   elRunThis.addEventListener('click', async () => {
     const out = document.getElementById('onNames');
     if (!currentFileId) {
-      out.textContent = 'Select a file first.';
+      out.textContent = 'Select a rule first.';
       return;
     }
     if (!lastCSVRows || !lastCSVRows.length) {
@@ -771,13 +802,13 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
     return;
   }
   const badge = cell && cell.querySelector('.badge');
-  const matches = await computeMatches(lastCSVRows, normalizedCSVRows, predicate, {
+  const result = await computeMatches(lastCSVRows, normalizedCSVRows, predicate, {
     chunk: 800,
     onProgress: (count) => {
       if (badge) badge.textContent = String(count);
     }
   });
-  matchesCache.set(f.id, { count: matches.length, rows: matches });
+  matchesCache.set(f.id, { count: result.rows.length, rows: result.rows, indices: result.indices });
   if (updateUI && cell) {
     cell.innerHTML = '';
     const a = document.createElement('a');
@@ -785,7 +816,7 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
     a.className = 'badge clickable';
     a.setAttribute('data-role', 'open-matches');
     a.setAttribute('data-id', f.id);
-    a.textContent = String(matches.length);
+    a.textContent = String(result.rows.length);
     a.title = 'Click to view results';
     cell.appendChild(a);
   }
@@ -808,6 +839,76 @@ function bindOpenMatches() {
       openResultTable(id);
     });
   });
+}
+
+/* Ranks alerts by the sum of every enabled Boolean rule that matched them. */
+function openRiskTable(enabledFiles) {
+  const matchSets = new Map(enabledFiles.map((file) => [file.id, new Set(matchesCache.get(file.id)?.indices || [])]));
+  const rules = enabledFiles.map((file) => ({
+    id: file.id,
+    name: file.name,
+    weight: RiskScoring.normalizeWeight(file.weight)
+  }));
+  const scored = RiskScoring.scoreAlerts(lastCSVRows, rules, matchSets);
+  const wrap = document.getElementById('resultWrap');
+  let page = 1;
+  let pageSize = 50;
+
+  const renderPage = () => {
+    const pages = Math.max(1, Math.ceil(scored.length / pageSize));
+    page = Math.min(Math.max(1, page), pages);
+    const start = (page - 1) * pageSize;
+    const pageAlerts = scored.slice(start, start + pageSize);
+    const bodyHTML = pageAlerts.map((alert) => {
+      const rRaw = alert.row;
+      const row = normalizedRowByRaw.get(rRaw);
+      const ruleText = alert.matchedRules.map((rule) => `${rule.name} (+${rule.weight})`).join(', ');
+      const timeText = `ID ${safe(row.ID)} | Incident ${safe(row.IncidentTime)} | Event ${safe(row.EventTime)}`;
+      return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
+        <td class="copy-column"><button class="icon-copy" title="Copy row data" aria-label="Copy row data" data-act="copy-row">${DLPUtils.copyIconSvg()}</button></td>
+        <td><strong class="risk-score">${alert.score}</strong></td>
+        <td title="${escapeHtml(ruleText)}">${escapeHtml(ruleText)}</td>
+        <td title="${escapeHtml(timeText)}">${escapeHtml(timeText)}</td>
+        <td title="${escapeHtml(safe(row.Source))}">${escapeHtml(safe(row.Source))}</td>
+        <td title="${escapeHtml(safe(row.Policies))}">${escapeHtml(safe(row.Policies))}</td>
+        <td title="${escapeHtml(safe(row.Channel))}">${escapeHtml(safe(row.Channel))}</td>
+        <td title="${escapeHtml(safe(row.Destination))}">${escapeHtml(safe(row.Destination))}</td>
+        <td title="${escapeHtml(safe(row.FileName))}">${escapeHtml(safe(row.FileName))}</td>
+        <td title="${escapeHtml(safe(row.Status))}">${escapeHtml(safe(row.Status))}</td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<output id="onNames" class="muted-sm">Scored ${scored.length} of ${lastCSVRows.length} alerts with ${rules.length} enabled rules.</output>
+    <section class="section risk-results">
+      <header><strong>Alerts ranked by combined risk</strong><div class="right">
+        <label class="muted-sm">Rows per page <select class="textinput" data-role="page-size"><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label>
+        <span class="muted-sm">${scored.length} scored alerts</span>
+      </div></header>
+      <div style="overflow:auto"><table class="cols-10"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th>Risk score</th><th>Triggered rules</th><th>Time</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Status</th></tr></thead>
+      <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
+      <div class="pager" data-role="pager"><span class="muted-sm">${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length} • Page ${page} of ${pages}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div>
+    </section>`;
+
+    wrap.querySelector('table').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-act="copy-row"]');
+      const rowElement = button?.closest('tr');
+      if (rowElement?.dataset.rowJson) copyRowToClipboard(JSON.parse(rowElement.dataset.rowJson), button);
+    });
+    wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
+      pageSize = Number(event.target.value) || 50;
+      page = 1;
+      renderPage();
+    });
+    wrap.querySelector('[data-role="pager"]').addEventListener('click', (event) => {
+      const action = event.target.closest('[data-page]')?.dataset.page;
+      if (action === 'first') page = 1;
+      if (action === 'prev') page--;
+      if (action === 'next') page++;
+      if (action === 'last') page = pages;
+      if (action) renderPage();
+    });
+  };
+  renderPage();
 }
 
 /* Opens a paginated results table below for the selected file. */
@@ -855,7 +956,7 @@ function openResultTable(fileId) {
     })
     .join('');
 
-    wrap.innerHTML = `
+    wrap.innerHTML = `<output id="onNames" class="muted-sm">Showing matches for ${escapeHtml(f.name)}.</output>
     <section class="section">
       <header>
         <strong>Results • ${escapeHtml(f.name)}</strong>

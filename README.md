@@ -12,7 +12,7 @@ DLP Analyzer expects the column names present in Forcepoint DLP exports. In part
 
 - **Alert Analyzer** works with incident exports containing fields such as `ID`, `Incident Time`, `Source`, `Policies`, `Destination`, `File Name`, `Details`, `Channel`, `Action`, and `Severity`.
 - **Rule Identifier** combines an alert export (including `Violation Triggers` and `Policies`) with a policy/rule export (including `Rule Name`, `Relation`, and `Classifiers`) to add the matching rule name to each alert.
-- **Custom Rule** creates, stores, imports, exports, and runs reusable JavaScript predicates against the same alert CSV rows, which is useful for organization-specific Forcepoint DLP triage rules.
+- **Risk Scoring** creates, stores, imports, and exports weighted Boolean predicates, then ranks alerts by the combined weight of every matching rule.
 
 Export labels can vary between Forcepoint versions and configured report templates. If a required column was renamed or omitted, export it again with the expected field names before processing it. All analysis is local and does not modify data in Forcepoint.
 
@@ -33,7 +33,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
 └── docs/
     ├── DLP_Tools.html           # Main page and tool navigation
     ├── AlertAnalyzer.html       # DLP alert analysis interface
-    ├── CardManager.html         # Custom Rule interface
+    ├── CardManager.html         # Risk Scoring interface
     ├── RuleIdentifier.html      # Alert and policy matching interface
     ├── PolicyViewer.html        # DLP policy viewer
     ├── DocViewer.html           # Local document viewer
@@ -45,6 +45,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
     │   ├── csv.js               # Alert ingestion and tab construction
     │   ├── csv-utils.js         # Shared Papa Parse wrapper
     │   ├── dlp-utils.js         # Shared DOM and output-safety helpers
+    │   ├── risk-scoring.js      # Weighted alert-score aggregation
     │   ├── rules.js             # Alert Analyzer rule execution
     │   ├── storage.js           # Expiring secrets and rule-result cache
     │   ├── ui.js                # Alert Analyzer rendering and interaction
@@ -72,7 +73,7 @@ page-specific parsing and rendering logic should remain in each tool's script.
 
 - **DLP Analyzer** provides a single navigation page that loads each analyzer and utility.
 - **Alert Analyzer** imports DLP alert CSV or XLSX files and presents every alert individually alongside summaries, JSON rule-pack findings, filters, charts, and exports. For XLSX workbooks, the first worksheet is imported. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
-- **Custom Rule** generates JavaScript predicates with optional OpenAI assistance, stores reusable rules, imports or exports rule collections, and runs enabled rules against uploaded CSV data.
+- **Risk Scoring** generates JavaScript Boolean predicates with optional OpenAI assistance, assigns each rule a weight, stores reusable rule collections, and ranks alerts by the sum of all matching enabled rules.
 - **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts.
 - **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details.
 - **Document Viewer** opens supported local documents for quick browser-based inspection.

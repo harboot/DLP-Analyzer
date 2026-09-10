@@ -404,10 +404,17 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
 
 	#tbl th.name,
 	#tbl td.name {
-	  width: 84%;
+	  width: 70%;
 	  white-space: nowrap;
 	  overflow: hidden;
 	  text-overflow: ellipsis; /* only the name column uses an ellipsis */
+	}
+
+	#tbl th.weight,
+	#tbl td.weight {
+	  width: 10%;
+	  text-align: right;
+	  font-variant-numeric: tabular-nums;
 	}
 
 	#tbl th.matches,
@@ -418,7 +425,7 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
 
 	#tbl th.actions,
 	#tbl td.actions {
-	  width: 6%;
+	  width: 10%;
 	  min-width: 50px;
 	  text-align: right; /* without an ellipsis */
 	}
@@ -516,6 +523,8 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
     .badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;background:#0e141e;border:1px solid #2b3d55;color:var(--text);font-variant-numeric:tabular-nums}
     .badge.clickable{cursor:pointer}
     .badge.clickable:hover{border-color:var(--accent)}
+    .risk-score{color:var(--warn);font-size:16px;font-variant-numeric:tabular-nums}
+    .risk-results{margin-top:12px}
 }
 
 /* ==========================================================================
