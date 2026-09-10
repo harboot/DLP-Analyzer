@@ -5,7 +5,7 @@ const splitDestParts = value => txt(value).split(/[;,]/).map(part => part.trim()
 const isEmailLike = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(txt(value));
 const extractFirstEmail = value => (txt(value).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [''])[0];
 const extractLocal = value => txt(value).split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-const stripSize = value => txt(value).trim().replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[.,]\d+)?\s*(?:[KMGT]B)\s*\]?\s*\)?\s*$/i, '').trim();
+const stripSize = value => txt(value).trim().replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[.,]\d+)?\s*(?:[KMGT]?B)\s*\]?\s*\)?\s*$/i, '').trim();
 const hasExtension = value => /\.[A-Za-z0-9]{1,8}$/.test(stripSize(value));
 const ignored = value => ['image','img_','img-','image0','outlook-','signature','sign_','logo','scan','screenshot'].some(prefix => value.startsWith(prefix));
 const sensitive = /\b(confidential|salary|client[_\s-]?list|password|secret|api[_\s-]?key|credit[_\s-]?card)\b/i;

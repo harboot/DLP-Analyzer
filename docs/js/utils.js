@@ -272,7 +272,7 @@ const ICON_COL = '__Copy';
   // Removes a file-size suffix from a token
   function stripSizeSuffix(s) {
     return normalizeSpaces(s)
-      .replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[\.,]\d+)?\s*(?:[KMGT]B)\s*\]?\s*\)?\s*$/i, '')
+      .replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[\.,]\d+)?\s*(?:[KMGT]?B)\s*\]?\s*\)?\s*$/i, '')
       .trim();
   }
 
