@@ -18,8 +18,10 @@ function ingest(rows){
     row.destinationDomains = Array.from(new Set(
       splitDestParts(row['Destination']).map(getBaseDomain).filter(Boolean)
     ));
+    // normalizeFileList uses semicolons as separators. Commas can legitimately
+    // be part of a filename (for example, "SURNAME, GIVEN NAME.pdf").
     row.fileTokens = txt(row['File Name'])
-      .split(/[;,\n]/)
+      .split(/[;\n]/)
       .map(token => token.trim())
       .filter(Boolean);
     row.incidentDate = incidentDate;

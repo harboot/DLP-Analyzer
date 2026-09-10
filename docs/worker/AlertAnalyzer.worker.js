@@ -6,6 +6,7 @@ const isEmailLike = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(txt(value));
 const extractFirstEmail = value => (txt(value).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [''])[0];
 const extractLocal = value => txt(value).split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 const stripSize = value => txt(value).trim().replace(/\s*[-,]?\s*\(?\s*\[?\s*\d+(?:[.,]\d+)?\s*(?:[KMGT]B)\s*\]?\s*\)?\s*$/i, '').trim();
+const hasExtension = value => /\.[A-Za-z0-9]{1,8}$/.test(stripSize(value));
 const ignored = value => ['image','img_','img-','image0','outlook-','signature','sign_','logo','scan','screenshot'].some(prefix => value.startsWith(prefix));
 const sensitive = /\b(confidential|salary|client[_\s-]?list|password|secret|api[_\s-]?key|credit[_\s-]?card)\b/i;
 const freeMailDomains = new Set(['gmail.com','yahoo.com','protonmail.com','proton.me','icloud.com']);
@@ -97,7 +98,7 @@ function analyze(rows, rules) {
         case 'destination-domain-in': matched = row.destinationDomains.some(domain => rule.values.includes(domain)); break;
         case 'short-email-subject': matched = row.channelLower.includes('email') && txt(row.Details).trim().length < rule.minLength; break;
         case 'hour-range': matched = row.incidentHour != null && row.incidentHour >= rule.start && row.incidentHour < rule.end; break;
-        case 'file-without-extension': matched = row.fileTokens.some(file => !file.includes('.')); break;
+        case 'file-without-extension': matched = row.fileTokens.some(file => !hasExtension(file)); break;
         case 'sequential-files': matched = row.fileTokens.some(file => { const part = stemTail(file); return part && (sequences.get(`${row.sourceLower}|${part.stem}`)?.size || 0) >= rule.minimumDistinct; }); break;
         case 'text-regex': {
           const regex = new RegExp(rule.pattern, rule.flags || '');
