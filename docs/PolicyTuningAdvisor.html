@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DLP Analyzer — Policy Tuning Advisor</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="js/csv-utils.js"></script>
+  <script src="js/dlp-utils.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-policy-tuning tool-page">
+<div class="wrap">
+  <header class="page-header">
+    <h1>DLP Policy Tuning Advisor</h1>
+    <p class="page-description">Find explainable policy tuning opportunities in Forcepoint DLP alert exports using deterministic, local browser analysis. Findings are review prompts and never classify alerts as false positives.</p>
+    <div class="input-guide" aria-label="Input guide">
+      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP incident or alert CSV and XLSX exports. Multiple files are combined.</div>
+      <div class="input-guide-item"><span class="input-guide-label">Recommended columns</span><code>ID, Incident Time, Source, Policies, Destination, File Name, Violation Triggers, Channel, Application</code></div>
+    </div>
+  </header>
+  <section class="panel upload-panel" aria-label="Import alerts">
+    <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /><strong>Drop</strong> CSV or XLSX files here, or click to select</label>
+    <button class="btn" id="sampleBtn" type="button">Load sample</button>
+    <a class="btn link" href="guides/PolicyTuningAdvisorGuide.html" target="_blank" rel="noopener">📖 Guide</a>
+    <span id="status" class="muted" role="status" aria-live="polite">No alert data loaded.</span>
+  </section>
+  <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
+  <section id="summary" class="advisor-summary" hidden aria-label="Analysis summary"></section>
+  <div class="advisor-toolbar" id="toolbar" hidden>
+    <label>Filter policies <input id="search" type="search" placeholder="Policy name or finding" /></label>
+    <label>Opportunity <select id="level"><option value="">All levels</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+  </div>
+  <main id="results" aria-live="polite"><div class="advisor-empty"><strong>Upload an alert export to begin.</strong><span>The file remains on this device. No AI or remote analysis is used.</span></div></main>
+</div>
+<script src="js/policy-tuning.js"></script>
+<script src="js/policy-tuning-ui.js"></script>
+</body>
+</html>
