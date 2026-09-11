@@ -76,7 +76,7 @@
 
           <div id="builtInDetails" hidden>
             <div class="muted-sm">Rule description</div>
-            <p id="builtInDescription" class="rule-description"></p>
+            <textarea id="builtInDescription" class="textinput rule-description" rows="3" readonly aria-label="Rule description"></textarea>
             <div id="builtInSettings" class="built-in-settings"></div>
           </div>
 
@@ -516,19 +516,35 @@ function renderBuiltInSettings(file) {
   const fields = file.key === 'shortSubject'
     ? [{ key: 'subjectLength', label: 'Maximum subject length', type: 'number', min: 1, max: 200 }]
     : file.key === 'outOfHours'
-      ? [{ key: 'startHour', label: 'Start hour', type: 'number', min: 0, max: 23 }, { key: 'endHour', label: 'End hour', type: 'number', min: 0, max: 23 }]
+      ? [{ key: 'startTime', label: 'Start time', type: 'time' }, { key: 'endTime', label: 'End time', type: 'time' }]
+      : file.key === 'sensitiveKeywords'
+        ? [
+            { key: 'keywords', label: 'Sensitive keyword list', type: 'textarea' },
+            { key: 'detectFileName', label: 'Detect in attachment filename', type: 'checkbox' },
+            { key: 'detectSubject', label: 'Detect in email subject', type: 'checkbox' }
+          ]
       : file.key === 'weirdTld'
         ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
         : [];
   fields.forEach(field => {
     const label = document.createElement('label');
     label.innerHTML = `<span class="muted-sm">${field.label}</span>`;
-    const input = document.createElement('input');
-    input.className = 'textinput';
-    input.type = field.type;
+    const input = document.createElement(field.type === 'textarea' ? 'textarea' : field.type === 'time' ? 'select' : 'input');
+    input.className = field.type === 'checkbox' ? 'setting-checkbox' : 'textinput';
+    if (field.type === 'time') {
+      for (let hour = 0; hour < 24; hour++) {
+        const value = `${String(hour).padStart(2, '0')}:00`;
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }).format(new Date(Date.UTC(2020, 0, 1, hour)));
+        input.appendChild(option);
+      }
+    } else if (field.type !== 'textarea') input.type = field.type;
+    if (field.type === 'textarea') input.rows = 5;
     if (field.min !== undefined) input.min = field.min;
     if (field.max !== undefined) input.max = field.max;
-    input.value = file.settings?.[field.key] ?? '';
+    if (field.type === 'checkbox') input.checked = file.settings?.[field.key] !== false;
+    else input.value = file.settings?.[field.key] ?? '';
     input.dataset.setting = field.key;
     input.addEventListener('input', () => { elMeta.textContent = 'Unsaved changes'; });
     label.appendChild(input);
@@ -565,7 +581,7 @@ function saveCurrent() {
   if (file.builtIn) {
     file.settings ||= {};
     builtInSettings.querySelectorAll('[data-setting]').forEach(input => {
-      file.settings[input.dataset.setting] = input.type === 'number' ? Number(input.value) : input.value;
+      file.settings[input.dataset.setting] = input.type === 'number' ? Number(input.value) : input.type === 'checkbox' ? input.checked : input.value;
     });
   }
   file.weight = weight;
