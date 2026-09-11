@@ -4,7 +4,7 @@
 
 A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. The Alert Analyzer also accepts XLSX incident exports directly. It is a companion analysis utility, not an official Forcepoint product.
 
-Processing happens in the browser: uploaded file contents are not sent to an application server. The CSV-based tools use one shared Papa Parse integration (`docs/js/csv-utils.js`), with Web Worker parsing enabled when the browser supports it, so large Forcepoint exports do not unnecessarily block the interface. XLSX files are read locally with a local SheetJS browser build (`docs/lib/xlsx.full.min.js`).
+Processing happens in the browser: uploaded file contents are not sent to an application server. The CSV-based tools use the shared local parser in `docs/js/csv-utils.js`. XLSX files are read locally with a local SheetJS browser build (`docs/lib/xlsx.full.min.js`).
 
 ## Forcepoint DLP compatibility
 
@@ -19,11 +19,13 @@ Export labels can vary between Forcepoint versions and configured report templat
 
 ## Open the application
 
-To try Alert Analyzer immediately, open the [hosted GitHub Pages version](https://harboot.github.io/DLP-Analyzer/DLP_Tools.html#AlertAnalyzer).
+To try Alert Analyzer immediately, open the [hosted GitHub Pages version](https://harboot.github.io/DLP-Analyzer/#AlertAnalyzer).
 
-Open `docs/DLP_Tools.html` directly in a web browser. No web server, installation, or build step is required.
+Open `docs/index.html` directly in a web browser. No web server, installation, or build step is required.
 
-`DLP_Tools.html` is the main page and provides navigation to every tool. Individual HTML files in `docs/` can also be opened directly when you only need a specific tool.
+`index.html` is the main page and provides navigation to every tool. Individual HTML files in `docs/` can also be opened directly when you only need a specific tool.
+
+When served over HTTPS, including on GitHub Pages, the application prepares all local pages, scripts, styles, rule packs, workers, guides, and samples for offline use on the first visit. Keep that page open until the real caching progress reaches completion. Later visits can load the complete tool set without a network connection. Service Workers are unavailable for pages opened directly with a `file://` URL.
 
 ## Project structure
 
@@ -32,7 +34,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
 ├── AGENTS.md                    # Repository language and workflow guidance
 ├── README.md                    # Project documentation
 └── docs/
-    ├── DLP_Tools.html           # Main page and tool navigation
+    ├── index.html               # Main page and tool navigation
     ├── AlertAnalyzer.html
     ├── PolicyTuningAdvisor.html
     ├── CardManager.html
@@ -46,7 +48,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
     │   ├── KG_script.js         # Keyword Generator logic
     │   ├── ai.js                # AI-assisted filter generation
     │   ├── csv.js               # Alert ingestion and tab construction
-    │   ├── csv-utils.js         # Shared Papa Parse wrapper
+    │   ├── csv-utils.js         # Shared local CSV parser
     │   ├── dlp-utils.js         # Shared DOM and output-safety helpers
     │   ├── risk-scoring.js      # Weighted alert-score aggregation
     │   ├── rules.js             # Alert Analyzer rule execution
