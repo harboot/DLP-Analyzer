@@ -12,7 +12,7 @@
   ];
 
   function builtInRules() {
-    return BUILT_IN_RULES.map(rule => ({ ...rule, builtIn: true, enabled: false, weight: DEFAULT_WEIGHT, settings: { ...rule.settings } }));
+    return BUILT_IN_RULES.map(rule => ({ ...rule, type: 'file', builtIn: true, enabled: false, weight: DEFAULT_WEIGHT, settings: { ...rule.settings } }));
   }
 
   function localPart(value) {
@@ -40,7 +40,7 @@
       const hour = parseIncidentHour(row.IncidentTime);
       const start = Number(settings.startHour ?? 0);
       const end = Number(settings.endHour ?? 5);
-      return hour !== null && (start <= end ? hour >= start && hour <= end : hour >= start || hour <= end);
+      return hour !== null && (start <= end ? hour >= start && hour < end : hour >= start || hour < end);
     }
     if (rule.key === 'noExtension') {
       return String(row.FileName || '').split(/[;\n,|]+/).map(value => value.trim()).filter(Boolean)
