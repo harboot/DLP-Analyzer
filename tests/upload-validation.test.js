@@ -8,7 +8,17 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'dlp-uti
 const context = { window: {}, document: {} };
 vm.runInNewContext(source, context);
 
-const { findMissingColumns } = context.window.DLPUtils;
+const { findMissingColumns, showUploadWarning } = context.window.DLPUtils;
+
+function createElement(tagName) {
+  return {
+    tagName,
+    children: [],
+    textContent: '',
+    appendChild(child) { this.children.push(child); },
+    replaceChildren() { this.children = []; }
+  };
+}
 
 test('findMissingColumns compares trimmed headers without case sensitivity', () => {
   const rows = [{ ' ID ': '1', source: 'alice' }];
@@ -19,6 +29,22 @@ test('findMissingColumns reads parser header metadata for an empty file', () => 
   const rows = [];
   Object.defineProperty(rows, 'headers', { value: ['ID', 'Channel'] });
   assert.deepEqual(Array.from(findMissingColumns(rows, ['ID', 'Source', 'Channel'])), ['Source']);
+});
+
+test('showUploadWarning lists missing columns without file names', () => {
+  context.document.createElement = createElement;
+  const warning = createElement('div');
+
+  showUploadWarning(warning, [
+    { fileName: 'Custom Policy Daily.csv', missing: ['Status'] },
+    { fileName: 'Other.csv', missing: ['Status', 'Channel'] }
+  ]);
+
+  assert.equal(warning.hidden, false);
+  assert.equal(warning.children[0].textContent, 'Missing expected columns: ');
+  assert.equal(warning.children[1].tagName, 'code');
+  assert.equal(warning.children[1].textContent, 'Status, Channel');
+  assert.doesNotMatch(warning.children.map(child => child.textContent).join(''), /Custom Policy Daily|Other\.csv/);
 });
 
 test('every tool page links to its English guide', () => {

@@ -47,14 +47,9 @@
     const strong = document.createElement('strong');
     strong.textContent = 'Missing expected columns: ';
     element.appendChild(strong);
-    entries.forEach((entry, index) => {
-      if (index) element.appendChild(document.createElement('br'));
-      const fileName = document.createElement('span');
-      fileName.textContent = `${entry.fileName}: `;
-      const columns = document.createElement('code');
-      columns.textContent = entry.missing.join(', ');
-      element.append(fileName, columns);
-    });
+    const columns = document.createElement('code');
+    columns.textContent = [...new Set(entries.flatMap(entry => entry.missing))].join(', ');
+    element.appendChild(columns);
   }
 
   function copyIconSvg() {
