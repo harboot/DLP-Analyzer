@@ -415,6 +415,7 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
     .rule-description{display:block;width:100%;margin:3px 0 10px;color:var(--text);resize:vertical}
     .built-in-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
     .built-in-settings label{display:flex;flex-direction:column;gap:4px}
+    .built-in-settings .setting-wide{grid-column:1/-1}
     .built-in-settings .setting-checkbox{width:18px;height:18px;accent-color:var(--accent2)}
 
 	#tbl th.weight,

@@ -91,6 +91,7 @@
           <div class="right" style="justify-content:space-between">
             <div class="status" id="meta">&nbsp;</div>
             <div class="right">
+              <button class="btn" id="btnDefault" title="Restore predefined rule defaults" hidden>↺ DEFAULT</button>
               <button class="btn" id="btnRunThis" title="Run this rule on loaded CSV">▶️ RUN</button>
               <button class="icon-btn" id="btnSave" title="Save">💾</button>
               <button class="icon-btn" id="btnDelete" title="Delete rule">🗑️</button>
@@ -126,7 +127,7 @@
 <script src="js/ai.js"></script>
 <script>
 
-const LS_KEY = 'jsSnippetItems:v4';
+const LS_KEY = 'jsSnippetItems:v5';
 
 /* Selects the first element matching a selector. */
 const $ = DLPUtils.query;
@@ -234,15 +235,14 @@ function save(items) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
-/* Migrates legacy data to weighted rules when the v4 key does not exist. */
+/* Migrates legacy data and applies the current predefined weights once. */
 (function migrate() {
   try {
     if (localStorage.getItem(LS_KEY)) return;
-    const legacy = JSON.parse(localStorage.getItem('jsSnippetItems:v3') || localStorage.getItem('jsSnippetItems:v2') || '[]');
-    const onlyFiles = (Array.isArray(legacy) ? legacy : [])
-      .filter((x) => x && x.type === 'file')
-      .map((x) => ({ id: x.id || uid(), type: 'file', name: x.name, code: x.code || '', enabled: !!x.enabled, weight: RiskScoring.normalizeWeight(x.weight) }));
-    if (onlyFiles.length) localStorage.setItem(LS_KEY, JSON.stringify(onlyFiles));
+    const v4 = localStorage.getItem('jsSnippetItems:v4');
+    const legacy = JSON.parse(v4 || localStorage.getItem('jsSnippetItems:v3') || localStorage.getItem('jsSnippetItems:v2') || '[]');
+    const migrated = RiskScoring.migrateRules(legacy, !!v4).map((rule) => ({ ...rule, id: rule.id || uid() }));
+    if (migrated.length) localStorage.setItem(LS_KEY, JSON.stringify(migrated));
   } catch {}
 })();
 
@@ -269,6 +269,7 @@ const elCode = $('#inpCode');
 const elWeight = $('#inpWeight');
 const elMeta = $('#meta');
 const elRunThis = $('#btnRunThis');
+const defaultButton = $('#btnDefault');
 const codeEditorField = $('#codeEditorField');
 const builtInDetails = $('#builtInDetails');
 const builtInDescription = $('#builtInDescription');
@@ -501,6 +502,7 @@ function openEditor(id) {
   elCode.value = file.code || '';
   codeEditorField.hidden = !!file.builtIn;
   builtInDetails.hidden = !file.builtIn;
+  defaultButton.hidden = !file.builtIn;
   deleteButton.hidden = !!file.builtIn;
   builtInDescription.textContent = file.description || '';
   renderBuiltInSettings(file);
@@ -524,10 +526,11 @@ function renderBuiltInSettings(file) {
             { key: 'detectSubject', label: 'Detect in email subject', type: 'checkbox' }
           ]
       : file.key === 'weirdTld'
-        ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
+        ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'textarea' }]
         : [];
   fields.forEach(field => {
     const label = document.createElement('label');
+    label.className = field.type === 'textarea' ? 'setting-wide' : '';
     label.innerHTML = `<span class="muted-sm">${field.label}</span>`;
     const input = document.createElement(field.type === 'textarea' ? 'textarea' : field.type === 'time' ? 'select' : 'input');
     input.className = field.type === 'checkbox' ? 'setting-checkbox' : 'textinput';
@@ -550,6 +553,17 @@ function renderBuiltInSettings(file) {
     label.appendChild(input);
     builtInSettings.appendChild(label);
   });
+}
+
+/* Restores the editable values of a predefined rule to their defaults. */
+function restoreBuiltInDefaults() {
+  const file = fileById(currentFileId);
+  if (!file?.builtIn) return;
+  const defaults = RiskScoring.builtInRules().find(rule => rule.id === file.id);
+  if (!defaults) return;
+  elWeight.value = defaults.weight;
+  renderBuiltInSettings(defaults);
+  elMeta.textContent = 'Unsaved default settings';
 }
 
 /* Saves changes to the currently open file. */
@@ -613,6 +627,7 @@ function clearEditor() {
   elWeight.value = RiskScoring.DEFAULT_WEIGHT;
   elPath.textContent = '';
   elMeta.textContent = '';
+  defaultButton.hidden = true;
 }
 
 /* Exports all files to JSON and downloads the result. */
@@ -687,6 +702,7 @@ $('#fileImport').addEventListener('change', (e) => {
   e.target.value = '';
 });
 $('#btnSave').addEventListener('click', saveCurrent);
+defaultButton.addEventListener('click', restoreBuiltInDefaults);
 $('#btnDelete').addEventListener('click', () => {
   if (currentFileId) deleteFile(currentFileId);
 });
