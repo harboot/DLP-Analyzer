@@ -177,6 +177,15 @@ body.page-keyword-generator .wrap {
 :where(body.tool-page) .btn:disabled{opacity:.6;cursor:not-allowed}
 :where(body.tool-page) .tiny{font-size:12px}
 :where(body.tool-page) .soft{color:#b9c7da}
+
+:where(body.tool-page) .upload-warning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, .12);
+  color: #fde68a;
+}
 :where(body.tool-page) .ok{color:var(--accent2)}
 :where(body.tool-page) .warn{color:var(--warn)}
 :where(body.tool-page) .danger{color:var(--danger)}

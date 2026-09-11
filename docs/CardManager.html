@@ -34,7 +34,7 @@
           <button class="btn" id="btnUpload" title="Upload CSV">📤 Upload</button>
           <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
           <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
-          <a class="btn link" href="RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
+          <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
           <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
         <div class="row-right">
@@ -43,6 +43,7 @@
         </div>
       </div>
     </div>
+    <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
 
     <div class="layout">
       <section class="section" aria-label="Items">
@@ -745,13 +746,17 @@ async function loadCsvFiles(files) {
   try {
     out.textContent = 'Loading CSV…';
     const merged = [];
+    const warnings = [];
+    const expectedColumns = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
     let totalRows = 0;
     for (const f of files) {
       const rows = await parseCSVFile(f);
+      warnings.push({ fileName: f.name, missing: DLPUtils.findMissingColumns(rows, expectedColumns) });
       merged.push(...rows);
       totalRows += rows.length;
     }
     lastCSVRows = merged;
+    DLPUtils.showUploadWarning(document.getElementById('uploadWarning'), warnings);
     // Normalization is intentionally done once per upload. Every snippet reuses
     // this array instead of rebuilding the same row objects for every run.
     normalizedRowByRaw = new WeakMap();

@@ -22,6 +22,15 @@ To try Alert Analyzer immediately, open the [hosted GitHub Pages version](https:
 
 Open `docs/DLP_Tools.html` directly in a web browser. No web server, installation, or build step is required.
 
+## User guides
+
+- [Alert Analyzer guide](https://harboot.github.io/DLP-Analyzer/guides/AlertAnalyzerGuide.html)
+- [Risk Scoring guide](https://harboot.github.io/DLP-Analyzer/guides/RiskScoringGuide.html)
+- [Rule Identifier guide](https://harboot.github.io/DLP-Analyzer/guides/RuleIdentifierGuide.html)
+- [Policy Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/PolicyViewerGuide.html)
+- [Document Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/DocViewerGuide.html)
+- [Keyword Generator guide](https://harboot.github.io/DLP-Analyzer/guides/KeywordGeneratorGuide.html)
+
 `DLP_Tools.html` is the main page and provides navigation to every tool. Individual HTML files in `docs/` can also be opened directly when you only need a specific tool.
 
 ## Project structure
@@ -38,6 +47,7 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
     ├── PolicyViewer.html        # DLP policy viewer
     ├── DocViewer.html           # Local document viewer
     ├── KeywordGenerator.html    # Keyword generator interface
+    ├── guides/                  # Per-tool user guides
     ├── styles.css               # Shared application styles
     ├── js/                      # Shared and page-specific browser logic
     │   ├── KG_script.js         # Keyword Generator logic
