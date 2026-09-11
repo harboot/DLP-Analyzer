@@ -3,17 +3,30 @@
 
   const DEFAULT_WEIGHT = 1;
   const DEFAULT_SENSITIVE_KEYWORDS = 'extraction, export, dump, backup, customer list, client list, employee list, payroll, salary, credential, password, confidential, restricted, secret, database, db dump, account list, user list, master list, migration, bulk, batch, archive, api key, credit card';
+  const DEFAULT_UNUSUAL_TLDS = 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party';
   const BUILT_IN_RULES = [
     { id: 'builtin-self', key: 'self', name: 'Email Sent to Self', description: 'Matches email alerts when a recipient address resembles the sender address.', weight: 6, settings: {} },
     { id: 'builtin-short-subject', key: 'shortSubject', name: 'Short Subject', description: 'Matches email alerts with an empty subject or a subject shorter than the configured length.', weight: 3, settings: { subjectLength: 15 } },
     { id: 'builtin-out-of-hours', key: 'outOfHours', name: 'Out-of-Hours', description: 'Matches alerts whose incident time falls within the configured monitoring window.', weight: 5, settings: { startTime: '23:00', endTime: '05:00' } },
     { id: 'builtin-no-extension', key: 'noExtension', name: 'Attachment No Ext', description: 'Matches alerts containing at least one attachment without a file extension.', weight: 4, settings: {} },
     { id: 'builtin-sensitive-keywords', key: 'sensitiveKeywords', name: 'Sensitive Keywords', description: 'Matches selected email fields when they contain one or more configured sensitive-data keywords.', weight: 7, settings: { keywords: DEFAULT_SENSITIVE_KEYWORDS, detectFileName: true, detectSubject: true } },
-    { id: 'builtin-weird-tld', key: 'weirdTld', name: 'Weird TLD Dest', description: 'Matches destinations using one of the configured unusual top-level domains.', weight: 5, settings: { tlds: 'xyz, top, icu' } }
+    { id: 'builtin-weird-tld', key: 'weirdTld', name: 'Weird TLD Dest', description: 'Matches destinations using one of the configured unusual top-level domains.', weight: 5, settings: { tlds: DEFAULT_UNUSUAL_TLDS } }
   ];
 
   function builtInRules() {
     return BUILT_IN_RULES.map(rule => ({ ...rule, type: 'file', builtIn: true, enabled: false, weight: normalizeWeight(rule.weight), settings: { ...rule.settings } }));
+  }
+
+  function migrateRules(rules, resetBuiltInWeights) {
+    const defaultWeights = new Map(BUILT_IN_RULES.map(rule => [rule.id, rule.weight]));
+    return (Array.isArray(rules) ? rules : [])
+      .filter(rule => rule && rule.type === 'file')
+      .map(rule => ({
+        ...rule,
+        weight: resetBuiltInWeights && rule.builtIn && defaultWeights.has(rule.id)
+          ? defaultWeights.get(rule.id)
+          : normalizeWeight(rule.weight)
+      }));
   }
 
   function localPart(value) {
@@ -100,5 +113,5 @@
       .sort((a, b) => b.score - a.score || b.matchedRules.length - a.matchedRules.length || a.index - b.index);
   }
 
-  root.RiskScoring = { DEFAULT_WEIGHT, builtInRules, matchesBuiltIn, normalizeWeight, scoreAlerts };
+  root.RiskScoring = { DEFAULT_WEIGHT, builtInRules, matchesBuiltIn, migrateRules, normalizeWeight, scoreAlerts };
 })(typeof globalThis === 'undefined' ? window : globalThis);

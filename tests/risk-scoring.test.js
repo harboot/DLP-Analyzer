@@ -6,7 +6,7 @@ const context = {};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), context);
 
-const { normalizeWeight, scoreAlerts } = context.RiskScoring;
+const { migrateRules, normalizeWeight, scoreAlerts } = context.RiskScoring;
 
 assert.equal(normalizeWeight(undefined), 1);
 assert.equal(normalizeWeight('4'), 4);
@@ -38,11 +38,16 @@ assert.deepEqual(Array.from(builtIns, rule => rule.name), [
 ]);
 const rule = key => builtIns.find(item => item.key === key);
 assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
+assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
+const migratedBuiltIns = migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
+assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
+assert.equal(migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('shortSubject'), { Channel: 'Network email', Details: 'Hello' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('noExtension'), { FileName: 'report; archive.zip' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('sensitiveKeywords'), { Details: 'Confidential payroll export' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.xyz' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.party' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 03:20:11 AM GMT+0800' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 05:00:00 AM GMT+0800' }), false);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 11:30:00 PM GMT+0800' }), true);
