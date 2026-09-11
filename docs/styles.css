@@ -290,7 +290,7 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
 	  .settings-box label{display:grid;gap:5px;margin-top:14px;font-weight:700}
 	  .settings-box textarea{width:100%;resize:vertical;padding:9px 10px;border:1px solid #2b3d55;border-radius:8px;background:#0e141e;color:var(--text);font:inherit;font-weight:400}
 	  .settings-actions{justify-content:flex-end;margin-top:16px}
-	  .top-sources{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:9px 12px;border-bottom:1px solid var(--line);background:#101722;white-space:nowrap}
+	  .top-sources{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);background:#101722}
 	  .source-chip{border:1px solid #2b3d55;border-radius:999px;padding:5px 9px;background:#0e141e;color:var(--accent);cursor:pointer}
 	  .source-chip:hover{border-color:var(--accent)}
 	  @media(max-width:760px){.split-header{grid-template-columns:1fr}.split-header .input-guide{margin-top:0}}

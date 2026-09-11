@@ -573,11 +573,9 @@ function openFilterPopover(anchor, tab, col){
   const currentFilter = st.filters[col] || '';
   const currentSort = (st.sort && st.sort.col === col) ? st.sort.type : null;
   pop.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(4,auto); gap:6px; margin-bottom:8px;">
-      <button class="btn btn-sort" title="Ascending" data-type="asc"  ${currentSort==='asc'?'style="outline:1px solid var(--accent)"':''}>A</button>
-      <button class="btn btn-sort" title="Descending" data-type="desc" ${currentSort==='desc'?'style="outline:1px solid var(--accent)"':''}>D</button>
-      <button class="btn btn-sort" title="Most" data-type="most" ${currentSort==='most'?'style="outline:1px solid var(--accent)"':''}>M</button>
-      <button class="btn btn-sort" title="Less" data-type="less" ${currentSort==='less'?'style="outline:1px solid var(--accent)"':''}>L</button>
+    <div style="display:grid; grid-template-columns:repeat(2,auto); gap:6px; margin-bottom:8px;">
+      <button class="btn btn-sort" title="Ascending" aria-label="Sort ascending" data-type="asc" ${currentSort==='asc'?'style="outline:1px solid var(--accent)"':''}>↑</button>
+      <button class="btn btn-sort" title="Descending" aria-label="Sort descending" data-type="desc" ${currentSort==='desc'?'style="outline:1px solid var(--accent)"':''}>↓</button>
     </div>
     <div><input type="text" placeholder="contains... (leave blank to clear)"
       value="${escapeHtml(currentFilter)}" style="width:100%" /></div>
@@ -638,17 +636,6 @@ function applyFiltersAndSort(rows, filters, sort){
       out = out.filter(r=> txt(r[k]).toLowerCase().includes(needle));
     }
   }
-  const byFreq = (col)=>{
-    const m = new Map();
-    for(const r of out){
-      const key = (col==='Time')
-        ? `ID ${txt(r['ID'])} Incident ${txt(r['Incident Time'])} Event ${txt(r['Event Time'])}`
-        : txt(r[col]).trim();
-      if(!key) continue;
-      m.set(key, (m.get(key)||0)+1);
-    }
-    return m;
-  };
   if (sort && sort.col){
     const col = sort.col;
     if (sort.type === 'asc' || sort.type === 'desc'){
@@ -669,23 +656,6 @@ function applyFiltersAndSort(rows, filters, sort){
           return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
         });
       }
-    } else if (sort.type === 'most' || sort.type === 'less'){
-      const freq = byFreq(col);
-      out.sort((a,b)=>{
-        const ak = (col==='Time')
-          ? `ID ${txt(a['ID'])} Incident ${txt(a['Incident Time'])} Event ${txt(a['Event Time'])}`
-          : txt(a[col]).trim();
-        const bk = (col==='Time')
-          ? `ID ${txt(b['ID'])} Incident ${txt(b['Incident Time'])} Event ${txt(b['Event Time'])}`
-          : txt(b[col]).trim();
-        const af = freq.get(ak)||0, bf = freq.get(bk)||0;
-        if (af !== bf) return (sort.type === 'most') ? (bf - af) : (af - bf);
-        const av = txt(a[col]).toLowerCase(), bv = txt(b[col]).toLowerCase();
-        const cmp = av.localeCompare(bv, undefined, {numeric:true,sensitivity:'base'});
-        if (cmp !== 0) return cmp;
-        const at=parseIncidentTime(a['Incident Time']); const bt=parseIncidentTime(b['Incident Time']);
-        return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
-      });
     }
   } else {
     const sF = freqMap(out,'Source'); const dF = freqMap(out,'Destination');
