@@ -22,15 +22,6 @@ To try Alert Analyzer immediately, open the [hosted GitHub Pages version](https:
 
 Open `docs/DLP_Tools.html` directly in a web browser. No web server, installation, or build step is required.
 
-## User guides
-
-- [Alert Analyzer guide](https://harboot.github.io/DLP-Analyzer/guides/AlertAnalyzerGuide.html)
-- [Risk Scoring guide](https://harboot.github.io/DLP-Analyzer/guides/RiskScoringGuide.html)
-- [Rule Identifier guide](https://harboot.github.io/DLP-Analyzer/guides/RuleIdentifierGuide.html)
-- [Policy Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/PolicyViewerGuide.html)
-- [Document Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/DocViewerGuide.html)
-- [Keyword Generator guide](https://harboot.github.io/DLP-Analyzer/guides/KeywordGeneratorGuide.html)
-
 `DLP_Tools.html` is the main page and provides navigation to every tool. Individual HTML files in `docs/` can also be opened directly when you only need a specific tool.
 
 ## Project structure
@@ -41,12 +32,12 @@ Open `docs/DLP_Tools.html` directly in a web browser. No web server, installatio
 ├── README.md                    # Project documentation
 └── docs/
     ├── DLP_Tools.html           # Main page and tool navigation
-    ├── AlertAnalyzer.html       # DLP alert analysis interface
-    ├── CardManager.html         # Risk Scoring interface
-    ├── RuleIdentifier.html      # Alert and policy matching interface
-    ├── PolicyViewer.html        # DLP policy viewer
-    ├── DocViewer.html           # Local document viewer
-    ├── KeywordGenerator.html    # Keyword generator interface
+    ├── AlertAnalyzer.html
+    ├── CardManager.html
+    ├── RuleIdentifier.html
+    ├── PolicyViewer.html
+    ├── DocViewer.html
+    ├── KeywordGenerator.html
     ├── guides/                  # Per-tool user guides
     ├── styles.css               # Shared application styles
     ├── js/                      # Shared and page-specific browser logic
@@ -81,10 +72,9 @@ page-specific parsing and rendering logic should remain in each tool's script.
 
 ## Page functions
 
-- **DLP Analyzer** provides a single navigation page that loads each analyzer and utility.
-- **Alert Analyzer** imports DLP alert CSV or XLSX files and presents every alert individually alongside summaries, JSON rule-pack findings, filters, charts, and exports. For XLSX workbooks, the first worksheet is imported. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML.
-- **Risk Scoring** generates JavaScript Boolean predicates with optional OpenAI assistance, assigns each rule a weight, stores reusable rule collections, and ranks alerts by the sum of all matching enabled rules.
-- **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts.
-- **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details.
-- **Document Viewer** opens supported local documents for quick browser-based inspection.
-- **Keyword Generator** extracts and ranks useful keywords from supplied text or files.
+- **Alert Analyzer** imports DLP alert CSV or XLSX files and presents every alert individually alongside summaries, JSON rule-pack findings, filters, charts, and exports. For XLSX workbooks, the first worksheet is imported. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML. [Open the Alert Analyzer guide](https://harboot.github.io/DLP-Analyzer/guides/AlertAnalyzerGuide.html).
+- **Risk Scoring** generates JavaScript Boolean predicates with optional OpenAI assistance, assigns each rule a weight, stores reusable rule collections, and ranks alerts by the sum of all matching enabled rules. [Open the Risk Scoring guide](https://harboot.github.io/DLP-Analyzer/guides/RiskScoringGuide.html).
+- **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts. [Open the Rule Identifier guide](https://harboot.github.io/DLP-Analyzer/guides/RuleIdentifierGuide.html).
+- **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details. [Open the Policy Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/PolicyViewerGuide.html).
+- **Document Viewer** opens supported local documents for quick browser-based inspection. [Open the Document Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/DocViewerGuide.html).
+- **Keyword Generator** extracts and ranks useful keywords from supplied text or files. [Open the Keyword Generator guide](https://harboot.github.io/DLP-Analyzer/guides/KeywordGeneratorGuide.html).
