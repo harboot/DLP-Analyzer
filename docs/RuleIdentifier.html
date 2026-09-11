@@ -33,8 +33,10 @@
           <button class="btn" id="btn-process" disabled>Process in Worker</button>
           <button class="btn" id="btn-reset">Reset</button>
           <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
+          <a class="btn link" href="guides/RuleIdentifierGuide.html" target="_blank" rel="noopener" title="Open the Rule Identifier guide">📖 Guide</a>
         </div>
       </div>
+      <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
 
       <!-- KPI cards: 6 items, big numbers -->
       <div class="kpis">
@@ -269,6 +271,7 @@ async function handleFiles(files){
   reading=true;
   try{
     let newAlerts=0, newRules=0;
+	const warnings = [];
 	for (const f of files){
 	  const text = await f.text();
 	  const textNoBom = text.replace(/\uFEFF/g, '');
@@ -280,9 +283,13 @@ async function handleFiles(files){
 	  // 2) Parse CSV and also compute parsed header/rows
 	  const rows = await CSVUtils.parseText(textNoBom);
 	  const { header, rows: objs } = rowsToObjects(rows);
+	  Object.defineProperty(objs, 'headers', { value: header });
+	  const alertMissing = DLPUtils.findMissingColumns(objs, ['Violation Triggers', 'Policies']);
+	  const policyMissing = DLPUtils.findMissingColumns(objs, ['Rule Name', 'Relation', 'Classifiers']);
 
 	  // 3) If raw-line detection couldn't decide, fall back to parsed header
 	  if (kind === 'unknown') {
+		warnings.push({ fileName: f.name, missing: alertMissing.length <= policyMissing.length ? alertMissing : policyMissing });
 		kind = classifySetFromParsedHeader(header, objs);
 	  }
 
@@ -306,6 +313,7 @@ async function handleFiles(files){
 		logLine(`[Policies] ${f.name} OK (${objs.length} rows)`);
 	  }
 	}
+    DLPUtils.showUploadWarning($('#uploadWarning'), warnings);
     totalRules = policiesRows.length;
     stat.total = alertsRows.length;
 	stat.noClassifiers = policiesRows.filter(p => !hasNonEmptyClassifiers(p)).length;

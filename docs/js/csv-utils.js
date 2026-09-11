@@ -17,6 +17,9 @@
     return new Promise((resolve, reject) => {
       global.Papa.parse(input, Object.assign({}, config, {
         complete(results) {
+          if (Array.isArray(results.data) && Array.isArray(results.meta?.fields)) {
+            Object.defineProperty(results.data, 'headers', { value: results.meta.fields });
+          }
           resolve(results.data);
         },
         error(error) {
@@ -40,10 +43,13 @@
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) return [];
 
-    return global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+    const rows = global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
       defval: '',
       raw: false
     });
+    const headerRows = global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1, range: 0, blankrows: false });
+    Object.defineProperty(rows, 'headers', { value: headerRows[0] || [] });
+    return rows;
   }
 
   global.CSVUtils = Object.freeze({

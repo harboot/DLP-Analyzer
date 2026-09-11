@@ -79,6 +79,19 @@ function buildTabs(){
 
 // Renders tab buttons and click handlers, then renders the active tab and filter icons.
 const fileInput = $('#file');
+const EXPECTED_ALERT_COLUMNS = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
+const uploadWarning = document.getElementById('uploadWarning');
+
+async function ingestFiles(files) {
+  const warnings = [];
+  for (const f of files) {
+    const rows = await CSVUtils.parseFile(f);
+    warnings.push({ fileName: f.name, missing: DLPUtils.findMissingColumns(rows, EXPECTED_ALERT_COLUMNS) });
+    ingest(rows);
+  }
+  DLPUtils.showUploadWarning(uploadWarning, warnings);
+}
+
 fileInput.addEventListener('change', async (e)=>{
   const files = e.target.files;
   if (!files || files.length === 0) return;
@@ -93,10 +106,7 @@ fileInput.addEventListener('change', async (e)=>{
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
-  for (const f of files) {
-    const rows = await CSVUtils.parseFile(f);
-    ingest(rows);
-  }
+  await ingestFiles(Array.from(files));
 });
 
 const drop = $('#drop');
@@ -116,10 +126,7 @@ drop.addEventListener('drop', async (e)=>{
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
-  for (const f of files) {
-    const rows = await CSVUtils.parseFile(f);
-    ingest(rows);
-  }
+  await ingestFiles(Array.from(files));
 });
 
 document.getElementById('demoBtn').addEventListener('click', async () => {
@@ -137,6 +144,7 @@ document.getElementById('demoBtn').addEventListener('click', async () => {
     state.activeTab = null;
     if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
     currentFilename = 'alerts.csv';
+    DLPUtils.showUploadWarning(uploadWarning, [{ fileName: 'alerts.csv', missing: DLPUtils.findMissingColumns(demo, EXPECTED_ALERT_COLUMNS) }]);
     ingest(demo);
   } catch (error) {
     alert(`Unable to load the sample data: ${error.message}`);

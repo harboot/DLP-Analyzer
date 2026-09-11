@@ -27,6 +27,36 @@
     return toText(value).replace(/\t/g, ' ').replace(/[\r\n]/g, ' ');
   }
 
+  function findMissingColumns(rows, expectedColumns) {
+    const available = new Set();
+    (Array.isArray(rows?.headers) ? rows.headers : []).forEach(key => available.add(String(key).trim().toLowerCase()));
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+      if (!row || typeof row !== 'object') return;
+      Object.keys(row).forEach(key => available.add(key.trim().toLowerCase()));
+    });
+    return (expectedColumns || []).filter(column => !available.has(String(column).trim().toLowerCase()));
+  }
+
+  function showUploadWarning(element, missingByFile) {
+    if (!element) return;
+    const entries = (missingByFile || []).filter(entry => entry.missing?.length);
+    element.replaceChildren();
+    element.hidden = entries.length === 0;
+    if (!entries.length) return;
+
+    const strong = document.createElement('strong');
+    strong.textContent = 'Missing expected columns: ';
+    element.appendChild(strong);
+    entries.forEach((entry, index) => {
+      if (index) element.appendChild(document.createElement('br'));
+      const fileName = document.createElement('span');
+      fileName.textContent = `${entry.fileName}: `;
+      const columns = document.createElement('code');
+      columns.textContent = entry.missing.join(', ');
+      element.append(fileName, columns);
+    });
+  }
+
   function copyIconSvg() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
   }
@@ -60,6 +90,8 @@
     toText,
     escapeHtml,
     sanitizeForTSV,
+    findMissingColumns,
+    showUploadWarning,
     copyIconSvg,
     showCopyPreview
   });
