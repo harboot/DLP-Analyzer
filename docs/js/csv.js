@@ -41,7 +41,7 @@ function ingest(rows){
 
 // Builds tab definitions from the dataset (overview, blocked, per-channel, and saved tabs).
 function buildTabs(){
-  const all = state.raw;
+  const all = state.raw.filter(row => !isIgnoredAlert(row));
 
   const isBlocked = r => {
     const a = r.actionLower;
@@ -81,6 +81,34 @@ function buildTabs(){
 const fileInput = $('#file');
 const EXPECTED_ALERT_COLUMNS = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
 const uploadWarning = document.getElementById('uploadWarning');
+
+function initializeIgnoredValuesSettings() {
+  const dialog = document.getElementById('settingsDialog');
+  const sourceInput = document.getElementById('ignoredSources');
+  const destinationInput = document.getElementById('ignoredDestinations');
+  const close = () => { dialog.hidden = true; };
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    sourceInput.value = ignoredValues.sources.join('\n');
+    destinationInput.value = ignoredValues.destinations.join('\n');
+    dialog.hidden = false;
+    sourceInput.focus();
+  });
+  document.getElementById('settingsClose').addEventListener('click', close);
+  document.getElementById('settingsCancel').addEventListener('click', close);
+  dialog.addEventListener('click', event => { if (event.target === dialog) close(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !dialog.hidden) close(); });
+  document.getElementById('settingsSave').addEventListener('click', () => {
+    ignoredValues = { sources: parseIgnoredValues(sourceInput.value), destinations: parseIgnoredValues(destinationInput.value) };
+    try { localStorage.setItem(IGNORED_VALUES_KEY, JSON.stringify(ignoredValues)); } catch (_) {}
+    state.tabs = state.tabs.filter(tab => !tab.closable);
+    state.activeTab = 'overview';
+    state.tabState.clear();
+    buildTabs();
+    close();
+  });
+}
+
+initializeIgnoredValuesSettings();
 
 async function ingestFiles(files) {
   const warnings = [];
