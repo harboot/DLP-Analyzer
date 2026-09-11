@@ -28,9 +28,9 @@
   <div id="settingsDialog" class="settings-dialog" hidden>
     <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <div class="settings-heading"><strong id="settingsTitle">Ignored values</strong><button id="settingsClose" class="icon-btn" type="button" aria-label="Close settings">×</button></div>
-      <p class="tiny muted">Alerts matching any value below are excluded from all views and counts. Separate values with commas or new lines.</p>
-      <label>Source<textarea id="ignoredSources" rows="5" placeholder="source@example.com"></textarea></label>
-      <label>Destination<textarea id="ignoredDestinations" rows="5" placeholder="destination@example.com"></textarea></label>
+      <p class="tiny muted">Alerts matching any value below are excluded from all views and counts. Separate values with commas or new lines. Use * to match any characters.</p>
+      <label>Source<textarea id="ignoredSources" rows="5" placeholder="source@example.com or src-rep*"></textarea></label>
+      <label>Destination<textarea id="ignoredDestinations" rows="5" placeholder="destination@example.com or *.example.com"></textarea></label>
       <div class="settings-actions"><button id="settingsCancel" class="btn" type="button">Cancel</button><button id="settingsSave" class="btn" type="button">Save</button></div>
     </div>
   </div>
