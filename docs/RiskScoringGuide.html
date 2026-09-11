@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DLP Analyzer — Risk Scoring Guide</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .guide{max-width:1100px}.guide section{margin:14px 0;padding:18px}.guide h2{margin-top:0}.guide h3{margin-top:24px}
+    .guide pre{overflow:auto;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);white-space:pre}
+    .guide code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.guide li{margin:6px 0}
+  </style>
+</head>
+<body class="tool-page page-card-manager">
+<main class="wrap guide">
+  <header class="page-header">
+    <h1>Risk Scoring Guide</h1>
+    <p class="page-description">Create weighted rules, test JavaScript predicates, and rank DLP alerts by combined risk.</p>
+  </header>
+
+  <section class="section">
+    <h2>How risk scoring works</h2>
+    <ol>
+      <li>Upload one or more Forcepoint DLP alert CSV files.</li>
+      <li>Select rules in the rule list and assign each one a non-negative risk weight.</li>
+      <li>Select <strong>RUN ALL</strong>. Every enabled rule is evaluated for every alert.</li>
+      <li>The tool adds the weights of all matching rules and ranks alerts from highest to lowest score.</li>
+    </ol>
+    <p>Predefined rules are maintained by the application. You can enable or disable them and change their weight. Rules with parameters also expose those parameters in the editor. Their names, descriptions, and matching logic cannot be changed or deleted.</p>
+  </section>
+
+  <section class="section">
+    <h2>Creating a JavaScript snippet</h2>
+    <p>Select <strong>New Rule</strong>, enter a unique name and risk weight, then write a statement block that returns <code>true</code> for a match and <code>false</code> otherwise. The current normalized alert is available as <code>row</code>; all normalized alerts are available as <code>rows</code>; and <code>i</code> is the current zero-based row index.</p>
+    <p>Available <code>row</code> properties are <code>ID</code>, <code>IncidentTime</code>, <code>EventTime</code>, <code>Source</code>, <code>Policies</code>, <code>Channel</code>, <code>Destination</code>, <code>FileName</code>, <code>Details</code>, <code>Size</code>, and <code>Status</code>. Values are strings. Multiple filenames and destinations are normalized to semicolon-separated text.</p>
+    <ul>
+      <li>Use pure, synchronous JavaScript. Network, browser storage, DOM, and dynamic-code APIs are unavailable.</li>
+      <li>Handle blank values and return a Boolean on every path.</li>
+      <li>Use <strong>RUN</strong> to inspect one rule before enabling it for combined scoring.</li>
+      <li>Only import snippets from sources you trust, and review generated code before running it.</li>
+    </ul>
+
+    <h3>Sample: attachment resembles a ransomware note or encrypted file</h3>
+    <pre><code>"use strict";
+const fn = String(row.FileName || "");
+if (!fn) return false;
+const names = fn.split(/[\n\r;,|]+/).map(s =&gt; s.trim()).filter(Boolean);
+const noteRegex = /\b(read[_\- ]?me|how[_\-\s]?to(?:[_\-\s]?(decrypt|restore|recover|recover_files|restore_files))|howto[_\-\s]?(decrypt|restore|recover)|decrypt(?:ion)?|decryption|restore(?:_files)?|recover(?:_files)?|ransom|ransomware|!!!|_readme)\b/i;
+const otherSuspicious = /\b(files[_\-\s]?(are[_\-\s])?encrypted|your[_\-\s]?files|restore[_\-\s]?your[_\-\s]?files|recover[_\-\s]?your[_\-\s]?files|decrypt_your_files)\b/i;
+const encExtRegex = /\.(locked|encrypted|enc|crypt|crypted|crypt0|crypt1|cryp|crpt|lock|crypto|cipher|crypted-files|encrypted-files|vault|enc[0-9a-z]{2,8})$/i;
+for (const name of names) {
+  if (noteRegex.test(name) || otherSuspicious.test(name) || encExtRegex.test(name)) return true;
+  if (/\.(txt|htm|html|hta|url)$/i.test(name) &amp;&amp; /(read[_\-\s]?me|how[_\-\s]?to|decrypt|restore|recover|ransom)/i.test(name)) return true;
+  if (/[!]{2,}/.test(name) || /_+readme/i.test(name) || /\b(encrypted|locked|lockedfiles|locked_files)\b/i.test(name)) return true;
+  const idExtension = name.match(/\.([0-9a-fA-F]{6,12}|[0-9a-zA-Z]{6,12})$/);
+  if (idExtension &amp;&amp; (name.match(/\./g) || []).length &gt;= 2) return true;
+}
+return false;</code></pre>
+
+    <h3>Sample: destination email uses a subdomain</h3>
+    <pre><code>const dest = String(row.Destination || "");
+const emailRe = /^[^@\s]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)$/;
+for (const part of dest.split(/;/)) {
+  const match = emailRe.exec(part.trim());
+  if (!match) continue;
+  const domain = match[1].toLowerCase();
+  if (["onmicrosoft", "salesforce", "imcap", "landbank.com"].some(value =&gt; domain.includes(value))) continue;
+  const labels = domain.split(".").filter(Boolean).slice(0, -1);
+  if (labels.filter(label =&gt; label.length &gt;= 4).length &gt;= 2) return true;
+}
+return false;</code></pre>
+
+    <h3>Sample: email subject or filename obfuscation</h3>
+    <pre><code>const text = `${row.Details || ""} ${row.FileName || ""}`.toLowerCase();
+const patterns = [
+  "p@ss", "pa$$", "p4ss", "p4$$", "p455", "pa55",
+  "p@ssw0rd", "p@ssword", "p@55w0rd", "pa55w0rd",
+  "c0nfident1al", "c0nf", "c0nfid", "c0nf1dent",
+  "s3cret", "s3cur", "s3curity", "cr3d", "cr3dit",
+  "cr3d3ntial", "cr3d3ntials", "credz", "cr3dz", "creds",
+  "4uth", "4uth0rize", "4uthenticate", "l0gin", "l0g1n", "1ogin",
+  "t0p s3cret", "priv8", "pr1v", "pr1vate"
+];
+return patterns.some(pattern =&gt; text.includes(pattern));</code></pre>
+  </section>
+</main>
+</body>
+</html>

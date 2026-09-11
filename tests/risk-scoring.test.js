@@ -30,4 +30,16 @@ assert.deepEqual(Array.from(result, (alert) => alert.row.id), ['b', 'c', 'a']);
 assert.deepEqual(Array.from(result, (alert) => alert.score), [13, 8, 6]);
 assert.deepEqual(Array.from(result[0].matchedRules, (rule) => rule.name), ['External destination', 'Large transfer']);
 
+const builtIns = context.RiskScoring.builtInRules();
+assert.deepEqual(Array.from(builtIns, rule => rule.name), [
+  'Email Sent to Self', 'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest'
+]);
+const rule = key => builtIns.find(item => item.key === key);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('shortSubject'), { Channel: 'Network email', Details: 'Hello' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('noExtension'), { FileName: 'report; archive.zip' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('sensitiveKeywords'), { Details: 'Confidential payroll export' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.xyz' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 03:20:11 AM GMT+0800' }), true);
+
 console.log('Risk scoring tests passed.');
