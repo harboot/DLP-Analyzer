@@ -14,14 +14,27 @@
 
 <body class="page-alert-analyzer tool-page">
 <div class="wrap">
-  <header class="page-header">
-    <h1>Forcepoint DLP Alerts Analyzer</h1>
-    <p class="page-description">Analyze Forcepoint DLP alerts and review individual alerts, summaries, risk findings, filters, charts, and exports.</p>
+  <header class="page-header split-header">
+    <div class="page-intro">
+      <div class="title-row">
+        <h1>Forcepoint DLP Alerts Analyzer</h1>
+        <button id="settingsBtn" class="icon-btn" type="button" aria-label="Open ignored values settings" title="Ignored values settings">⚙</button>
+      </div>
+      <p class="page-description">Analyze Forcepoint DLP alerts and review individual alerts, summaries, risk findings, filters, charts, and exports.</p>
+    </div>
     <div class="input-guide" aria-label="Input guide">
       <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP incident or alert CSV and XLSX exports. Multiple files can be combined in one upload.</div>
-      <div class="input-guide-item"><span class="input-guide-label">Required columns</span><code>ID, Incident Time, Event Time, Source, Policies, Destination, File Name, Transaction Size (KB), Details, Status, Channel, Action, Severity</code></div>
     </div>
   </header>
+  <div id="settingsDialog" class="settings-dialog" hidden>
+    <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-heading"><strong id="settingsTitle">Ignored values</strong><button id="settingsClose" class="icon-btn" type="button" aria-label="Close settings">×</button></div>
+      <p class="tiny muted">Alerts matching any value below are excluded from all views and counts. Separate values with commas or new lines.</p>
+      <label>Source<textarea id="ignoredSources" rows="5" placeholder="source@example.com"></textarea></label>
+      <label>Destination<textarea id="ignoredDestinations" rows="5" placeholder="destination@example.com"></textarea></label>
+      <div class="settings-actions"><button id="settingsCancel" class="btn" type="button">Cancel</button><button id="settingsSave" class="btn" type="button">Save</button></div>
+    </div>
+  </div>
   <div class="panel">
     <div class="row">
       <div class="row-left"></div>

@@ -391,6 +391,24 @@ function renderTableSection(tab){
   const sec = document.createElement('div'); sec.className = 'sectionx';
   sec.innerHTML = `<header><strong>${escapeHtml(tab.label)}</strong><span class="tiny muted"></span></header>`;
 
+  const topSources = Array.from(freqMap(tab.rows, 'Source').entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (topSources.length) {
+    const summary = document.createElement('div');
+    summary.className = 'top-sources';
+    const heading = document.createElement('strong');
+    heading.textContent = 'Top Sources (10)';
+    summary.appendChild(heading);
+    for (const [source, count] of topSources) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'source-chip';
+      button.textContent = `${source} (${count})`;
+      button.addEventListener('click', () => openFilterTab('Source', source, tab));
+      summary.appendChild(button);
+    }
+    sec.appendChild(summary);
+  }
+
   const body = document.createElement('div'); body.className = 'tablewrap';
   const tableEl = renderDataTable(tab); body.appendChild(tableEl); sec.appendChild(body);
 

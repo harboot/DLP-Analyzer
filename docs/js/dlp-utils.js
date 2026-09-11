@@ -50,6 +50,13 @@
     const columns = document.createElement('code');
     columns.textContent = [...new Set(entries.flatMap(entry => entry.missing))].join(', ');
     element.appendChild(columns);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'upload-warning-close';
+    close.setAttribute('aria-label', 'Close missing-column warning');
+    close.textContent = '×';
+    close.addEventListener('click', () => { element.hidden = true; });
+    element.appendChild(close);
   }
 
   function copyIconSvg() {
