@@ -30,6 +30,21 @@
   </section>
 
   <section class="section">
+    <h2>Using the AI Rule Generator</h2>
+    <ol>
+      <li>Open <strong>AI Rule Generator</strong> below the Risk Scoring results.</li>
+      <li>Enter your OpenAI API key, choose how many days it may be kept in this browser, and select <strong>Save API key</strong>.</li>
+      <li>Select <strong>New Rule</strong>, then describe the condition in plain English and select <strong>Generate rule</strong>.</li>
+      <li>Review the generated JavaScript carefully, give the rule a unique name and risk weight, and select <strong>Save</strong>.</li>
+      <li>Use <strong>RUN</strong> to validate the rule against uploaded alerts before enabling it for <strong>RUN ALL</strong>.</li>
+    </ol>
+    <p>The API key is stored only in the current browser for the selected retention period. Generating a rule sends your written instruction to OpenAI, but it does not send the uploaded CSV rows. Generated code should always be reviewed before it is run.</p>
+    <h3>Example request</h3>
+    <pre><code>Match Network email alerts when the attachment is larger than 10 MB and the destination is outside example.com.</code></pre>
+    <p>A useful generated rule should verify that <code>row.Channel</code> is email, parse <code>row.Size</code> as kilobytes, split multiple values in <code>row.Destination</code> on semicolons, and return <code>true</code> only when both conditions match.</p>
+  </section>
+
+  <section class="section">
     <h2>Creating a JavaScript snippet</h2>
     <p>Select <strong>New Rule</strong>, enter a unique name and risk weight, then write a statement block that returns <code>true</code> for a match and <code>false</code> otherwise. The current normalized alert is available as <code>row</code>; all normalized alerts are available as <code>rows</code>; and <code>i</code> is the current zero-based row index.</p>
     <p>Available <code>row</code> properties are <code>ID</code>, <code>IncidentTime</code>, <code>EventTime</code>, <code>Source</code>, <code>Policies</code>, <code>Channel</code>, <code>Destination</code>, <code>FileName</code>, <code>Details</code>, <code>Size</code>, and <code>Status</code>. Values are strings. Multiple filenames and destinations are normalized to semicolon-separated text.</p>
