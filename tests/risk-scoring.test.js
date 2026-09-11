@@ -38,7 +38,7 @@ assert.deepEqual(Array.from(builtIns, rule => rule.name), [
 ]);
 const rule = key => builtIns.find(item => item.key === key);
 assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
-assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw,\nxyz, loan, review, click, win,\nmen, trade, bid, date, party');
+assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
 assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
 assert.equal(migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);

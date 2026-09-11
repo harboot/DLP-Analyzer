@@ -526,7 +526,7 @@ function renderBuiltInSettings(file) {
             { key: 'detectSubject', label: 'Detect in email subject', type: 'checkbox' }
           ]
       : file.key === 'weirdTld'
-        ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'textarea' }]
+        ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
         : [];
   fields.forEach(field => {
     const label = document.createElement('label');

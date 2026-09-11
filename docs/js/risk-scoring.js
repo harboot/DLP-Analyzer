@@ -3,7 +3,7 @@
 
   const DEFAULT_WEIGHT = 1;
   const DEFAULT_SENSITIVE_KEYWORDS = 'extraction, export, dump, backup, customer list, client list, employee list, payroll, salary, credential, password, confidential, restricted, secret, database, db dump, account list, user list, master list, migration, bulk, batch, archive, api key, credit card';
-  const DEFAULT_UNUSUAL_TLDS = 'cc, tk, ml, ga, cf, gq, pw,\nxyz, loan, review, click, win,\nmen, trade, bid, date, party';
+  const DEFAULT_UNUSUAL_TLDS = 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party';
   const BUILT_IN_RULES = [
     { id: 'builtin-self', key: 'self', name: 'Email Sent to Self', description: 'Matches email alerts when a recipient address resembles the sender address.', weight: 6, settings: {} },
     { id: 'builtin-short-subject', key: 'shortSubject', name: 'Short Subject', description: 'Matches email alerts with an empty subject or a subject shorter than the configured length.', weight: 3, settings: { subjectLength: 15 } },
