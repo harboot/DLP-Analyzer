@@ -15,8 +15,11 @@ function createElement(tagName) {
     tagName,
     children: [],
     textContent: '',
+    attributes: {},
     appendChild(child) { this.children.push(child); },
-    replaceChildren() { this.children = []; }
+    replaceChildren() { this.children = []; },
+    setAttribute(name, value) { this.attributes[name] = value; },
+    addEventListener(name, listener) { this.listeners ||= {}; this.listeners[name] = listener; }
   };
 }
 
@@ -44,6 +47,9 @@ test('showUploadWarning lists missing columns without file names', () => {
   assert.equal(warning.children[0].textContent, 'Missing expected columns: ');
   assert.equal(warning.children[1].tagName, 'code');
   assert.equal(warning.children[1].textContent, 'Status, Channel');
+  assert.equal(warning.children[2].attributes['aria-label'], 'Close missing-column warning');
+  warning.children[2].listeners.click();
+  assert.equal(warning.hidden, true);
   assert.doesNotMatch(warning.children.map(child => child.textContent).join(''), /Custom Policy Daily|Other\.csv/);
 });
 
@@ -60,6 +66,8 @@ test('every tool page links to its English guide', () => {
   for (const [page, guide] of Object.entries(links)) {
     const html = fs.readFileSync(path.join(__dirname, '..', 'docs', page), 'utf8');
     assert.match(html, new RegExp(`href=["']${guide.replace('.', '\\.')}["']`));
+    assert.match(html, /<header class="page-header split-header">/);
+    assert.match(html, /<div class="page-intro">/);
     assert.equal(fs.existsSync(path.join(__dirname, '..', 'docs', guide)), true);
   }
 });

@@ -37,11 +37,30 @@ const ICON_COL = '__Copy';
   };
 
   const state = { raw: [], tabs: [], activeTab: null, tabState: new Map(), datasetFiles: [] };
+  const IGNORED_VALUES_KEY = 'dlpAnalyzerIgnoredValues';
+  let ignoredValues = loadIgnoredValues();
   let currentFilename = '';
   let openAiApiKey = '';
 
   const $ = DLPUtils.query;
   const $$ = DLPUtils.queryAll;
+
+  function parseIgnoredValues(value) {
+    return String(value || '').split(/[,\n]+/).map(item => item.trim().toLowerCase()).filter(Boolean);
+  }
+
+  function loadIgnoredValues() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(IGNORED_VALUES_KEY) || '{}');
+      return { sources: parseIgnoredValues(saved.sources), destinations: parseIgnoredValues(saved.destinations) };
+    } catch (_) { return { sources: [], destinations: [] }; }
+  }
+
+  function isIgnoredAlert(row) {
+    const source = txt(row.Source).trim().toLowerCase();
+    const destinations = splitDestParts(row.Destination).map(value => value.toLowerCase());
+    return ignoredValues.sources.includes(source) || destinations.some(value => ignoredValues.destinations.includes(value));
+  }
 
   // Sets a cookie with max-age and expires (Safari compatible)
   // Generates a safe key for a DOM ID
