@@ -50,6 +50,7 @@ test('showUploadWarning lists missing columns without file names', () => {
 test('every tool page links to its English guide', () => {
   const links = {
     'AlertAnalyzer.html': 'guides/AlertAnalyzerGuide.html',
+    'PolicyTuningAdvisor.html': 'guides/PolicyTuningAdvisorGuide.html',
     'CardManager.html': 'guides/RiskScoringGuide.html',
     'RuleIdentifier.html': 'guides/RuleIdentifierGuide.html',
     'PolicyViewer.html': 'guides/PolicyViewerGuide.html',
