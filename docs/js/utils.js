@@ -49,6 +49,15 @@ const ICON_COL = '__Copy';
     return String(value || '').split(/[,\n]+/).map(item => item.trim().toLowerCase()).filter(Boolean);
   }
 
+  function matchesIgnoredValue(value, pattern) {
+    if (!pattern.includes('*')) return value === pattern;
+    const expression = pattern
+      .split('*')
+      .map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*');
+    return new RegExp(`^${expression}$`).test(value);
+  }
+
   function loadIgnoredValues() {
     try {
       const saved = JSON.parse(localStorage.getItem(IGNORED_VALUES_KEY) || '{}');
@@ -59,7 +68,8 @@ const ICON_COL = '__Copy';
   function isIgnoredAlert(row) {
     const source = txt(row.Source).trim().toLowerCase();
     const destinations = splitDestParts(row.Destination).map(value => value.toLowerCase());
-    return ignoredValues.sources.includes(source) || destinations.some(value => ignoredValues.destinations.includes(value));
+    return ignoredValues.sources.some(pattern => matchesIgnoredValue(source, pattern))
+      || destinations.some(value => ignoredValues.destinations.some(pattern => matchesIgnoredValue(value, pattern)));
   }
 
   // Sets a cookie with max-age and expires (Safari compatible)
