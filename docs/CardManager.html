@@ -431,7 +431,11 @@ async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800,
 
 /* Renders the file list in the left table and attaches row event handlers. */
 function render() {
-  const fileList = applyFilter(files()).sort((a, b) => a.name.localeCompare(b.name));
+  const fileList = applyFilter(files()).sort((a, b) => {
+    if (!!a.builtIn !== !!b.builtIn) return a.builtIn ? -1 : 1;
+    if (a.builtIn && b.builtIn) return items.indexOf(a) - items.indexOf(b);
+    return a.name.localeCompare(b.name);
+  });
   const rows = [];
   fileList.forEach((fl) => {
     if (typeof fl.enabled !== 'boolean') fl.enabled = false;
