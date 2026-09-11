@@ -1,32 +1,53 @@
 (function (global) {
   'use strict';
 
-  if (!global.Papa) {
-    throw new Error('CSVUtils requires Papa Parse to be loaded first.');
+  function parseRows(text) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let quoted = false;
+    const input = String(text ?? '').replace(/^\uFEFF/, '');
+
+    for (let index = 0; index < input.length; index++) {
+      const character = input[index];
+      if (quoted) {
+        if (character === '"' && input[index + 1] === '"') {
+          field += '"';
+          index++;
+        } else if (character === '"') {
+          quoted = false;
+        } else {
+          field += character;
+        }
+      } else if (character === '"' && field === '') {
+        quoted = true;
+      } else if (character === ',') {
+        row.push(field);
+        field = '';
+      } else if (character === '\n' || character === '\r') {
+        if (character === '\r' && input[index + 1] === '\n') index++;
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = '';
+      } else {
+        field += character;
+      }
+    }
+    if (field !== '' || row.length) {
+      row.push(field);
+      rows.push(row);
+    }
+    return rows.filter(values => values.some(value => value !== ''));
   }
 
-  const DEFAULTS = Object.freeze({
-    dynamicTyping: false,
-    skipEmptyLines: true,
-    worker: true
-  });
-
-  function parse(input, options) {
-    const config = Object.assign({}, DEFAULTS, options);
-
-    return new Promise((resolve, reject) => {
-      global.Papa.parse(input, Object.assign({}, config, {
-        complete(results) {
-          if (Array.isArray(results.data) && Array.isArray(results.meta?.fields)) {
-            Object.defineProperty(results.data, 'headers', { value: results.meta.fields });
-          }
-          resolve(results.data);
-        },
-        error(error) {
-          reject(error instanceof Error ? error : new Error(String(error)));
-        }
-      }));
-    });
+  function parseText(text, options = {}) {
+    const rows = parseRows(text);
+    if (!options.header) return rows;
+    const headers = rows.shift() || [];
+    const records = rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ''])));
+    Object.defineProperty(records, 'headers', { value: headers });
+    return records;
   }
 
   function isExcelFile(file) {
@@ -35,30 +56,24 @@
   }
 
   async function parseExcelFile(file) {
-    if (!global.XLSX) {
-      throw new Error('Excel support requires lib/xlsx.full.min.js.');
-    }
-
+    if (!global.XLSX) throw new Error('Excel support requires lib/xlsx.full.min.js.');
     const workbook = global.XLSX.read(await file.arrayBuffer(), { type: 'array' });
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) return [];
-
-    const rows = global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
-      defval: '',
-      raw: false
-    });
-    const headerRows = global.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1, range: 0, blankrows: false });
-    Object.defineProperty(rows, 'headers', { value: headerRows[0] || [] });
-    return rows;
+    const sheet = workbook.Sheets[firstSheetName];
+    const records = global.XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+    const headerRows = global.XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, blankrows: false });
+    Object.defineProperty(records, 'headers', { value: headerRows[0] || [] });
+    return records;
   }
 
   global.CSVUtils = Object.freeze({
-    parseFile(file, options) {
+    async parseFile(file, options) {
       if (isExcelFile(file)) return parseExcelFile(file);
-      return parse(file, Object.assign({ header: true }, options));
+      return parseText(await file.text(), Object.assign({ header: true }, options));
     },
     parseText(text, options) {
-      return parse(String(text ?? ''), Object.assign({ header: false }, options));
+      return Promise.resolve(parseText(text, Object.assign({ header: false }, options)));
     }
   });
 })(window);
