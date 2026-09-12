@@ -17,19 +17,28 @@
     </header>
 
     <div class="panel">
-      <div class="row">
-        <div class="row" id="drop-zone">
+      <div class="row" id="policy-drop-zone">
+        <div class="row-left"></div>
+        <div class="row-right">
+          <span id="policy-file-name" class="muted-sm"></span>
           <label class="drop">Upload Policy (JSON)<input id="file-policies" type="file" accept=".json,application/json" multiple /></label>
-          <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
-        </div>
-        <div class="row" style="gap:10px">
           <button class="btn" id="btn-load-sample">Load sample</button>
-          <button class="btn" id="btn-process" disabled>Process in Worker</button>
-          <button class="btn" id="btn-reset">Reset</button>
-          <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
           <a class="btn link" href="guides/RuleIdentifierGuide.html" target="_blank" rel="noopener" title="Open the Rule Identifier guide">📖 Guide</a>
         </div>
       </div>
+    </div>
+    <div class="panel">
+      <div class="row" id="drop-zone">
+        <div class="row-left"></div>
+        <div class="row-right">
+          <span id="alerts-file-name" class="muted-sm"></span>
+          <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
+          <button class="btn" id="btn-process" disabled>Process</button>
+          <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
+        </div>
+      </div>
+    </div>
+    <div class="panel matcher-results-panel">
       <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
 
       <!-- KPI cards: 6 items, big numbers -->
@@ -186,6 +195,8 @@ function classifySetFromParsedHeader(header, rows){
 const drop = $('#drop-zone');
 const fileAll = $('#file-all');
 const filePolicies = $('#file-policies');
+const policyFileName = $('#policy-file-name');
+const alertsFileName = $('#alerts-file-name');
 let reading = false;
 
 drop.addEventListener('dragover', e => {
@@ -208,7 +219,9 @@ fileAll.addEventListener('change', async e => {
   fileAll.value = '';        // avoid stale value blocking next change
 });
 filePolicies.addEventListener('change', async e => {
-  await handlePolicyJsonFiles([...e.target.files]);
+  const files = [...e.target.files];
+  policyFileName.textContent = files.map(file => file.name).join(', ');
+  await handlePolicyJsonFiles(files);
   filePolicies.value = '';
 });
 
@@ -224,6 +237,7 @@ function isAlertFile(f){
 }
 
 async function handlePolicyJsonFiles(files){
+  policyFileName.textContent = files.map(file => file.name).join(', ');
   const warnings = [];
   for (const file of files) {
     try {
@@ -324,10 +338,12 @@ async function handleFiles(files){
 
 	  // 4) Commit datasets
 	  if (kind === 'alerts') {
+		alertsFileName.textContent = [alertsFileName.textContent, f.name].filter(Boolean).join(', ');
 		if (!alertsHeader.length) alertsHeader = header;
 		alertsRows.push(...objs);
 		logLine(`[Alerts] ${f.name} OK (${objs.length} rows)`);
 	  } else if (kind === 'policies') {
+		policyFileName.textContent = [policyFileName.textContent, f.name].filter(Boolean).join(', ');
 		policiesRows.push(...objs);
 		logLine(`[Policies] ${f.name} OK (${objs.length} rows)`);
 	  }
@@ -611,6 +627,9 @@ function hardReset(){
   refreshKPIs(); setBar(0);
   $('#download-link').style.display='none';
   fileAll.value='';
+  filePolicies.value='';
+  policyFileName.textContent='';
+  alertsFileName.textContent='';
   // clear chart
   ctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
   chartCanvas.width = chartCanvas.clientWidth; chartCanvas.height = 460;
@@ -637,8 +656,6 @@ $('#btn-load-sample').addEventListener('click', async (event) => {
     button.disabled = false;
   }
 });
-$('#btn-reset').addEventListener('click', hardReset);
-
 /* ------------------------------ Init -------------------------------- */
 refreshKPIs();
 logLine('Ready. Upload your CSV files to begin.');

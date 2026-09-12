@@ -123,15 +123,7 @@ const ICON_COL = '__Copy';
 
   // Generates [key, value] pairs for one data row
   function getRowCells(row) {
-    return [
-      ['ID', txt(row['ID'])],
-      ['Event Time', stripGMT(txt(row['Event Time']))],
-      ['Channel', txt(row['Channel'])],
-      ['Source/Sender', txt(row['Source'])],
-      ['Destination/Recipient', txt(row['Destination'])],
-      ['Document information', txt(row['File Name'])],
-      ['Details', txt(row['Details'])]
-    ];
+    return ALL_COLS.map(column => [column, txt(row[column])]);
   }
 
   // Builds an HTML table for the clipboard (Excel/Office)

@@ -32,16 +32,17 @@
           <input id="csvInput" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
         </div>
       </div>
+    </div>
+    <div class="panel">
       <div class="row risk-actions-row">
-        <div class="row-left">
+        <div class="row-left"></div>
+        <div class="row-right">
           <button class="btn" id="btnNewFile" title="New rule">➕ New Rule</button>
           <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
           <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
           <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
-        </div>
-        <div class="row-right">
-		  <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
+          <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
         </div>
       </div>
     </div>
@@ -97,7 +98,6 @@
               <button class="btn" id="btnDefault" title="Restore predefined rule defaults" hidden>↺ DEFAULT</button>
               <button class="btn" id="btnRunThis" title="Run this rule on loaded CSV">▶️ RUN</button>
               <button class="icon-btn" id="btnSave" title="Save">💾</button>
-              <button class="icon-btn" id="btnDelete" title="Delete rule">🗑️</button>
             </div>
           </div>
         </div>
@@ -284,7 +284,6 @@ const codeEditorField = $('#codeEditorField');
 const builtInDetails = $('#builtInDetails');
 const builtInDescription = $('#builtInDescription');
 const builtInSettings = $('#builtInSettings');
-const deleteButton = $('#btnDelete');
 
 const apiKeyInput = $('#apikey-input');
 const retentionInput = $('#apikey-retention-days');
@@ -532,7 +531,6 @@ function openEditor(id) {
   codeEditorField.hidden = !!file.builtIn;
   builtInDetails.hidden = !file.builtIn;
   defaultButton.hidden = !file.builtIn;
-  deleteButton.hidden = !!file.builtIn;
   builtInDescription.textContent = file.description || '';
   renderBuiltInSettings(file);
   elWeight.value = RiskScoring.normalizeWeight(file.weight);
@@ -663,17 +661,7 @@ function clearEditor() {
 function exportJSON() {
   const data = JSON.stringify({
     version: 4,
-    items: files().map((f) => ({
-      id: f.id,
-      name: f.name,
-      code: f.code,
-      builtIn: !!f.builtIn,
-      key: f.key,
-      settings: f.settings,
-      type: 'file',
-      enabled: !!f.enabled,
-      weight: RiskScoring.normalizeWeight(f.weight)
-    }))
+    items: RiskScoring.exportRuleConfigs(files())
   }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const a = document.createElement('a');
@@ -732,9 +720,6 @@ $('#fileImport').addEventListener('change', (e) => {
 });
 $('#btnSave').addEventListener('click', saveCurrent);
 defaultButton.addEventListener('click', restoreBuiltInDefaults);
-$('#btnDelete').addEventListener('click', () => {
-  if (currentFileId) deleteFile(currentFileId);
-});
 $('#search').addEventListener('input', () => {
   filter = $('#search').value;
   render();

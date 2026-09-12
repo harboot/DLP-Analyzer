@@ -16,12 +16,18 @@
     <div class="page-intro"><h1>Policy Tuning Advisor</h1>
     <p class="page-description">Find explainable policy tuning opportunities in Forcepoint DLP alert exports using deterministic, local browser analysis. Findings are review prompts and never classify alerts as false positives.</p></div>
   </header>
-  <section class="panel upload-panel" aria-label="Import alerts">
-    <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />Upload DLP Alerts (CSV or XLSX)</label>
-    <button class="btn" id="sampleBtn" type="button">Load sample</button>
-    <a class="btn link" href="guides/PolicyTuningAdvisorGuide.html" target="_blank" rel="noopener">📖 Guide</a>
-    <span id="status" class="muted" role="status" aria-live="polite">No alert data loaded.</span>
+  <section class="panel" aria-label="Import alerts">
+    <div class="row">
+      <div class="row-left"></div>
+      <div class="row-right">
+        <span id="advisorFileName" class="muted-sm"></span>
+        <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />Upload DLP Alerts (CSV or XLSX)</label>
+        <button class="btn" id="sampleBtn" type="button">Load sample</button>
+        <a class="btn link" href="guides/PolicyTuningAdvisorGuide.html" target="_blank" rel="noopener">📖 Guide</a>
+      </div>
+    </div>
   </section>
+  <div id="status" class="soft tool-status" role="status" aria-live="polite">No alert data loaded.</div>
   <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
   <section id="summary" class="advisor-summary" hidden aria-label="Analysis summary"></section>
   <div class="advisor-toolbar" id="toolbar" hidden>

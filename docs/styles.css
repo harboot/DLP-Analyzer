@@ -43,7 +43,8 @@ body.tool-page .page-header h1 {
 }
 
 body.tool-page .page-header .page-description {
-  max-width: 960px;
+  width: 100%;
+  max-width: none;
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
@@ -51,7 +52,7 @@ body.tool-page .page-header .page-description {
 
 body.tool-page .split-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, .75fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -200,6 +201,9 @@ body.page-keyword-generator .wrap {
 /* Shared controls and content shells used by the utility pages. Page scopes below
    may override these defaults when a tool needs a denser layout. */
 :where(body.tool-page) .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+:where(body.tool-page) .panel + .panel{margin-top:12px}
+:where(body.tool-page) .muted-sm{color:var(--muted);font-size:12px}
+:where(body.tool-page) .tool-status{margin-top:10px}
 :where(body.tool-page) .row,:where(body.tool-page) .row-left,:where(body.tool-page) .row-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 :where(body.tool-page) .row{justify-content:space-between}
 :where(body.tool-page) .drop{border:1.5px dashed #2a3b52;border-radius:12px;padding:10px 14px;text-align:center;cursor:pointer;background:#0e141e}
@@ -291,7 +295,7 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
 
 	  .wrap{max-width:96vw;margin:24px auto;padding:0 8px}
 	  h1{font-size:22px;margin:0 0 8px}
-	  .split-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.75fr);gap:24px;align-items:start}
+	  .split-header{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
 	  .split-header .input-guide{display:block;margin-top:0}
 	  .title-row{display:flex;align-items:center;gap:8px}
 	  .title-row h1{margin:0}
@@ -1220,7 +1224,7 @@ body.page-doc-viewer footer{width:90vw;margin:24px auto;text-align:center;color:
    Policy Tuning Advisor
    ========================================================================== */
 @scope (body.page-policy-tuning) {
-  .wrap{max-width:1400px}.upload-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.upload-panel .drop{flex:1;min-width:300px}.upload-panel #status{margin-left:auto}
+  .wrap{max-width:1400px}
   .advisor-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.advisor-summary>div{display:flex;flex-direction:column;gap:3px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.advisor-summary strong{font-size:28px}.advisor-summary span{color:var(--muted);font-size:13px}
   .advisor-toolbar{display:flex;gap:16px;align-items:end;margin:16px 0}.advisor-toolbar label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.advisor-toolbar input,.advisor-toolbar select{min-width:240px;padding:9px 11px;border:1px solid #2b3d55;border-radius:9px;background:#0e141e;color:var(--text);font:14px system-ui;text-transform:none;letter-spacing:normal}
   .advisor-policy{margin:14px 0;border:1px solid var(--line);border-radius:15px;background:var(--panel);overflow:hidden}.advisor-policy-header{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:16px 18px;background:#0f1521}.advisor-policy h2{display:inline;margin:0 8px;font-size:19px}.advisor-policy-header p{margin:6px 0 0;color:var(--muted)}.opportunity,.finding-level{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase}.high{color:#ff8ca5;background:rgba(239,71,111,.13)}.medium{color:var(--warn);background:rgba(255,209,102,.12)}.low{color:var(--accent2);background:rgba(128,237,153,.1)}.score{text-align:center;min-width:120px}.score strong{display:block;color:var(--accent);font-size:31px;line-height:1}.score span{display:block;margin-top:5px;color:var(--muted);font-size:10px;text-transform:uppercase}
