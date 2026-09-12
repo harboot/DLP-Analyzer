@@ -10,8 +10,8 @@
   const warning = document.getElementById('uploadWarning');
   const search = document.getElementById('search');
   const level = document.getElementById('level');
-  const recommended = ['Policies', 'Source', 'Destination', 'File Name', 'Violation Triggers', 'Channel'];
-  const displayed = ['ID', 'Incident Time', 'Source', 'Destination', 'File Name', 'Violation Triggers', 'Channel', 'Application'];
+  const recommended = ['Policies', 'Source', 'Destination', 'File Name', 'Channel'];
+  const displayed = ['ID', 'Incident Time', 'Source', 'Destination', 'File Name', 'Channel'];
   let report = null;
 
   const esc = DLPUtils.escapeHtml;
@@ -26,7 +26,7 @@
     results.innerHTML = policies.length ? policies.map((policy, policyIndex) => `
       <article class="advisor-policy">
         <header class="advisor-policy-header">
-          <div><span class="opportunity ${policy.opportunity.toLowerCase()}">${policy.opportunity}</span><h2>${esc(policy.name)}</h2><p>${policy.alertCount} alerts · ${policy.triggerDiversity} normalized triggers · ${policy.findings.length} findings</p></div>
+          <div><span class="opportunity ${policy.opportunity.toLowerCase()}">${policy.opportunity}</span><h2>${esc(policy.name)}</h2><p>${policy.alertCount} alerts · ${policy.findings.length} findings</p></div>
           <div class="score" aria-label="Tuning Candidate Score ${policy.score} out of 100"><strong>${policy.score}</strong><span>Tuning Candidate Score</span></div>
         </header>
         ${policy.findings.length ? `<div class="advisor-findings">${policy.findings.map((item, findingIndex) => `
@@ -53,12 +53,16 @@
     status.hidden = false;
     fileName.textContent = files.map(file => file.name).join(', ');
     status.textContent = 'Analyzing alert data…';
+    status.classList.add('is-loading');
     try {
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       const batches = await Promise.all(files.map(file => CSVUtils.parseFile(file)));
       const warnings = batches.map((rows, index) => ({ fileName: files[index].name, missing: DLPUtils.findMissingColumns(rows, recommended) }));
       showReport(batches.flat(), `${files.length} ${files.length === 1 ? 'file' : 'files'}`, warnings);
     } catch (error) {
       status.textContent = `Unable to analyze the selected data: ${error.message}`;
+    } finally {
+      status.classList.remove('is-loading');
     }
   }
   fileInput.addEventListener('change', event => loadFiles([...event.target.files]));
@@ -66,6 +70,19 @@
   ['dragleave', 'drop'].forEach(name => drop.addEventListener(name, event => { event.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', event => loadFiles([...event.dataTransfer.files]));
   search.addEventListener('input', render); level.addEventListener('change', render);
+  document.getElementById('exportCsv').addEventListener('click', () => {
+    if (!report) return;
+    const needle = search.value.trim().toLowerCase();
+    const policies = report.policies.filter(policy => (!level.value || policy.opportunity === level.value) && (!needle || policy.name.toLowerCase().includes(needle) || policy.findings.some(item => item.type.toLowerCase().includes(needle))));
+    const headers = ['Policy', 'Opportunity', 'Score', 'Finding', ...displayed];
+    const records = policies.flatMap(policy => policy.findings.flatMap(item => item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => [policy.name, policy.opportunity, policy.score, item.type, ...displayed.map(column => get(row, column))])));
+    const csv = [headers, ...records].map(values => values.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+    link.download = 'policy-tuning-advisor.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
   document.getElementById('sampleBtn').addEventListener('click', async () => {
     status.hidden = false;
     fileName.textContent = 'alerts.csv';

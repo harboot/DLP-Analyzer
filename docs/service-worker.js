@@ -1,7 +1,7 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v10';
+const CACHE_VERSION = 'dlp-analyzer-v11';
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
   './CardManager.html',
@@ -56,6 +56,12 @@ async function notifyClients(message) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   windows.forEach(client => client.postMessage(message));
 }
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'GET_OFFLINE_CACHE_VERSION') {
+    event.source?.postMessage({ type: 'OFFLINE_CACHE_VERSION', version: CACHE_VERSION });
+  }
+});
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {

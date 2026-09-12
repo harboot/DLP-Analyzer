@@ -41,8 +41,9 @@
       : `${percent}% — Saved ${completed} of ${total} files.`;
   }
 
-  function finishPreparation() {
+  function finishPreparation(version) {
     if (!panel) return;
+    if (version) versionLabel.textContent = `Version: ${version}`;
     progress.value = progress.max;
     detail.textContent = 'Offline preparation complete.';
     panel.classList.add('is-complete');
@@ -54,7 +55,9 @@
     if (message.type === 'OFFLINE_CACHE_PROGRESS') {
       updatePreparation(message.completed, message.total, message.file, message.version);
     } else if (message.type === 'OFFLINE_CACHE_COMPLETE') {
-      finishPreparation();
+      finishPreparation(message.version);
+    } else if (message.type === 'OFFLINE_CACHE_VERSION') {
+      if (panel) versionLabel.textContent = `Version: ${message.version}`;
     }
   });
 
@@ -70,6 +73,7 @@
     const worker = registration.installing;
     if (!worker) return;
     showPreparation();
+    worker.postMessage({ type: 'GET_OFFLINE_CACHE_VERSION' });
     worker.addEventListener('statechange', () => {
       if (worker.state !== 'redundant' || !panel) return;
       detail.textContent = 'Offline preparation failed. Reload while online to try again.';

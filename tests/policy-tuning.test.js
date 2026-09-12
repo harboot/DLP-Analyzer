@@ -22,7 +22,7 @@ test('normalization makes case and separators deterministic', () => {
   assert.equal(genericName('customer-agreement.pdf'), false);
 });
 
-test('analyze groups multi-policy alerts and creates explainable findings', () => {
+test('analyze groups multi-policy alerts and creates explainable findings without violation triggers', () => {
   const rows = Array.from({ length: 6 }, (_, index) => row(index + 1, index === 1 ? { 'Violation Triggers': 'pii name; ACCOUNT NUMBER' } : {}));
   rows[0].Policies = 'Customer PII; Regulated Data';
   const report = analyze(rows);
@@ -31,9 +31,18 @@ test('analyze groups multi-policy alerts and creates explainable findings', () =
   const policy = report.policies.find(item => item.name === 'Customer PII');
   assert.equal(policy.alertCount, 6);
   assert.ok(policy.score > 0 && policy.score <= 100);
-  assert.ok(policy.findings.some(item => item.type === 'Trigger-set dominance'));
-  assert.ok(policy.findings.some(item => item.type === 'Case/variant trigger redundancy'));
+  assert.ok(policy.findings.some(item => item.type === 'Destination concentration'));
+  assert.ok(policy.findings.every(item => !/trigger/i.test(`${item.type} ${item.reason} ${item.evidence} ${item.review}`)));
   assert.ok(policy.findings.every(item => item.reason && item.evidence && item.review && item.alertIds.length));
+});
+
+test('violation triggers and application do not affect tuning scores', () => {
+  const baseline = Array.from({ length: 4 }, (_, index) => row(index + 1));
+  const changed = baseline.map((item, index) => ({ ...item, Application: `App ${index}`, 'Violation Triggers': `Trigger ${index}` }));
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(analyze(changed).policies)),
+    JSON.parse(JSON.stringify(analyze(baseline).policies))
+  );
 });
 
 test('burst rule requires three matching signatures in ten minutes', () => {
