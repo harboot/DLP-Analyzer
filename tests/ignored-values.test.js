@@ -42,9 +42,46 @@ test('regular expression characters in ignored values remain literal', () => {
 });
 
 test('source and destination ignore lists apply wildcard patterns without case sensitivity', () => {
-  setIgnoredValues({ sources: ['src-rep*'], destinations: ['*.example.com'] });
+  setIgnoredValues({ sources: ['src-rep*'], destinations: ['*.example.com'], filenames: [] });
 
   assert.equal(isIgnoredAlert({ Source: 'SRC-REP-01', Destination: 'external.test' }), true);
   assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'first.test; MAIL.EXAMPLE.COM' }), true);
   assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test' }), false);
+});
+
+test('filename ignore list applies exact and wildcard patterns without case sensitivity', () => {
+  setIgnoredValues({ sources: [], destinations: [], filenames: ['temporary-*', 'private.pdf'] });
+
+  assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test', 'File Name': 'PRIVATE.PDF' }), true);
+  assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test', fileTokens: ['report.pdf', 'Temporary-01.csv'] }), true);
+  assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test', 'File Name': 'public.pdf' }), false);
+});
+
+test('volume series uses hours for datasets shorter than two days', () => {
+  const { getVolumeSeries } = vm.runInContext('({ getVolumeSeries })', context);
+  const result = getVolumeSeries([
+    { 'Incident Time': '2026-09-10T10:15:00Z' },
+    { 'Incident Time': '2026-09-10T10:45:00Z' },
+    { 'Incident Time': '2026-09-11T09:00:00Z' }
+  ]);
+
+  assert.equal(result.granularity, 'hour');
+  assert.deepEqual(Array.from(result.pairs, pair => Array.from(pair)), [
+    ['2026-09-10T10:00', 2],
+    ['2026-09-11T09:00', 1]
+  ]);
+});
+
+test('volume series keeps daily buckets for datasets spanning two days or more', () => {
+  const { getVolumeSeries } = vm.runInContext('({ getVolumeSeries })', context);
+  const result = getVolumeSeries([
+    { 'Incident Time': '2026-09-10T10:00:00Z' },
+    { 'Incident Time': '2026-09-12T10:00:00Z' }
+  ]);
+
+  assert.equal(result.granularity, 'day');
+  assert.deepEqual(Array.from(result.pairs, pair => Array.from(pair)), [
+    ['2026-09-10', 1],
+    ['2026-09-12', 1]
+  ]);
 });
