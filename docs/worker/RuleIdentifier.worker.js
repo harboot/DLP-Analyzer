@@ -96,7 +96,7 @@ function matchAlert(alert, policies, classifierIndex) {
       const indexes = (relation.match(/\d+/g) || []).map(Number);
       ok = indexes.length ? indexes.every(index => hits[index]) : policy.classifiers.every((_, index) => hits[index + 1]);
     }
-    if (ok) matched.push(policy.ruleName);
+    if (ok) matched.push({ policyName: policy.policyName, ruleName: policy.ruleName });
   }
   return matched;
 }
@@ -108,17 +108,26 @@ self.onmessage = ({ data }) => {
   const policyColumn = outputHeader.findIndex(name => name.trim().toLowerCase() === 'policies');
   outputHeader.splice(policyColumn < 0 ? outputHeader.length : policyColumn + 1, 0, 'Rule Name');
   const outputRows = new Array(alerts.length);
-  const counts = {};
+  const counts = Object.create(null);
   let identified = 0;
 
   for (let index = 0; index < alerts.length; index++) {
     const matched = matchAlert(alerts[index], policies, classifierIndex);
     const row = {};
-    for (const name of outputHeader) row[name] = name === 'Rule Name' ? matched.join('; ') : (alerts[index][name] ?? '');
+    for (const name of outputHeader) row[name] = name === 'Rule Name' ? matched.map(item => item.ruleName).join('; ') : (alerts[index][name] ?? '');
     outputRows[index] = row;
     if (matched.length) {
       identified++;
-      for (const rule of matched) if (rule) counts[rule] = (counts[rule] || 0) + 1;
+      for (const item of matched) {
+        const policyName = String(item.policyName || alerts[index].Policies || 'Unknown Policy').trim();
+        const ruleName = String(item.ruleName || '').trim();
+        if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
+        if (ruleName) counts[policyName].rules[ruleName] = (counts[policyName].rules[ruleName] || 0) + 1;
+      }
+    } else {
+      const policyName = String(alerts[index].Policies ?? alerts[index]['Policies '] ?? 'Unknown Policy').trim() || 'Unknown Policy';
+      if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
+      counts[policyName].unmatched++;
     }
     if ((index + 1) % 5000 === 0) self.postMessage({ type: 'progress', processed: index + 1 });
   }
