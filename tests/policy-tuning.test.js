@@ -52,6 +52,14 @@ test('burst rule requires three matching signatures in ten minutes', () => {
   assert.equal(finding.alertIds.length, 3);
 });
 
+test('removed tuning patterns are excluded and strong findings produce a high opportunity', () => {
+  const rows = [1, 2, 3, 4, 5, 6].map(id => row(id, { 'File Name': 'quarterly_report_20260911.pdf' }));
+  const policy = analyze(rows).policies[0];
+  assert.equal(policy.opportunity, 'High');
+  assert.equal(policy.findings.some(item => item.type === 'Channel concentration'), false);
+  assert.equal(policy.findings.some(item => item.type === 'Generic attachment pattern'), false);
+});
+
 test('sparse unrelated alerts are not automatically high opportunities', () => {
   const report = analyze([
     row(1, { Policies: 'One', Source: 'a', Destination: 'x', 'Violation Triggers': 'Alpha' }),

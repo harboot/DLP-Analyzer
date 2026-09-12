@@ -60,7 +60,6 @@
 
     addDominance('Destination', row => domain(value(row, ['Destination'])), 'Destination exception scope and business approval', 12);
     addDominance('Source + destination', row => `${normalized(value(row, ['Source']))} → ${domain(value(row, ['Destination']))}`, 'User workflow and destination exception scope', 14);
-    addDominance('Channel', row => normalized(value(row, ['Channel'])), 'Channel-specific policy thresholds', 10);
     addDominance('Source', row => normalized(value(row, ['Source'])), 'User or service-account workflow', 10);
 
     const destinations = countBy(rows, row => domain(value(row, ['Destination'])));
@@ -71,11 +70,6 @@
     if (template && template[1].length >= 3) findings.push(finding('Repeated filename/document template', template[1].length / Math.max(1, filenames.length) >= .5 ? 'High' : 'Medium', 12,
       [...new Map(template[1].map(item => [item.row.__advisorId, item.row])).values()],
       `${template[1].length} attachments share the filename template “${template[0]}”.`, `${pct(template[1].length / Math.max(1, filenames.length))} of attachment names`, 'Document template and detector combination'));
-    const generic = filenames.filter(item => genericName(item.file));
-    if (generic.length >= 3) findings.push(finding('Generic attachment pattern', generic.length / Math.max(1, filenames.length) >= .4 ? 'Medium' : 'Low', 7,
-      [...new Map(generic.map(item => [item.row.__advisorId, item.row])).values()], `${generic.length} attachments use generic names such as image.png or File.pdf.`,
-      `${pct(generic.length / Math.max(1, filenames.length))} of attachment names are generic`, 'Attachment handling and inline-image exclusions'));
-
     const internal = rows.filter(row => {
       const sourceDomain = domain(value(row, ['Source'])); const destinationDomain = domain(value(row, ['Destination']));
       return sourceDomain.includes('.') && sourceDomain === destinationDomain;
@@ -87,7 +81,7 @@
     const rawScore = findings.reduce((sum, item) => sum + item.points, 0);
     const confidence = Math.min(1, total / 10);
     const score = Math.min(100, Math.round(rawScore * (.65 + .35 * confidence)));
-    const opportunity = score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low';
+    const opportunity = score >= 50 ? 'High' : score >= 25 ? 'Medium' : 'Low';
     return { name, alertCount: total, score, opportunity, findings };
   }
 

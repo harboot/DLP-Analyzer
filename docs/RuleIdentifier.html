@@ -34,7 +34,6 @@
           <span id="alerts-file-name" class="muted-sm"></span>
           <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
           <button class="btn" id="btn-process" disabled>Process</button>
-          <button class="btn" id="btn-reset" type="button">Reset</button>
           <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
         </div>
       </div>
@@ -207,17 +206,20 @@ drop.addEventListener('drop', async e => {
   e.preventDefault();
   drop.classList.remove('drag');
   const files = await collectDroppedCSVFiles(e.dataTransfer); // supports folders
+  alertsHeader = []; alertsRows = [];
   await handleFiles(files);  // <-- the existing function
   fileAll.value = '';        // reset input so next selection always fires
 });
 
 fileAll.addEventListener('change', async e => {
   const files = [...e.target.files].filter(isAlertFile);
+  alertsHeader = []; alertsRows = [];
   await handleFiles(files);  // <-- the existing function
   fileAll.value = '';        // avoid stale value blocking next change
 });
 filePolicies.addEventListener('change', async e => {
   const files = [...e.target.files];
+  policiesRows = [];
   policyFileName.textContent = files.map(file => file.name).join(', ');
   await handlePolicyJsonFiles(files);
   filePolicies.value = '';
@@ -612,7 +614,6 @@ function hardReset(){
 
 /* ----------------------------- Bindings ----------------------------- */
 $('#btn-process').addEventListener('click', processAll);
-$('#btn-reset').addEventListener('click', hardReset);
 $('#btn-load-sample').addEventListener('click', async (event) => {
   const button = event.currentTarget;
   button.disabled = true;

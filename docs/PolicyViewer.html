@@ -204,6 +204,7 @@
     if(!files || !files.length) return;
     const toRead = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.json'));
     if(!toRead.length){ log('No .json files detected.'); return; }
+    flatRows = [];
     policyFileName.textContent = toRead.map(file => file.name).join(', ');
 
     let readCount = 0;
