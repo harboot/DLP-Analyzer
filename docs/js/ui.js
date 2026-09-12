@@ -49,7 +49,7 @@ function renderTabs(){
 
 // Returns or initializes per-tab state (filters, pagination, and sorting).
 function getTabState(key){
-  if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:50, sort:null});
+  if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:10, sort:null});
   return state.tabState.get(key);
 }
 
@@ -249,7 +249,7 @@ function renderOverview(rows){
   grids.appendChild(makeClickableTable('Top Sources', ['Source','Count'], by('Source'), 'Source'));
   grids.appendChild(makeClickableTable('Top Destinations', ['Destination','Count'], by('Destination'), 'Destination'));
   grids.appendChild(makeClickableTable('Destination Domains', ['Domain','Count'], domains, 'Domain'));
-  grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], by('File Name').slice(0,50), 'File Name'));
+  grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], by('File Name'), 'File Name'));
   wrap.appendChild(grids);
 
   const byDay = aggregateByDay(rows);
@@ -292,29 +292,31 @@ function makeSimpleTableEl(headers, rows){
 // Builds a table section whose contents open drill-down filters when clicked.
 function makeClickableTable(title, headers, rows, col){
   const sec = document.createElement('div'); sec.className = 'section';
-  sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted">  </span></header>`;
+  sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted"></span></header>`;
   const body = document.createElement('div'); body.className = 'tablewrap';
-  const tbl = document.createElement('table');
-  const thead = document.createElement('thead');
-  thead.innerHTML = `<tr>${headers.map(h=>
-    h==='Count' ? `<th class="count-col">${escapeHtml(h)}</th>`
-                : `<th>${escapeHtml(h)}</th>`
-  ).join('')}</tr>`;
-  const tbody = document.createElement('tbody');
-  for(const pair of rows){
-    const name = pair[0]; const count = pair[1];
-    const tr = document.createElement('tr');
-    const td0 = document.createElement('td');
-    const a = document.createElement('a'); a.href='#'; a.className='link'; a.textContent = name;
-    a.addEventListener('click',(e)=>{e.preventDefault(); openFilterTab(col, name);});
-    td0.appendChild(a); tr.appendChild(td0);
-    const td1 = document.createElement('td');
-    td1.textContent = count;
-    td1.className='count-col';
-    tr.appendChild(td1);
-    tbody.appendChild(tr);
-  }
-  tbl.appendChild(thead); tbl.appendChild(tbody); body.appendChild(tbl); sec.appendChild(body);
+  const pager = document.createElement('div'); pager.className = 'pager overview-pager';
+  let page = 1;
+  const renderPage = () => {
+    const pages = Math.max(1, Math.ceil(rows.length / 10));
+    page = Math.min(page, pages);
+    const start = (page - 1) * 10;
+    body.replaceChildren(makeSimpleTableEl(headers, rows.slice(start, start + 10)));
+    body.querySelectorAll('tbody tr').forEach((tr, index) => {
+      const name = rows[start + index][0];
+      const cell = tr.cells[0];
+      const link = document.createElement('a'); link.href = '#'; link.className = 'link'; link.textContent = name;
+      link.addEventListener('click', event => { event.preventDefault(); openFilterTab(col, name); });
+      cell.replaceChildren(link);
+    });
+    pager.innerHTML = `<span>${rows.length ? `Showing ${start + 1}–${Math.min(start + 10, rows.length)} of ${rows.length}` : 'No rows'}</span>`;
+    const addButton = (label, nextPage, disabled) => {
+      const button = document.createElement('button'); button.className = 'btn'; button.type = 'button'; button.textContent = label; button.disabled = disabled;
+      button.addEventListener('click', () => { page = nextPage; renderPage(); }); pager.appendChild(button);
+    };
+    addButton('◀', Math.max(1, page - 1), page === 1);
+    addButton('▶', Math.min(pages, page + 1), page === pages);
+  };
+  sec.appendChild(body); sec.appendChild(pager); renderPage();
   return sec;
 }
 
@@ -417,12 +419,12 @@ function renderTableSection(tab){
   right.innerHTML = `
     <button class="btn" data-act="export">Export CSV</button>
     <label style="margin-left:8px">Rows/page
-      <select data-role="pagesize"><option>25</option><option selected>50</option><option>100</option></select>
+      <select data-role="pagesize"><option selected>10</option><option>25</option><option>50</option><option>100</option></select>
     </label>`;
   actions.appendChild(pager); actions.appendChild(right); sec.appendChild(actions);
 
   right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
-  right.querySelector('[data-role="pagesize"]').addEventListener('change', (e)=>{ const st=getTabState(tab.key); st.pageSize=parseInt(e.target.value,10)||50; st.page=1; rerenderTabTable(tab, sec); });
+  right.querySelector('[data-role="pagesize"]').addEventListener('change', (e)=>{ const st=getTabState(tab.key); st.pageSize=parseInt(e.target.value,10)||10; st.page=1; rerenderTabTable(tab, sec); });
 
   updatePager(tab, sec, tableEl);
   return sec;

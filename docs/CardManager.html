@@ -28,7 +28,7 @@
           <button class="btn" id="btnUpload" title="Upload DLP alert files">Upload DLP Alerts (CSV or XLSX)</button>
           <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
           <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
-          <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open AI Rule Generator" title="AI Rule Generator">⚙</button>
+          <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open settings" title="Settings">⚙</button>
           <input id="csvInput" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
         </div>
       </div>
@@ -109,8 +109,12 @@
     </div>
 
     <div id="aiSettingsDialog" class="settings-dialog" hidden>
-      <div class="settings-box ai-filter-generator" role="dialog" aria-modal="true" aria-labelledby="aiFilterTitle">
-      <div class="settings-heading"><strong id="aiFilterTitle">AI Rule Generator</strong><button id="aiSettingsClose" class="icon-btn" type="button" aria-label="Close AI Rule Generator">×</button></div>
+      <div class="settings-box ai-filter-generator" role="dialog" aria-modal="true" aria-labelledby="riskSettingsTitle">
+      <div class="settings-heading"><strong id="riskSettingsTitle">Settings</strong><button id="aiSettingsClose" class="icon-btn" type="button" aria-label="Close settings">×</button></div>
+      <label class="risk-ignore-setting"><input id="useIgnoredValues" type="checkbox" /> Ignored values</label>
+      <p class="tiny muted">Exclude alerts using the saved Ignored values settings from Alert Analyzer.</p>
+      <hr />
+      <strong id="aiFilterTitle">AI Rule Generator</strong>
       <div class="editor" aria-labelledby="aiFilterTitle">
         <div class="cjs-chatrow">
           <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
@@ -742,9 +746,55 @@ const csvNameEl = $('#csvName');
 if (csvInput) csvInput.style.display = 'none';
 
 let lastCSVRows = null;
+let uploadedCSVRows = null;
 let normalizedCSVRows = null;
 let normalizedRowByRaw = new WeakMap();
 const matchesCache = new Map();
+const useIgnoredValues = $('#useIgnoredValues');
+const RISK_IGNORE_KEY = 'riskScoringUseIgnoredValues';
+useIgnoredValues.checked = localStorage.getItem(RISK_IGNORE_KEY) === 'true';
+
+function matchesIgnoredPattern(value, pattern) {
+  if (!pattern.includes('*')) return value === pattern;
+  const expression = pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+  return new RegExp(`^${expression}$`).test(value);
+}
+
+function applyIgnoredValues(rows) {
+  if (!useIgnoredValues.checked) return rows;
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('dlpAnalyzerIgnoredValues') || '{}'); } catch (_) {}
+  const sources = Array.isArray(saved.sources) ? saved.sources : String(saved.sources || '').split(/[,\n]+/);
+  const destinations = Array.isArray(saved.destinations) ? saved.destinations : String(saved.destinations || '').split(/[,\n]+/);
+  const sourcePatterns = sources.map(value => String(value).trim().toLowerCase()).filter(Boolean);
+  const destinationPatterns = destinations.map(value => String(value).trim().toLowerCase()).filter(Boolean);
+  return rows.filter(row => {
+    const source = String(row.Source || '').trim().toLowerCase();
+    const destinationValues = String(row.Destination || '').split(/[;,\n]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+    return !sourcePatterns.some(pattern => matchesIgnoredPattern(source, pattern))
+      && !destinationValues.some(value => destinationPatterns.some(pattern => matchesIgnoredPattern(value, pattern)));
+  });
+}
+
+function setActiveAlertRows(rows) {
+  lastCSVRows = applyIgnoredValues(rows);
+  normalizedRowByRaw = new WeakMap();
+  normalizedCSVRows = lastCSVRows.map((row) => {
+    const normalized = ensureCamelRow(row);
+    normalizedRowByRaw.set(row, normalized);
+    return normalized;
+  });
+}
+
+useIgnoredValues.addEventListener('change', () => {
+  localStorage.setItem(RISK_IGNORE_KEY, String(useIgnoredValues.checked));
+  if (uploadedCSVRows) setActiveAlertRows(uploadedCSVRows);
+  matchesCache.clear();
+  $$('#tbody .matches').forEach((cell) => (cell.innerHTML = '<span class="badge">—</span>'));
+  document.getElementById('onNames').textContent = uploadedCSVRows
+    ? `${lastCSVRows.length} alerts ready after applying settings. Press RUN ALL to score them.`
+    : 'Upload DLP alerts, then press RUN ALL to rank them by combined risk or RUN to inspect one rule.';
+});
 
 btnUpload.addEventListener('click', () => {
   csvInput.value = '';
@@ -768,23 +818,18 @@ async function loadCsvFiles(files) {
       merged.push(...rows);
       totalRows += rows.length;
     }
-    lastCSVRows = merged;
+    uploadedCSVRows = merged;
     DLPUtils.showUploadWarning(document.getElementById('uploadWarning'), warnings);
     // Normalization is intentionally done once per upload. Every snippet reuses
     // this array instead of rebuilding the same row objects for every run.
-    normalizedRowByRaw = new WeakMap();
-    normalizedCSVRows = merged.map((row) => {
-      const normalized = ensureCamelRow(row);
-      normalizedRowByRaw.set(row, normalized);
-      return normalized;
-    });
+    setActiveAlertRows(merged);
     const names = files.map((f) => f.name).join(', ');
     csvNameEl.textContent = `${names} (${totalRows} rows total)`;
     matchesCache.clear();
     $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
-    out.textContent = totalRows ?
+    out.textContent = lastCSVRows.length ?
       'DLP alerts loaded. Press RUN ALL or open a rule and press RUN for that rule.' :
-      'The uploaded alert files contain 0 parsed data rows.';
+      'No alerts remain after parsing and applying settings.';
   } catch (err) {
     csvNameEl.textContent = '';
     out.textContent = 'Alert file error: ' + (err?.message || String(err));

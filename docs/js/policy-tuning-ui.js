@@ -8,8 +8,6 @@
   const status = document.getElementById('status');
   const fileName = document.getElementById('advisorFileName');
   const warning = document.getElementById('uploadWarning');
-  const search = document.getElementById('search');
-  const level = document.getElementById('level');
   const recommended = ['Policies', 'Source', 'Destination', 'File Name', 'Channel'];
   const displayed = ['ID', 'Incident Time', 'Source', 'Destination', 'File Name', 'Channel'];
   let report = null;
@@ -21,8 +19,7 @@
   };
   function render() {
     if (!report) return;
-    const needle = search.value.trim().toLowerCase();
-    const policies = report.policies.filter(policy => (!level.value || policy.opportunity === level.value) && (!needle || policy.name.toLowerCase().includes(needle) || policy.findings.some(item => item.type.toLowerCase().includes(needle))));
+    const policies = report.policies;
     results.innerHTML = policies.length ? policies.map((policy, policyIndex) => `
       <article class="advisor-policy">
         <header class="advisor-policy-header">
@@ -69,11 +66,9 @@
   ['dragenter', 'dragover'].forEach(name => drop.addEventListener(name, event => { event.preventDefault(); drop.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach(name => drop.addEventListener(name, event => { event.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', event => loadFiles([...event.dataTransfer.files]));
-  search.addEventListener('input', render); level.addEventListener('change', render);
   document.getElementById('exportCsv').addEventListener('click', () => {
     if (!report) return;
-    const needle = search.value.trim().toLowerCase();
-    const policies = report.policies.filter(policy => (!level.value || policy.opportunity === level.value) && (!needle || policy.name.toLowerCase().includes(needle) || policy.findings.some(item => item.type.toLowerCase().includes(needle))));
+    const policies = report.policies;
     const headers = ['Policy', 'Opportunity', 'Score', 'Finding', ...displayed];
     const records = policies.flatMap(policy => policy.findings.flatMap(item => item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => [policy.name, policy.opportunity, policy.score, item.type, ...displayed.map(column => get(row, column))])));
     const csv = [headers, ...records].map(values => values.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');

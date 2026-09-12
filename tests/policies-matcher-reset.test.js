@@ -5,9 +5,10 @@ const test = require('node:test');
 
 const matcherSource = fs.readFileSync(path.join(__dirname, '..', 'docs', 'RuleIdentifier.html'), 'utf8');
 
-test('Policies Matcher provides a Reset button after Process', () => {
-  assert.match(matcherSource, /id="btn-process"[^>]*>Process<\/button>\s*<button[^>]*id="btn-reset"[^>]*>Reset<\/button>/);
-  assert.match(matcherSource, /\$\('#btn-reset'\)\.addEventListener\('click', hardReset\)/);
+test('Policies Matcher replaces uploaded datasets without a Reset button', () => {
+  assert.doesNotMatch(matcherSource, /id="btn-reset"/);
+  assert.match(matcherSource, /fileAll\.addEventListener\('change',[\s\S]*?alertsHeader = \[\]; alertsRows = \[\]/);
+  assert.match(matcherSource, /filePolicies\.addEventListener\('change',[\s\S]*?policiesRows = \[\]/);
 });
 
 test('reset prevents processing until both datasets are loaded again', () => {
