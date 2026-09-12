@@ -32,6 +32,40 @@
     return { type, level, points, alertIds: ids(rows), reason, evidence, review };
   }
 
+  const overlapRatio = (left, right) => {
+    const rightIds = new Set(right.alertIds);
+    const shared = left.alertIds.filter(id => rightIds.has(id)).length;
+    return shared / Math.max(1, Math.min(left.alertIds.length, right.alertIds.length));
+  };
+
+  function mergeFindings(findings) {
+    const clusters = [];
+    findings.forEach(signal => {
+      const matches = clusters.filter(cluster => cluster.some(existing => overlapRatio(signal, existing) >= .6));
+      if (!matches.length) return clusters.push([signal]);
+      const combined = [signal, ...matches.flat()];
+      matches.forEach(cluster => clusters.splice(clusters.indexOf(cluster), 1));
+      clusters.push(combined);
+    });
+    return clusters.map(signals => {
+      signals.sort((a, b) => b.points - a.points || b.alertIds.length - a.alertIds.length);
+      const primary = signals[0];
+      const supportingBonus = signals.slice(1).reduce((sum, signal) => sum + Math.min(2, Math.max(1, Math.round(signal.points * .15))), 0);
+      const alertIds = [...new Set(signals.flatMap(signal => signal.alertIds))].sort((a, b) => a - b);
+      const levels = { Low: 1, Medium: 2, High: 3 };
+      return {
+        type: primary.type,
+        level: signals.reduce((level, signal) => levels[signal.level] > levels[level] ? signal.level : level, primary.level),
+        points: primary.points + supportingBonus,
+        primaryPoints: primary.points,
+        supportingBonus,
+        alertIds,
+        signals,
+        review: [...new Set(signals.map(signal => signal.review))].join('; ')
+      };
+    }).sort((a, b) => b.points - a.points || b.alertIds.length - a.alertIds.length);
+  }
+
   function analyzePolicy(name, rows) {
     const total = rows.length;
     const findings = [];
@@ -59,6 +93,7 @@
       `${burstRows.length} alerts occur in repeated-signature groups within ten-minute windows.`, `${pct(burstRows.length / total)} of policy alerts are in bursts`, 'Incident aggregation or burst suppression'));
 
     addDominance('Destination', row => domain(value(row, ['Destination'])), 'Destination exception scope and business approval', 12);
+    addDominance('Trigger', row => normalized(value(row, ['Violation Triggers', 'Violation Trigger', 'Trigger'])), 'Detector and trigger thresholds', 10);
     addDominance('Source + destination', row => `${normalized(value(row, ['Source']))} → ${domain(value(row, ['Destination']))}`, 'User workflow and destination exception scope', 14);
     addDominance('Source', row => normalized(value(row, ['Source'])), 'User or service-account workflow', 10);
 
@@ -77,12 +112,12 @@
     if (internal.length >= 3 && internal.length / total >= .3) findings.push(finding('Internal destination pattern', 'Low', 7, internal,
       `${internal.length} alerts have matching source and destination domains. This is a pattern only, not proof of approval.`, `${pct(internal.length / total)} appear internal`, 'Approved internal destinations and business justification'));
 
-    findings.sort((a, b) => b.points - a.points || b.alertIds.length - a.alertIds.length);
-    const rawScore = findings.reduce((sum, item) => sum + item.points, 0);
+    const opportunities = mergeFindings(findings);
+    const rawScore = opportunities.reduce((sum, item) => sum + item.points, 0);
     const confidence = Math.min(1, total / 10);
     const score = Math.min(100, Math.round(rawScore * (.65 + .35 * confidence)));
-    const opportunity = score >= 50 ? 'High' : score >= 25 ? 'Medium' : 'Low';
-    return { name, alertCount: total, score, opportunity, findings };
+    const opportunity = score >= 25 ? 'High' : score >= 12 ? 'Medium' : 'Low';
+    return { name, alertCount: total, score, opportunity, opportunities, findings: opportunities };
   }
 
   function analyze(inputRows) {

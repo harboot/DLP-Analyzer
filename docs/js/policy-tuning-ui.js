@@ -23,13 +23,13 @@
     results.innerHTML = policies.length ? policies.map((policy, policyIndex) => `
       <article class="advisor-policy">
         <header class="advisor-policy-header">
-          <div><span class="opportunity ${policy.opportunity.toLowerCase()}">${policy.opportunity}</span><h2>${esc(policy.name)}</h2><p>${policy.alertCount} alerts · ${policy.findings.length} findings</p></div>
+          <div><span class="opportunity ${policy.opportunity.toLowerCase()}">${policy.opportunity}</span><h2>${esc(policy.name)}</h2><p>${policy.alertCount} alerts · ${policy.opportunities.length} tuning opportunities</p></div>
           <div class="score" aria-label="Tuning Candidate Score ${policy.score} out of 100"><strong>${policy.score}</strong><span>Tuning Candidate Score</span></div>
         </header>
-        ${policy.findings.length ? `<div class="advisor-findings">${policy.findings.map((item, findingIndex) => `
+        ${policy.opportunities.length ? `<div class="advisor-findings">${policy.opportunities.map((item, findingIndex) => `
           <details class="advisor-finding" data-policy="${policyIndex}" data-finding="${findingIndex}">
-            <summary><span class="finding-level ${item.level.toLowerCase()}">${item.level}</span><strong>${esc(item.type)}</strong><span>${item.alertIds.length} contributing alerts</span></summary>
-            <div class="finding-body"><div class="finding-explanation"><div><b>Why detected</b><p>${esc(item.reason)}</p></div><div><b>Evidence</b><p>${esc(item.evidence)}</p></div><div><b>Suggested area to review</b><p>${esc(item.review)}</p></div></div>
+            <summary><span class="finding-level ${item.level.toLowerCase()}">${item.level}</span><strong>${esc(item.type)}</strong><span>${item.signals.length} signals · ${item.alertIds.length} contributing alerts</span></summary>
+            <div class="finding-body"><div class="finding-explanation"><div class="finding-signals"><b>Supporting signals</b><ul>${item.signals.map((signal, index) => `<li><strong>${esc(signal.type)}</strong><span>${esc(signal.reason)}</span><small>${esc(signal.evidence)} · ${index ? `+${Math.min(2, Math.max(1, Math.round(signal.points * .15)))} supporting bonus` : `+${signal.points} primary score`}</small></li>`).join('')}</ul></div><div><b>Score contribution</b><p>${item.primaryPoints} primary points${item.supportingBonus ? ` + ${item.supportingBonus} supporting-signal bonus` : ''}. Correlated signals are not scored at full value.</p></div><div><b>Suggested areas to review</b><p>${esc(item.review)}</p></div></div>
               <div class="alert-table-wrap"><table><thead><tr>${displayed.map(column => `<th>${esc(column)}</th>`).join('')}</tr></thead><tbody>${item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => `<tr>${displayed.map(column => `<td title="${esc(get(row, column))}">${esc(get(row, column) || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
             </div>
           </details>`).join('')}</div>` : '<p class="no-findings">No tuning pattern crossed the deterministic thresholds for this policy.</p>'}
@@ -38,10 +38,10 @@
   function showReport(rows, label, warnings) {
     report = PolicyTuning.analyze(rows);
     const high = report.policies.filter(policy => policy.opportunity === 'High').length;
-    const findings = report.policies.reduce((sum, policy) => sum + policy.findings.length, 0);
+    const findings = report.policies.reduce((sum, policy) => sum + policy.opportunities.length, 0);
     status.hidden = true;
     summary.hidden = false; toolbar.hidden = false;
-    summary.innerHTML = `<div><strong>${rows.length}</strong><span>Alerts analyzed</span></div><div><strong>${report.policies.length}</strong><span>Policies</span></div><div><strong>${findings}</strong><span>Tuning findings</span></div><div><strong>${high}</strong><span>High opportunities</span></div>`;
+    summary.innerHTML = `<div><strong>${rows.length}</strong><span>Alerts analyzed</span></div><div><strong>${report.policies.length}</strong><span>Policies</span></div><div><strong>${findings}</strong><span>Tuning opportunities</span></div><div><strong>${high}</strong><span>High opportunities</span></div>`;
     DLPUtils.showUploadWarning(warning, warnings);
     render();
   }
@@ -69,8 +69,8 @@
   document.getElementById('exportCsv').addEventListener('click', () => {
     if (!report) return;
     const policies = report.policies;
-    const headers = ['Policy', 'Opportunity', 'Score', 'Finding', ...displayed];
-    const records = policies.flatMap(policy => policy.findings.flatMap(item => item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => [policy.name, policy.opportunity, policy.score, item.type, ...displayed.map(column => get(row, column))])));
+    const headers = ['Policy', 'Opportunity', 'Score', 'Primary Signal', 'Supporting Signals', ...displayed];
+    const records = policies.flatMap(policy => policy.opportunities.flatMap(item => item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => [policy.name, policy.opportunity, policy.score, item.type, item.signals.slice(1).map(signal => signal.type).join('; '), ...displayed.map(column => get(row, column))])));
     const csv = [headers, ...records].map(values => values.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
