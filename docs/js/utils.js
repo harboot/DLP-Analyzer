@@ -61,15 +61,41 @@ const ICON_COL = '__Copy';
   function loadIgnoredValues() {
     try {
       const saved = JSON.parse(localStorage.getItem(IGNORED_VALUES_KEY) || '{}');
-      return { sources: parseIgnoredValues(saved.sources), destinations: parseIgnoredValues(saved.destinations) };
-    } catch (_) { return { sources: [], destinations: [] }; }
+      return {
+        sources: parseIgnoredValues(saved.sources),
+        destinations: parseIgnoredValues(saved.destinations),
+        filenames: parseIgnoredValues(saved.filenames)
+      };
+    } catch (_) { return { sources: [], destinations: [], filenames: [] }; }
   }
 
   function isIgnoredAlert(row) {
     const source = txt(row.Source).trim().toLowerCase();
     const destinations = splitDestParts(row.Destination).map(value => value.toLowerCase());
+    const filenames = (Array.isArray(row.fileTokens) ? row.fileTokens : smartSplit(row['File Name']))
+      .map(value => stripSizeSuffix(value).trim().toLowerCase())
+      .filter(Boolean);
     return ignoredValues.sources.some(pattern => matchesIgnoredValue(source, pattern))
-      || destinations.some(value => ignoredValues.destinations.some(pattern => matchesIgnoredValue(value, pattern)));
+      || destinations.some(value => ignoredValues.destinations.some(pattern => matchesIgnoredValue(value, pattern)))
+      || filenames.some(value => (ignoredValues.filenames || []).some(pattern => matchesIgnoredValue(value, pattern)));
+  }
+
+  function getVolumeSeries(rows) {
+    const datedRows = rows.map(row => ({ date: parseIncidentTime(row['Incident Time']) }))
+      .filter(item => item.date)
+      .sort((a, b) => a.date - b.date);
+    const hourly = datedRows.length > 0
+      && datedRows[datedRows.length - 1].date - datedRows[0].date < 2 * 24 * 60 * 60 * 1000;
+    const counts = new Map();
+    for (const { date } of datedRows) {
+      const iso = date.toISOString();
+      const key = hourly ? `${iso.slice(0, 13)}:00` : iso.slice(0, 10);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return {
+      granularity: hourly ? 'hour' : 'day',
+      pairs: Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+    };
   }
 
   // Sets a cookie with max-age and expires (Safari compatible)

@@ -252,14 +252,15 @@ function renderOverview(rows){
   grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], by('File Name'), 'File Name'));
   wrap.appendChild(grids);
 
-  const byDay = aggregateByDay(rows);
+  const volume = getVolumeSeries(rows);
+  const volumeLabel = volume.granularity === 'hour' ? 'Hour' : 'Day';
   const vol = document.createElement('div');
   vol.className = 'section';
-  vol.innerHTML = `<header><strong>Volume by Day</strong>
-                     <span class="tiny muted">${byDay.length} days</span></header>`;
+  vol.innerHTML = `<header><strong>Volume by ${volumeLabel}</strong>
+                     <span class="tiny muted">${volume.pairs.length} ${volume.granularity}s</span></header>`;
   const cw = document.createElement('div');
   cw.className='chart-wrap';
-  cw.appendChild(makeLineChart(byDay));
+  cw.appendChild(makeLineChart(volume.pairs));
   vol.appendChild(cw);
   wrap.appendChild(vol);
 
@@ -332,17 +333,6 @@ function aggregateDomains(rows){
     for(const b of uniq){ m.set(b, (m.get(b)||0)+1); }
   }
   return Array.from(m.entries()).sort((a,b)=> b[1]-a[1]);
-}
-
-// Aggregates alert counts by day (based on Incident Time, ISO yyyy-mm-dd).
-function aggregateByDay(rows){
-  const m = new Map();
-  for(const r of rows){
-    const d = parseIncidentTime(r['Incident Time']); if(!d) continue;
-    const key = d.toISOString().slice(0,10);
-    m.set(key, (m.get(key)||0)+1);
-  }
-  return Array.from(m.entries()).sort((a,b)=> a[0].localeCompare(b[0]));
 }
 
 // Draws a responsive SVG line chart with axes, grid, and interactive tooltips.

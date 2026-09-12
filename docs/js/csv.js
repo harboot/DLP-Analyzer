@@ -88,10 +88,12 @@ function initializeIgnoredValuesSettings() {
   const dialog = document.getElementById('settingsDialog');
   const sourceInput = document.getElementById('ignoredSources');
   const destinationInput = document.getElementById('ignoredDestinations');
+  const filenameInput = document.getElementById('ignoredFilenames');
   const close = () => { dialog.hidden = true; };
   document.getElementById('settingsBtn').addEventListener('click', () => {
     sourceInput.value = ignoredValues.sources.join('\n');
     destinationInput.value = ignoredValues.destinations.join('\n');
+    filenameInput.value = (ignoredValues.filenames || []).join('\n');
     dialog.hidden = false;
     sourceInput.focus();
   });
@@ -100,7 +102,11 @@ function initializeIgnoredValuesSettings() {
   dialog.addEventListener('click', event => { if (event.target === dialog) close(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !dialog.hidden) close(); });
   document.getElementById('settingsSave').addEventListener('click', () => {
-    ignoredValues = { sources: parseIgnoredValues(sourceInput.value), destinations: parseIgnoredValues(destinationInput.value) };
+    ignoredValues = {
+      sources: parseIgnoredValues(sourceInput.value),
+      destinations: parseIgnoredValues(destinationInput.value),
+      filenames: parseIgnoredValues(filenameInput.value)
+    };
     try { localStorage.setItem(IGNORED_VALUES_KEY, JSON.stringify(ignoredValues)); } catch (_) {}
     state.tabs = state.tabs.filter(tab => !tab.closable);
     state.activeTab = 'overview';
