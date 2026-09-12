@@ -106,6 +106,20 @@ body.tool-page td.iconcell {
   text-align: center;
 }
 
+body.page-card-manager .score-column,
+body.page-card-manager .risk-result-cols td:nth-child(2) {
+  width: 64px;
+  min-width: 64px;
+  text-align: center;
+}
+
+body.page-card-manager .settings-trigger {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #2b3d55;
+  border-radius: 10px;
+}
+
 body.tool-page .icon-copy {
   all: unset;
   box-sizing: border-box;

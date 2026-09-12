@@ -13,14 +13,11 @@
 <body class="page-policy-tuning tool-page">
 <div class="wrap">
   <header class="page-header split-header">
-    <div class="page-intro"><h1>DLP Policy Tuning Advisor</h1>
+    <div class="page-intro"><h1>Policy Tuning Advisor</h1>
     <p class="page-description">Find explainable policy tuning opportunities in Forcepoint DLP alert exports using deterministic, local browser analysis. Findings are review prompts and never classify alerts as false positives.</p></div>
-    <div class="input-guide" aria-label="Input guide">
-      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP incident or alert CSV and XLSX exports. Multiple files are combined.</div>
-    </div>
   </header>
   <section class="panel upload-panel" aria-label="Import alerts">
-    <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" /><strong>Drop</strong> CSV or XLSX files here, or click to select</label>
+    <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />Upload DLP Alerts (CSV or XLSX)</label>
     <button class="btn" id="sampleBtn" type="button">Load sample</button>
     <a class="btn link" href="guides/PolicyTuningAdvisorGuide.html" target="_blank" rel="noopener">📖 Guide</a>
     <span id="status" class="muted" role="status" aria-live="polite">No alert data loaded.</span>

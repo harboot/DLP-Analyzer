@@ -30,7 +30,7 @@
   <section class="section">
     <h2>How risk scoring works</h2>
     <ol>
-      <li>Upload one or more Forcepoint DLP alert CSV files.</li>
+      <li>Upload one or more Forcepoint DLP alert CSV or XLSX files.</li>
       <li>Select rules in the rule list and assign each one a non-negative risk weight.</li>
       <li>Select <strong>RUN ALL</strong>. Every enabled rule is evaluated for every alert.</li>
       <li>The tool adds the weights of all matching rules and ranks alerts from highest to lowest score.</li>
@@ -41,13 +41,14 @@
   <section class="section">
     <h2>Using the AI Rule Generator</h2>
     <ol>
-      <li>Open <strong>AI Rule Generator</strong> below the Risk Scoring results.</li>
+      <li>Select the settings button beside Guide to open <strong>AI Rule Generator</strong>.</li>
       <li>Enter your OpenAI API key, choose how many days it may be kept in this browser, and select <strong>Save API key</strong>.</li>
       <li>Select <strong>New Rule</strong>, then describe the condition in plain English and select <strong>Generate rule</strong>.</li>
       <li>Review the generated JavaScript carefully, give the rule a unique name and risk weight, and select <strong>Save</strong>.</li>
       <li>Use <strong>RUN</strong> to validate the rule against uploaded alerts before enabling it for <strong>RUN ALL</strong>.</li>
     </ol>
     <p>The API key is stored only in the current browser for the selected retention period. Generating a rule sends your written instruction to OpenAI, but it does not send the uploaded CSV rows. Generated code should always be reviewed before it is run.</p>
+    <p>The ranked table displays a compact alert summary plus Score and Triggered rules. Row copy and CSV export retain every original uploaded column.</p>
     <h3>Example request</h3>
     <pre><code>Match Network email alerts when the attachment is larger than 10 MB and the destination is outside example.com.</code></pre>
     <p>A useful generated rule should verify that <code>row.Channel</code> is email, parse <code>row.Size</code> as kilobytes, split multiple values in <code>row.Destination</code> on semicolons, and return <code>true</code> only when both conditions match.</p>

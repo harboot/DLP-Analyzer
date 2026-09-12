@@ -14,10 +14,10 @@
       <div class="brand" aria-label="App title">DLP Analyzer</div>
       <nav class="menu" role="tablist" aria-label="Pages">
         <button class="tab" data-key="AlertAnalyzer" role="tab" aria-selected="false" title="Open AlertAnalyzer.html">Alert Analyzer</button>
-        <button class="tab" data-key="PolicyTuningAdvisor" role="tab" aria-selected="false" title="Open the DLP Policy Tuning Advisor">Policy Tuning Advisor</button>
         <button class="tab" data-key="CardManager" role="tab" aria-selected="false" title="Open the Risk Scoring tool">Risk Scoring</button>
-        <button class="tab" data-key="RuleIdentifier" role="tab" aria-selected="false" title="Open RuleIdentifier.html">Rule Identifier</button>
         <button class="tab" data-key="PolicyViewer" role="tab" aria-selected="false" title="Open PolicyViewer.html">Policy Viewer</button>
+        <button class="tab" data-key="PolicyTuningAdvisor" role="tab" aria-selected="false" title="Open Policy Tuning Advisor">Policy Tuning Advisor</button>
+        <button class="tab" data-key="RuleIdentifier" role="tab" aria-selected="false" title="Open Policies Matcher">Policies Matcher</button>
         <button class="tab" data-key="DocViewer" role="tab" aria-selected="false" title="Open DocViewer.html">Document Viewer</button>
 		<button class="tab" data-key="KeywordGenerator" role="tab" aria-selected="false" title="Open KeywordGenerator.html">Keyword Generator</button>
       </nav>
@@ -32,7 +32,7 @@
 
   <script>
     const BASE_PATH = './';
-    const PAGES = ['AlertAnalyzer','PolicyTuningAdvisor','CardManager','RuleIdentifier','PolicyViewer','DocViewer','KeywordGenerator'];
+    const PAGES = ['AlertAnalyzer','CardManager','PolicyViewer','PolicyTuningAdvisor','RuleIdentifier','DocViewer','KeywordGenerator'];
     const DEFAULT_KEY = 'AlertAnalyzer';
 
     const tabs = Array.from(document.querySelectorAll('.tab'));

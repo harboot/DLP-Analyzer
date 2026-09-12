@@ -386,7 +386,7 @@ function makeLineChart(pairs){
   return svg;
 }
 
-// Renders a tab table section with pagination, export, copy, and page-size controls.
+// Renders a tab table section with pagination, export, and page-size controls.
 function renderTableSection(tab){
   const sec = document.createElement('div'); sec.className = 'sectionx';
   sec.innerHTML = `<header><strong>${escapeHtml(tab.label)}</strong><span class="tiny muted"></span></header>`;
@@ -417,14 +417,12 @@ function renderTableSection(tab){
   const right = document.createElement('div'); right.className = 'right';
   right.innerHTML = `
     <button class="btn" data-act="export">Export CSV</button>
-    <button class="btn" data-act="copy">Copy table</button>
     <label style="margin-left:8px">Rows/page
       <select data-role="pagesize"><option>25</option><option selected>50</option><option>100</option></select>
     </label>`;
   actions.appendChild(pager); actions.appendChild(right); sec.appendChild(actions);
 
   right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
-  right.querySelector('[data-act="copy"]').addEventListener('click', ()=> copyCurrentView(tableEl));
   right.querySelector('[data-role="pagesize"]').addEventListener('change', (e)=>{ const st=getTabState(tab.key); st.pageSize=parseInt(e.target.value,10)||50; st.page=1; rerenderTabTable(tab, sec); });
 
   updatePager(tab, sec, tableEl);
@@ -710,17 +708,17 @@ function sanitizeFileName(s){
 
 // Exports the current table view (active page) to CSV.
 function exportCurrentView(tab, tableEl){
-  const rows = tableEl.__meta.pageRows; const cols = tableEl.__meta.visibleCols; const dq = '"', nl = '\n';
+  const rows = tableEl.__meta.rows; const cols = ALL_COLS; const dq = '"', nl = '\n';
   const csv = [cols.join(',')].concat(
     rows.map(r=> cols.map(c=>{
-      const v = (c==='Time') ? `ID ${txt(r['ID'])} | Incident ${txt(r['Incident Time'])} | Event ${txt(r['Event Time'])}` : txt(r[c]);
+      const v = txt(r[c]);
       return (v.includes(dq)||v.includes(',')||v.includes(nl)) ? dq+v.split(dq).join(dq+dq)+dq : v;
     }).join(','))
   ).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${sanitizeFileName(tab.label||'table')}_page${tableEl.__meta.page}.csv`;
+  a.download = `${sanitizeFileName(tab.label||'table')}.csv`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
