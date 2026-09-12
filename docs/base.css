@@ -1,0 +1,95 @@
+/* DLP Analyzer design tokens, reset, typography foundation, and base layout. */
+:root {
+  /* DLP Analyzer design system: primitives are declared once and components
+     below consume semantic tokens rather than page-specific color values. */
+  --color-bg: #0b0f14;
+  --color-surface: #121823;
+  --color-surface-subtle: #0e141e;
+  --color-surface-raised: #0f1521;
+  --color-surface-hover: #172233;
+  --color-surface-active: #122133;
+  --color-surface-inset: #0d131d;
+  --color-border: #1d2633;
+  --color-border-subtle: #1f2a3b;
+  --color-border-strong: #2b3d55;
+  --color-border-interactive: #274058;
+  --color-text: #e8eef6;
+  --color-text-muted: #7d8da3;
+  --color-text-soft: #b9c7da;
+  --color-text-info: #cfe2ff;
+  --color-accent: #4cc9f0;
+  --color-success: #80ed99;
+  --color-warning: #ffd166;
+  --color-danger: #ef476f;
+  --color-warning-strong: #f59e0b;
+  --color-warning-text: #fde68a;
+  --color-danger-text: #ff8ca5;
+  --color-focus: #7799ff;
+  --color-scrollbar: #253346;
+  --color-scrollbar-hover: #2f4561;
+  --color-overlay: rgba(5, 9, 14, .72);
+  --color-overlay-strong: rgba(0, 0, 0, .65);
+  --color-accent-soft: rgba(76, 201, 240, .15);
+  --color-accent-medium: rgba(76, 201, 240, .3);
+  --color-success-soft: rgba(128, 237, 153, .12);
+  --color-warning-soft: rgba(255, 209, 102, .12);
+  --color-white-soft: rgba(255, 255, 255, .1);
+  --color-white-medium: rgba(255, 255, 255, .25);
+  --color-border-soft: rgba(43, 61, 85, .3);
+  --shadow-color: rgba(0, 0, 0, .45);
+  --shadow-color-soft: rgba(0, 0, 0, .2);
+  --color-danger-soft: rgba(239, 71, 111, .13);
+  --shadow-panel: 0 12px 32px rgba(0, 0, 0, .12);
+  --shadow-popover: 0 6px 18px rgba(0, 0, 0, .35);
+  --shadow-dialog: 0 18px 48px rgba(0, 0, 0, .5);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+
+  /* Backwards-compatible semantic aliases used by application scripts. */
+  --bg: var(--color-bg);
+  --panel: var(--color-surface);
+  --muted: var(--color-text-muted);
+  --text: var(--color-text);
+  --accent: var(--color-accent);
+  --accent2: var(--color-success);
+  --warn: var(--color-warning);
+  --danger: var(--color-danger);
+  --line: var(--color-border);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body.tool-page .wrap {
+  width: min(1400px, calc(100% - 32px));
+  margin: var(--space-6) auto;
+}
+
+body.tool-page h1 {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 700px) {
+  body.tool-page .wrap {
+    width: min(100% - 20px, 1400px);
+    margin: var(--space-4) auto;
+  }
+}
