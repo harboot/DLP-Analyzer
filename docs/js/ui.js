@@ -354,21 +354,25 @@ function makeLineChart(pairs){
   const x = (i)=> pl + (w-pl-pr) * (i/Math.max(1,values.length-1));
   const y = (v)=> h - pb - (h-pt-pb)*((v-min)/(max-min||1));
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox',`0 0 ${w} ${h}`); svg.style.width='100%';
+  const theme=getComputedStyle(document.documentElement);
+  const axisColor=theme.getPropertyValue('--color-border-strong').trim();
+  const gridColor=theme.getPropertyValue('--color-border').trim();
+  const labelColor=theme.getPropertyValue('--color-text-muted').trim();
 
-  const ax=document.createElementNS(svg.namespaceURI,'line'); ax.setAttribute('x1',pl); ax.setAttribute('y1',h-pb); ax.setAttribute('x2',w-pr); ax.setAttribute('y2',h-pb); ax.setAttribute('stroke','#2b3d55'); svg.appendChild(ax);
-  const ay=document.createElementNS(svg.namespaceURI,'line'); ay.setAttribute('x1',pl); ay.setAttribute('y1',pt); ay.setAttribute('x2',pl); ay.setAttribute('y2',h-pb); ay.setAttribute('stroke','#2b3d55'); svg.appendChild(ay);
+  const ax=document.createElementNS(svg.namespaceURI,'line'); ax.setAttribute('x1',pl); ax.setAttribute('y1',h-pb); ax.setAttribute('x2',w-pr); ax.setAttribute('y2',h-pb); ax.setAttribute('stroke',axisColor); svg.appendChild(ax);
+  const ay=document.createElementNS(svg.namespaceURI,'line'); ay.setAttribute('x1',pl); ay.setAttribute('y1',pt); ay.setAttribute('x2',pl); ay.setAttribute('y2',h-pb); ay.setAttribute('stroke',axisColor); svg.appendChild(ay);
 
   const ticks=5;
   for(let i=0;i<=ticks;i++){
     const v=min+(max-min)*i/ticks, ty=y(v);
-    const gl=document.createElementNS(svg.namespaceURI,'line'); gl.setAttribute('x1',pl); gl.setAttribute('x2',w-pr); gl.setAttribute('y1',ty); gl.setAttribute('y2',ty); gl.setAttribute('stroke','#1d2633'); gl.setAttribute('stroke-dasharray','2,4'); svg.appendChild(gl);
-    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',pl-6); label.setAttribute('y',ty+4); label.setAttribute('text-anchor','end'); label.setAttribute('fill','#8aa0b5'); label.setAttribute('font-size','12'); label.textContent=Math.round(v); svg.appendChild(label);
+    const gl=document.createElementNS(svg.namespaceURI,'line'); gl.setAttribute('x1',pl); gl.setAttribute('x2',w-pr); gl.setAttribute('y1',ty); gl.setAttribute('y2',ty); gl.setAttribute('stroke',gridColor); gl.setAttribute('stroke-dasharray','2,4'); svg.appendChild(gl);
+    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',pl-6); label.setAttribute('y',ty+4); label.setAttribute('text-anchor','end'); label.setAttribute('fill',labelColor); label.setAttribute('font-size','12'); label.textContent=Math.round(v); svg.appendChild(label);
   }
 
   const step=Math.ceil(dates.length/12)||1;
   for(let i=0;i<dates.length;i+=step){
     const tx=x(i);
-    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',tx); label.setAttribute('y',h-8); label.setAttribute('text-anchor','middle'); label.setAttribute('fill','#8aa0b5'); label.setAttribute('font-size','12'); label.textContent=dates[i]; svg.appendChild(label);
+    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',tx); label.setAttribute('y',h-8); label.setAttribute('text-anchor','middle'); label.setAttribute('fill',labelColor); label.setAttribute('font-size','12'); label.textContent=dates[i]; svg.appendChild(label);
   }
 
   const poly=document.createElementNS(svg.namespaceURI,'polyline'); poly.setAttribute('points', values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')); poly.setAttribute('fill','none'); poly.setAttribute('stroke','currentColor'); poly.setAttribute('stroke-width','2'); svg.appendChild(poly);

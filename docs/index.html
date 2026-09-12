@@ -12,14 +12,20 @@
   <div class="host">
     <header id="topbar" class="topbar" role="navigation" aria-label="Main menu">
       <div class="brand" aria-label="App title">DLP Analyzer</div>
-      <nav class="menu" role="tablist" aria-label="Pages">
-        <button class="tab" data-key="AlertAnalyzer" role="tab" aria-selected="false" title="Open AlertAnalyzer.html">Alert Analyzer</button>
-        <button class="tab" data-key="CardManager" role="tab" aria-selected="false" title="Open the Risk Scoring tool">Risk Scoring</button>
-        <button class="tab" data-key="PolicyViewer" role="tab" aria-selected="false" title="Open PolicyViewer.html">Policy Viewer</button>
-        <button class="tab" data-key="PolicyTuningAdvisor" role="tab" aria-selected="false" title="Open Policy Tuning Advisor">Policy Tuning Advisor</button>
-        <button class="tab" data-key="RuleIdentifier" role="tab" aria-selected="false" title="Open Policies Matcher">Policies Matcher</button>
-        <button class="tab" data-key="DocViewer" role="tab" aria-selected="false" title="Open DocViewer.html">Document Viewer</button>
-		<button class="tab" data-key="KeywordGenerator" role="tab" aria-selected="false" title="Open KeywordGenerator.html">Keyword Generator</button>
+      <div class="current-tool" id="currentTool" aria-live="polite">Alert Analyzer</div>
+      <nav class="menu" aria-label="Tools">
+        <button class="menu-trigger" id="menuTrigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolMenu">
+          <span class="sr-only">Open tools menu</span><span aria-hidden="true">&#8942;</span>
+        </button>
+        <div class="menu-popover" id="toolMenu" role="menu" hidden>
+          <button class="tab" data-key="AlertAnalyzer" role="menuitemradio" aria-checked="false">Alert Analyzer</button>
+          <button class="tab" data-key="CardManager" role="menuitemradio" aria-checked="false">Risk Scoring</button>
+          <button class="tab" data-key="PolicyViewer" role="menuitemradio" aria-checked="false">Policy Viewer</button>
+          <button class="tab" data-key="PolicyTuningAdvisor" role="menuitemradio" aria-checked="false">Policy Tuning Advisor</button>
+          <button class="tab" data-key="RuleIdentifier" role="menuitemradio" aria-checked="false">Policies Matcher</button>
+          <button class="tab" data-key="DocViewer" role="menuitemradio" aria-checked="false">Document Viewer</button>
+          <button class="tab" data-key="KeywordGenerator" role="menuitemradio" aria-checked="false">Keyword Generator</button>
+        </div>
       </nav>
       <div id="spinner" class="spinner" aria-hidden="true"><span class="spin" aria-label="Loading" title="Loading..."></span></div>
     </header>
@@ -36,6 +42,9 @@
     const DEFAULT_KEY = 'AlertAnalyzer';
 
     const tabs = Array.from(document.querySelectorAll('.tab'));
+    const menuTrigger = document.getElementById('menuTrigger');
+    const toolMenu = document.getElementById('toolMenu');
+    const currentTool = document.getElementById('currentTool');
     const frame = document.getElementById('appFrame');
     const spinner = document.getElementById('spinner');
     const overlay = document.getElementById('overlay');
@@ -52,7 +61,14 @@
     }
 
     function setActiveTab(key){
-      tabs.forEach(btn => btn.setAttribute('aria-selected', String(btn.dataset.key === key)));
+      tabs.forEach(btn => btn.setAttribute('aria-checked', String(btn.dataset.key === key)));
+      currentTool.textContent = tabs.find(btn => btn.dataset.key === key)?.textContent || '';
+    }
+
+    function setMenuOpen(open, { focus = false } = {}) {
+      toolMenu.hidden = !open;
+      menuTrigger.setAttribute('aria-expanded', String(open));
+      if (open && focus) (tabs.find(btn => btn.getAttribute('aria-checked') === 'true') || tabs[0]).focus();
     }
 
     const showSpinner = (show) => {
@@ -64,7 +80,7 @@
       overlay.innerHTML = `
         <div class="row">
           <div>${message}</div>
-          <div style="display:flex;gap:6px;align-items:center;">
+          <div class="overlay-actions">
             <button class="btn" type="button" data-act="retry" data-key="${key}">Retry</button>
             <a class="btn" href="${pathFor(key)}" target="_blank" rel="noopener">Open in new tab</a>
           </div>
@@ -102,6 +118,7 @@
 
     tabs.forEach(btn => {
       btn.addEventListener('click', () => {
+        setMenuOpen(false);
         const key = btn.dataset.key;
         if (location.hash.replace(/^#+/,'') !== key){
           location.hash = key;
@@ -109,6 +126,19 @@
           navigateTo(key);
         }
       });
+    });
+
+    menuTrigger.addEventListener('click', () => {
+      setMenuOpen(menuTrigger.getAttribute('aria-expanded') !== 'true', { focus: true });
+    });
+    document.addEventListener('click', event => {
+      if (!event.target.closest('.menu')) setMenuOpen(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !toolMenu.hidden) {
+        setMenuOpen(false);
+        menuTrigger.focus();
+      }
     });
 
     window.addEventListener('hashchange', () => navigateTo(keyFromHash()));

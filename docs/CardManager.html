@@ -92,7 +92,7 @@
 "></textarea>
           </label>
 
-          <div class="right" style="justify-content:space-between">
+          <div class="right spread">
             <div class="status" id="meta">&nbsp;</div>
             <div class="right">
               <button class="btn" id="btnDefault" title="Restore predefined rule defaults" hidden>↺ DEFAULT</button>
@@ -118,7 +118,7 @@
       <div class="editor" aria-labelledby="aiFilterTitle">
         <div class="cjs-chatrow">
           <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
-          <label class="muted-sm">Save for (days) <input id="apikey-retention-days" class="textinput" type="number" min="1" max="90" value="90" style="width:80px" /></label>
+          <label class="muted-sm">Save for (days) <input id="apikey-retention-days" class="textinput input-compact" type="number" min="1" max="90" value="90" /></label>
           <button class="btn" id="save-apikey">Save API key</button>
         </div>
         <div class="cjs-chatrow">
@@ -174,12 +174,7 @@ const sanitizeForTSV = DLPUtils.sanitizeForTSV;
 // Builds an HTML table for the clipboard (Excel/Office)
 function buildRowClipboardHTML(row) {
   const cells = getRowCells(row);
-  const head = `
-  <style>
-    table.dlp-copy { border-collapse: collapse; font-family: system-ui, Arial, sans-serif; font-size: 13px; }
-    .dlp-copy th, .dlp-copy td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
-    .dlp-copy th { background:#f6f6f6; width:220px; }
-  </style>`;
+  const head = '';
   const rows = cells.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
   return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
 }
@@ -997,7 +992,7 @@ function openRiskTable(enabledFiles) {
     wrap.innerHTML = `<output id="onNames" class="muted-sm">Scored ${scored.length} of ${lastCSVRows.length} alerts with ${rules.length} enabled rules.</output>
     <section class="section risk-results">
       <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${scored.length} scored alerts</span></header>
-      <div style="overflow:auto"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
+      <div class="table-scroll"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
       <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
       <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right"><button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
     </section>`;
@@ -1083,7 +1078,7 @@ function openResultTable(fileId) {
           <span class="muted-sm">${rows.length} matched rows</span>
         </div>
       </header>
-      <div style="overflow:auto">
+      <div class="table-scroll">
         <table class="rule-result-cols">
           <thead><tr>${headerHTML}</tr></thead>
           <tbody>${bodyHTML || `<tr><td colspan="${cols.length}" class="muted-sm">No rows matched.</td></tr>`}</tbody>
