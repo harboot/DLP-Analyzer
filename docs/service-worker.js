@@ -1,9 +1,11 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v20';
+const CACHE_VERSION = 'dlp-analyzer-v21';
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
+  './base.css',
+  './components.css',
   './CardManager.html',
   './DocViewer.html',
   './KeywordGenerator.html',
