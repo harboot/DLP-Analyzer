@@ -3,7 +3,9 @@
 function ingest(rows){
   // Append rows so files from one upload action are combined
   const mapped = rows.map(r => {
-    const row = ensureCols(sanitizeHeaders(r));
+    const uploadedRow = sanitizeHeaders(r);
+    const row = ensureCols(uploadedRow);
+    row.__uploadedColumns = Object.keys(uploadedRow);
     row['File Name'] = normalizeFileList(row['File Name']);
     row.IncidentTime = row['Incident Time'];
     row.EventTime    = row['Event Time'];
