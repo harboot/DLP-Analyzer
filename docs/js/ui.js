@@ -389,7 +389,6 @@ function makeLineChart(pairs){
 // Renders a tab table section with pagination, export, and page-size controls.
 function renderTableSection(tab){
   const sec = document.createElement('div'); sec.className = 'sectionx';
-  sec.innerHTML = `<header><strong>${escapeHtml(tab.label)}</strong><span class="tiny muted"></span></header>`;
 
   const topSources = Array.from(freqMap(tab.rows, 'Source').entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
   if (topSources.length) {
@@ -447,7 +446,10 @@ function renderDataTable(tab){
     const th = document.createElement('th');
     th.textContent = HEADER_LABELS[col];
 
-    if (col === ICON_COL) th.classList.add('iconcell');
+    if (col === ICON_COL) {
+      th.classList.add('iconcell');
+      th.setAttribute('aria-label', 'Copy row');
+    }
 
     if (FILTERABLE_COLS.includes(col)){
       const ico = document.createElement('span');

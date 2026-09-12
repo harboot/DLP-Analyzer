@@ -17,7 +17,7 @@
   </header>
 
   <div class="panel">
-    <div class="row">
+    <div class="row policy-upload-row">
       <div class="row-left"></div>
       <div class="row-right">
         <span id="policyFileName" class="muted-sm"></span>
@@ -33,15 +33,15 @@
   <div class="panel">
     <div class="row">
       <div class="row-left">
-        <button class="btn" id="exportCsv" title="Export filtered rows (no exception details)">Export CSV (filtered)</button>
-        <button class="btn" id="toggleDisabled" title="Toggle visibility of disabled Policy/Rule">Hide Disabled</button>
-      </div>
-      <div class="row-right">
         <!-- Counters -->
         <span class="counter c-block" id="cntBlocked" title="Rules with action containing 'block'">Blocked (0)</span>
         <span class="counter c-block" id="cntBlockedAll" title="Rules with a blocking main or exception action">Blocked All (0)</span>
         <span class="counter c-disab" id="cntDisabled" title="Rules disabled (rule.enabled == false)">Disabled (0)</span>
         <span class="counter c-exc" id="cntException" title="Rules that have exceptions">Exception (0)</span>
+      </div>
+      <div class="row-right">
+        <button class="btn" id="exportCsv" title="Export filtered rows with the same fields as Copied information">Export CSV (filtered)</button>
+        <button class="btn" id="toggleDisabled" title="Toggle visibility of disabled Policy/Rule">Hide Disabled</button>
       </div>
     </div>
   </div>
@@ -650,45 +650,33 @@
   });
   updateFilterIcons();
 
-  /* ===================== Export CSV (filtered, no exception details) ===================== */
+  function getPolicyRowCells(row){
+    const sevWord = (row.severity || '').toLowerCase();
+    const severity = sevWord==='high' ? 'HIGH' : sevWord==='medium' ? 'MEDIUM' : sevWord==='low' ? 'LOW' : '';
+    const exception = (row.exceptions && row.exceptions.length)
+      ? row.exceptions.map(item => item?.exception_rule_name || '(unnamed)').join('; ')
+      : 'N/A';
+    return [
+      ['Policy Name', (row.policyName ?? '') + (row.policyEnabled ? '' : ' (disabled)')],
+      ['Rule Name', (row.ruleName ?? '') + (row.ruleEnabled ? '' : ' (disabled)')],
+      ['Relation', row.relation ?? ''],
+      ['Classifiers', (row.classifiers ?? []).join('; ')],
+      ['Severity', severity],
+      ['Action', row.action ?? ''],
+      ['Source', row.source ?? ''],
+      ['Channel', (row.channel ?? []).join('; ')],
+      ['Exception', exception]
+    ];
+  }
+
+  /* ===================== Export CSV (filtered) ===================== */
 function exportCsv(){
-  const cols = ['Policy Name','Rule Name','Relation','Classifiers','Severity','Action'];
+  const cols = getPolicyRowCells({}).map(([label]) => label);
   const lines = [cols.join(',')];
 
   flatRows.forEach(row=>{
     if(!passesFilters(row)) return;
-
-    // ===== Severity (HIGH / MEDIUM / LOW)
-    const sevWord = (row.severity || '').toLowerCase();
-    const sChar = sevWord==='high' ? 'HIGH'
-                : sevWord==='medium' ? 'MEDIUM'
-                : sevWord==='low' ? 'LOW'
-                : '';
-
-    // ===== Check Exception Action contains "block"
-    let actionValue = row.action || '';
-
-    if(Array.isArray(row.exceptions) && row.exceptions.length){
-      const hasBlockInException = row.exceptions.some(ex=>{
-        const details = (ex?.severity_action?.classifier_details) || [];
-        return details.some(d =>
-          String(d?.action_plan || '').toLowerCase().includes('block')
-        );
-      });
-
-      if(hasBlockInException){
-        actionValue = 'Block in Exception';
-      }
-    }
-
-    const vals = [
-      row.policyName + (row.policyEnabled?'':' (disabled)'),
-      row.ruleName + (row.ruleEnabled?'':' (disabled)'),
-      row.relation,
-      row.classifiers.join('; '),
-      sChar,
-      actionValue
-    ];
+    const vals = getPolicyRowCells(row).map(([, value]) => value);
 
     const esc = (v)=> `"${String(v??'').replace(/"/g,'""')}"`;
     lines.push(vals.map(esc).join(','));
@@ -718,24 +706,9 @@ function exportCsv(){
   /* ===================== Copy row as rich text (HTML) ===================== */
 /* ===================== Copy row as rich text (HTML) ===================== */
 async function copyRowAsRichText(row){
-  const sevWord = (row.severity || '').toLowerCase();
-  const sChar = sevWord==='high' ? 'HIGH' : sevWord==='medium' ? 'MEDIUM' : sevWord==='low' ? 'LOW' : '';
-  const exc = (row.exceptions && row.exceptions.length)
-    ? row.exceptions.map(exception => exception?.exception_rule_name || '(unnamed)').join('; ')
-    : 'N/A';
-
-  const headers = ['Policy Name','Rule Name','Relation','Classifiers','Severity','Action','Source','Channel','Exception'];
-  const values  = [
-    (row.policyName ?? '') + (row.policyEnabled ? '' : ' (disabled)'),
-    (row.ruleName ?? '') + (row.ruleEnabled ? '' : ' (disabled)'),
-    row.relation ?? '',
-    (row.classifiers ?? []).join('; '),
-    sChar,
-    row.action ?? '',
-    row.source ?? '',
-    (row.channel ?? []).join('; '),
-    exc
-  ];
+  const cells = getPolicyRowCells(row);
+  const headers = cells.map(([header]) => header);
+  const values = cells.map(([, value]) => value);
 
   // HTML: each header/value pair becomes its own <tr>
   const htmlRows = headers.map((h, i) => {

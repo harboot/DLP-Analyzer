@@ -6,7 +6,7 @@ const ICON_COL = '__Copy';
   const FILTERABLE_COLS = ['Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Details', 'Status'];
 
   const HEADER_LABELS = {
-    [ICON_COL]: 'Copy',
+    [ICON_COL]: '',
     Time: 'Incident Date',
     Source: 'Source',
     Policies: 'Policies',
@@ -123,7 +123,7 @@ const ICON_COL = '__Copy';
 
   // Generates [key, value] pairs for one data row
   function getRowCells(row) {
-    return ALL_COLS.map(column => [column, txt(row[column])]);
+    return DLPUtils.getAlertRowCells(row);
   }
 
   // Builds an HTML table for the clipboard (Excel/Office)

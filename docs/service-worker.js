@@ -1,7 +1,7 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v8';
+const CACHE_VERSION = 'dlp-analyzer-v10';
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
   './CardManager.html',
@@ -67,7 +67,7 @@ self.addEventListener('install', event => {
       if (!response.ok) throw new Error(`Unable to cache ${file}: HTTP ${response.status}`);
       await cache.put(request, response);
       completed++;
-      await notifyClients({ type: 'OFFLINE_CACHE_PROGRESS', completed, total: APPLICATION_FILES.length, file });
+      await notifyClients({ type: 'OFFLINE_CACHE_PROGRESS', completed, total: APPLICATION_FILES.length, file, version: CACHE_VERSION });
     }
     await notifyClients({ type: 'OFFLINE_CACHE_COMPLETE', version: CACHE_VERSION });
     await self.skipWaiting();

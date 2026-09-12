@@ -42,7 +42,7 @@
     report = PolicyTuning.analyze(rows);
     const high = report.policies.filter(policy => policy.opportunity === 'High').length;
     const findings = report.policies.reduce((sum, policy) => sum + policy.findings.length, 0);
-    status.textContent = `${rows.length} alerts loaded from ${label}.`;
+    status.hidden = true;
     summary.hidden = false; toolbar.hidden = false;
     summary.innerHTML = `<div><strong>${rows.length}</strong><span>Alerts analyzed</span></div><div><strong>${report.policies.length}</strong><span>Policies</span></div><div><strong>${findings}</strong><span>Tuning findings</span></div><div><strong>${high}</strong><span>High opportunities</span></div>`;
     DLPUtils.showUploadWarning(warning, warnings);
@@ -50,6 +50,7 @@
   }
   async function loadFiles(files) {
     if (!files.length) return;
+    status.hidden = false;
     fileName.textContent = files.map(file => file.name).join(', ');
     status.textContent = 'Analyzing alert data…';
     try {
@@ -66,6 +67,7 @@
   drop.addEventListener('drop', event => loadFiles([...event.dataTransfer.files]));
   search.addEventListener('input', render); level.addEventListener('change', render);
   document.getElementById('sampleBtn').addEventListener('click', async () => {
+    status.hidden = false;
     fileName.textContent = 'alerts.csv';
     status.textContent = 'Loading sample…';
     try {

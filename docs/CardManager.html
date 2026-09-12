@@ -37,12 +37,12 @@
       <div class="row risk-actions-row">
         <div class="row-left"></div>
         <div class="row-right">
+          <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
           <button class="btn" id="btnNewFile" title="New rule">➕ New Rule</button>
           <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
           <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
           <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
-          <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
         </div>
       </div>
     </div>
@@ -161,7 +161,7 @@ aiSettingsDialog.addEventListener('click', (event) => { if (event.target === aiS
 
 // Gets cells from a row object and converts them to a [key, value] array
 function getRowCells(row) {
-  return Object.entries(row).map(([k, v]) => [String(k), String(v ?? '')]);
+  return DLPUtils.getAlertRowCells(row);
 }
 
 // Sanitizes a string for TSV (Tab-Separated Values)
@@ -952,7 +952,7 @@ function openRiskTable(enabledFiles) {
     wrap.innerHTML = `<output id="onNames" class="muted-sm">Scored ${scored.length} of ${lastCSVRows.length} alerts with ${rules.length} enabled rules.</output>
     <section class="section risk-results">
       <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${scored.length} scored alerts</span></header>
-      <div style="overflow:auto"><table class="risk-result-cols"><thead><tr><th class="copy-column">Copy</th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
+      <div style="overflow:auto"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
       <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
       <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right"><button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
     </section>`;
@@ -991,10 +991,10 @@ function openResultTable(fileId) {
   }
   const rows = rec.rows || [];
   const cols = [
-    'Copy', 'Incident Date', 'Source', 'Policies', 'Channel', 'Destination',
+    '', 'Incident Date', 'Source', 'Policies', 'Channel', 'Destination',
     'File Name', 'Details'
   ];
-  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column"' : ''}>${escapeHtml(h)}</th>`).join('');
+  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column" aria-label="Copy row"' : ''}>${escapeHtml(h)}</th>`).join('');
   let page = 1;
   let pageSize = 50;
 
