@@ -57,10 +57,10 @@
       <div class="section">
         <header>
           <div style="font-weight:700">Alerts by Policy and Rule Name</div>
-          <div class="muted">rules are grouped by policy</div>
+          <div class="muted">Select a policy or rule to show or hide its count</div>
         </header>
         <div class="pad">
-          <canvas id="ruleChart" height="460"></canvas>
+          <div id="ruleChart" class="rule-chart" aria-live="polite"></div>
         </div>
       </div>
 
@@ -76,8 +76,7 @@
 const $ = DLPUtils.query;
 const logEl = $('#log');
 const barEl = $('#bar');
-const chartCanvas = $('#ruleChart');
-const ctx = chartCanvas.getContext('2d');
+const ruleChart = $('#ruleChart');
 
 /* ----------------------------- State -------------------------------- */
 let alertsHeader = [];
@@ -466,110 +465,68 @@ function renderRuleChart(countMap){
     })
     .forEach(([policyName, group]) => {
       const rules = Object.entries(group.rules).filter(([,count]) => count > 0).sort((a,b) => b[1] - a[1]);
-      if (rules.length) entries.push({ type: 'policy', label: policyName });
-      rules.forEach(([ruleName, count]) => entries.push({ type: 'rule', label: ruleName, count }));
-      if (group.unmatched > 0) entries.push({ type: 'unmatched', label: policyName, count: group.unmatched });
+      const total = group.unmatched + rules.reduce((sum, [, count]) => sum + count, 0);
+      entries.push({ type: 'policy', label: policyName, count: total, key: `policy:${policyName}` });
+      rules.forEach(([ruleName, count]) => entries.push({
+        type: 'rule', label: ruleName, count, key: `rule:${policyName}:${ruleName}`
+      }));
+      if (group.unmatched > 0 && rules.length) entries.push({
+        type: 'rule', label: 'Unmatched alerts', count: group.unmatched, key: `unmatched:${policyName}`
+      });
     });
 
-  // ---- Canvas sizing: full container width ----
-  const container = chartCanvas.closest('.pad') || chartCanvas.parentElement || document.body;
-  const cssW = Math.max(320, Math.floor(container.getBoundingClientRect().width || container.clientWidth || window.innerWidth));
-  chartCanvas.style.width = '100%';                 // CSS width (for layout)
-  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-  const barH = 16, gap = 6, rowH = barH + gap;
-  const cssH = Math.max(120, 28 + entries.length * rowH);
-
-  chartCanvas.width  = cssW * dpr;                  // internal bitmap
-  chartCanvas.height = cssH * dpr;
-
-  const c = ctx;
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // ---- Theme ----
-  const panelCol = getComputedStyle(document.documentElement).getPropertyValue('--panel') || '#121823';
-  const textCol  = getComputedStyle(document.documentElement).getPropertyValue('--text')  || '#e8eef6';
-  c.fillStyle = panelCol; c.fillRect(0,0,cssW,cssH);
-
-  // ---- Layout paddings (dynamic) ----
-  c.font = '11px system-ui';
-  const maxVal = Math.max(1, ...entries.map(entry => entry.count || 0));
-  const maxValW = c.measureText(String(maxVal)).width;
-  const leftGutter = Math.min( Math.max(Math.floor(cssW * 0.40), 260), 460); // 28% width, min 260, max 460
-  const pad = { t: 6, r: 18 + Math.ceil(maxValW) + 10, b: 26, l: leftGutter };
-  const x0 = pad.l, x1 = cssW - pad.r, y0 = pad.t, y1 = cssH - pad.b;
-
-  // ---- Grid ----
-  c.strokeStyle = '#2b3d55';
-  c.fillStyle = '#9fb1c9';
-  c.font = '11px system-ui';
-  for (let i = 0; i <= 4; i++) {
-    const x = x0 + (i / 4) * (x1 - x0);
-    c.globalAlpha = 0.28;
-    c.beginPath(); c.moveTo(x, y0); c.lineTo(x, y1); c.stroke();
-    c.globalAlpha = 1;
-    const val = String(Math.round((i / 4) * maxVal));
-    const tw = c.measureText(val).width;
-    c.fillText(val, Math.min(x - tw / 2, x1 - tw), y1 + 16); // clamp to right edge
+  ruleChart.replaceChildren();
+  if (!entries.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted rule-chart-empty';
+    empty.textContent = 'No policy or rule counts to display.';
+    ruleChart.appendChild(empty);
+    return;
   }
 
-  // ---- Helpers ----
-  function ellipsize(text, maxW){
-    c.font = '11px system-ui';
-    if (c.measureText(text).width <= maxW) return text;
-    const ell = '…', ellW = c.measureText(ell).width;
-    let lo = 0, hi = text.length;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      const slice = text.slice(0, mid);
-      if (c.measureText(slice).width + ellW <= maxW) lo = mid; else hi = mid - 1;
-    }
-    return text.slice(0, lo) + ell;
-  }
+  const hidden = new Set();
+  const rows = entries.map(entry => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `rule-chart-row rule-chart-${entry.type}`;
+    row.setAttribute('aria-pressed', 'true');
 
-  // ---- Bars + labels (no overlap) ----
-  entries.forEach((entry, i) => {
-    const y = y0 + i * rowH;
-    if (entry.type === 'policy') {
-      const label = ellipsize(entry.label, x0 - 18);
-      c.fillStyle = textCol;
-      c.font = 'bold 14px system-ui';
-      c.fillText(label, 8, y + barH - 3);
-      return;
-    }
-    const count = entry.count;
-    const w = Math.max(0, (count / maxVal) * (x1 - x0));
+    const label = document.createElement('span');
+    label.className = 'rule-chart-label';
+    label.textContent = entry.label;
 
-    // bar
-    c.fillStyle = '#4cc9f0';
-    c.fillRect(x0, y, w, barH);
+    const track = document.createElement('span');
+    track.className = 'rule-chart-track';
+    const bar = document.createElement('span');
+    bar.className = 'rule-chart-bar';
+    track.appendChild(bar);
 
-    // left label (Rule Name) — stays left in gutter
-    const leftMax = x0 - 12;
-    const label = entry.type === 'rule' ? `  ${entry.label}` : entry.label;
-    const txt = ellipsize(label, leftMax - 10);
-    c.fillStyle = textCol;
-    c.font = '14px system-ui';
-    c.textAlign = 'left';
-    c.fillText(txt, 8, y + barH - 3);
-
-    // value label — inside if possible, else outside but clamped
-    const valTxt = String(count);
-    const valW  = c.measureText(valTxt).width;
-    const inside = w >= (valW + 10);                // 10px breathing room
-    if (inside) {
-      c.textAlign = 'right';
-      c.fillStyle = textCol;
-      c.fillText(valTxt, x0 + w - 4, y + barH - 3);
-    } else {
-      c.textAlign = 'left';
-      c.fillStyle = textCol;
-      const lx = Math.min(x0 + w + 6, x1 - valW - 2); // do not overflow right
-      c.fillText(valTxt, lx, y + barH - 3);
-    }
+    const value = document.createElement('span');
+    value.className = 'rule-chart-value';
+    row.append(label, track, value);
+    ruleChart.appendChild(row);
+    return { entry, row, bar, value };
   });
 
-  // reset default align
-  c.textAlign = 'left';
+  function updateChart(){
+    const visible = entries.filter(entry => !hidden.has(entry.key));
+    const maxValue = Math.max(1, ...visible.map(entry => entry.count));
+    rows.forEach(({ entry, row, bar, value }) => {
+      const isVisible = !hidden.has(entry.key);
+      row.classList.toggle('is-hidden', !isVisible);
+      row.setAttribute('aria-pressed', String(isVisible));
+      row.setAttribute('aria-label', `${isVisible ? 'Hide' : 'Show'} ${entry.type} count for ${entry.label}`);
+      value.textContent = isVisible ? entry.count.toLocaleString('en-US') : '—';
+      bar.style.width = isVisible ? `${(entry.count / maxValue) * 100}%` : '0%';
+    });
+  }
+
+  rows.forEach(({ entry, row }) => row.addEventListener('click', () => {
+    if (hidden.has(entry.key)) hidden.delete(entry.key);
+    else hidden.add(entry.key);
+    updateChart();
+  }));
+  updateChart();
 }
 
 /* ----------------------------- Process ------------------------------ */
@@ -649,8 +606,7 @@ function hardReset(){
   policyFileName.textContent='';
   alertsFileName.textContent='';
   // clear chart
-  ctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
-  chartCanvas.width = chartCanvas.clientWidth; chartCanvas.height = 460;
+  ruleChart.replaceChildren();
   logLine('Reset done.');
 }
 
