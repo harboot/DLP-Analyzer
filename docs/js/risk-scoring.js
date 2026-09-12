@@ -95,6 +95,20 @@
     return Number.isFinite(weight) && weight >= 0 ? weight : DEFAULT_WEIGHT;
   }
 
+  function exportRuleConfigs(rules) {
+    return (Array.isArray(rules) ? rules : []).map(rule => ({
+      id: rule.id,
+      name: rule.name,
+      code: rule.code || '',
+      builtIn: !!rule.builtIn,
+      key: rule.key,
+      settings: { ...(rule.settings || {}) },
+      type: 'file',
+      enabled: !!rule.enabled,
+      weight: normalizeWeight(rule.weight)
+    }));
+  }
+
   function scoreAlerts(rows, rules, matchesByRule) {
     const scored = rows.map((row, index) => ({ row, index, score: 0, matchedRules: [] }));
     for (const rule of rules) {
@@ -113,5 +127,5 @@
       .sort((a, b) => b.score - a.score || b.matchedRules.length - a.matchedRules.length || a.index - b.index);
   }
 
-  root.RiskScoring = { DEFAULT_WEIGHT, builtInRules, matchesBuiltIn, migrateRules, normalizeWeight, scoreAlerts };
+  root.RiskScoring = { DEFAULT_WEIGHT, builtInRules, exportRuleConfigs, matchesBuiltIn, migrateRules, normalizeWeight, scoreAlerts };
 })(typeof globalThis === 'undefined' ? window : globalThis);

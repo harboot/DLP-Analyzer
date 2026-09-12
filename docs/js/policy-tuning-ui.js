@@ -6,6 +6,7 @@
   const summary = document.getElementById('summary');
   const toolbar = document.getElementById('toolbar');
   const status = document.getElementById('status');
+  const fileName = document.getElementById('advisorFileName');
   const warning = document.getElementById('uploadWarning');
   const search = document.getElementById('search');
   const level = document.getElementById('level');
@@ -49,6 +50,7 @@
   }
   async function loadFiles(files) {
     if (!files.length) return;
+    fileName.textContent = files.map(file => file.name).join(', ');
     status.textContent = 'Analyzing alert data…';
     try {
       const batches = await Promise.all(files.map(file => CSVUtils.parseFile(file)));
@@ -64,6 +66,7 @@
   drop.addEventListener('drop', event => loadFiles([...event.dataTransfer.files]));
   search.addEventListener('input', render); level.addEventListener('change', render);
   document.getElementById('sampleBtn').addEventListener('click', async () => {
+    fileName.textContent = 'alerts.csv';
     status.textContent = 'Loading sample…';
     try {
       const response = await fetch('sample/alerts.csv');

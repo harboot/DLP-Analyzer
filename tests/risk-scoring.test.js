@@ -6,7 +6,7 @@ const context = {};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), context);
 
-const { migrateRules, normalizeWeight, scoreAlerts } = context.RiskScoring;
+const { exportRuleConfigs, migrateRules, normalizeWeight, scoreAlerts } = context.RiskScoring;
 
 assert.equal(normalizeWeight(undefined), 1);
 assert.equal(normalizeWeight('4'), 4);
@@ -38,6 +38,12 @@ assert.deepEqual(Array.from(builtIns, rule => rule.name), [
 ]);
 const rule = key => builtIns.find(item => item.key === key);
 assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
+const exported = exportRuleConfigs([...builtIns, { id: 'disabled-custom', name: 'Disabled custom', type: 'file', code: 'return true;', enabled: false, weight: 2 }]);
+assert.equal(exported.length, 7);
+assert.equal(exported.every(item => item.type === 'file'), true);
+assert.equal(exported.filter(item => item.builtIn).length, 6);
+assert.equal(exported.find(item => item.id === 'builtin-short-subject').settings.subjectLength, 15);
+assert.equal(exported.find(item => item.id === 'disabled-custom').enabled, false);
 assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
 assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5]);

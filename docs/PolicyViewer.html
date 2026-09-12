@@ -18,15 +18,23 @@
 
   <div class="panel">
     <div class="row">
-      <div class="row-left">
+      <div class="row-left"></div>
+      <div class="row-right">
+        <span id="policyFileName" class="muted-sm"></span>
         <label class="drop" title="Select one or more policy JSON files">
           <input id="fileInput" type="file" accept=".json" multiple />
           Upload Policy (JSON)
         </label>
         <button class="btn" id="loadSampleBtn" title="Load a sample DLP policy">Load sample</button>
+        <a class="btn link" href="guides/PolicyViewerGuide.html" target="_blank" rel="noopener" title="Open the Policy Viewer guide">📖 Guide</a>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="row">
+      <div class="row-left">
         <button class="btn" id="exportCsv" title="Export filtered rows (no exception details)">Export CSV (filtered)</button>
         <button class="btn" id="toggleDisabled" title="Toggle visibility of disabled Policy/Rule">Hide Disabled</button>
-        <a class="btn link" href="guides/PolicyViewerGuide.html" target="_blank" rel="noopener" title="Open the Policy Viewer guide">📖 Guide</a>
       </div>
       <div class="row-right">
         <!-- Counters -->
@@ -81,6 +89,7 @@
   const logOut = document.getElementById('logOut');
   const exportCsvBtn = document.getElementById('exportCsv');
   const toggleDisabledBtn = document.getElementById('toggleDisabled');
+  const policyFileName = document.getElementById('policyFileName');
   const countInfo = document.getElementById('countInfo');
 
   // counters
@@ -195,6 +204,7 @@
     if(!files || !files.length) return;
     const toRead = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.json'));
     if(!toRead.length){ log('No .json files detected.'); return; }
+    policyFileName.textContent = toRead.map(file => file.name).join(', ');
 
     let readCount = 0;
     for(const file of toRead){

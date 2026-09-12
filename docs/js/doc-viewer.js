@@ -4,6 +4,7 @@
   const byId = id => document.getElementById(id);
   const input = byId('file');
   const status = byId('status');
+  const fileName = byId('documentFileName');
   const textOutput = byId('text');
   const state = { url: '', zip: null, initialText: '', initialSource: '', searchDocuments: [] };
   const textExtensions = /\.(?:txt|csv|json|xml|html?|md|log|ini|yaml|yml|js|css|rtf)$/i;
@@ -43,6 +44,7 @@
     return suspicious / Math.min(bytes.length, 4096) < 0.02;
   }
   function reset() {
+    fileName.textContent = '';
     if (state.url) URL.revokeObjectURL(state.url);
     Object.assign(state, { url: '', zip: null, initialText: '', initialSource: '', searchDocuments: [] });
     input.value = '';
@@ -211,6 +213,7 @@
     const bytes = new Uint8Array(buffer);
     const detected = magicType(bytes);
     show(byId('metaBox')); show(byId('viewBox'));
+    fileName.textContent = file.name;
     byId('fn').textContent = `name: ${file.name}`;
     byId('fs').textContent = `size: ${formatBytes(file.size)}`;
     byId('ft').textContent = `extension: ${extension(file.name)}`;
