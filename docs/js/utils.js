@@ -129,12 +129,7 @@ const ICON_COL = '__Copy';
   // Builds an HTML table for the clipboard (Excel/Office)
   function buildRowClipboardHTML(row) {
     const cells = getRowCells(row);
-    const head = `
-    <style>
-      table.dlp-copy { border-collapse: collapse; font-family: system-ui, Arial, sans-serif; font-size: 13px; }
-      .dlp-copy th, .dlp-copy td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
-      .dlp-copy th { background:#f6f6f6; width:220px; }
-    </style>`;
+    const head = '';
     const rows = cells.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
     return `<!doctype html><html><head>${head}</head><body><table class="dlp-copy">${rows}</table></body></html>`;
   }

@@ -26,19 +26,19 @@
         <button class="btn" id="loadSampleBtn">Load sample</button>
         <button class="btn" id="clearBtn">Clear</button>
         <a class="btn link" href="guides/KeywordGeneratorGuide.html" target="_blank" rel="noopener" title="Open the Keyword Generator guide">📖 Guide</a>
-        <div id="loadingIndicator" class="loading-container" style="display: none;">
+        <div id="loadingIndicator" class="loading-container initially-hidden">
           <div class="loading"></div>
           <span>Processing...</span>
         </div>
       </div>
     </div>
 
-    <div id="errorContainer" class="error-message" style="display: none;"></div>
+    <div id="errorContainer" class="error-message initially-hidden"></div>
 
     <div class="topgrid">
       <section class="section" id="leftBox">
         <header><h3>Input Text</h3></header>
-        <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="panel flexible-panel">
           <textarea id="subjects" placeholder="Example:
 Bank of the Philippine Islands (Cards) Month_Invoice Number
 BPI – Inspiro Headcount Masterlist as of June
@@ -51,7 +51,7 @@ Billable | BPI Non-Voice
 
       <section class="section" id="rightBox">
         <header><h3>Exceptions & Rules</h3></header>
-        <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="panel flexible-panel">
           <textarea id="rules" placeholder="Enter rules here:
 • Exceptions: one WORD or exact phrase per line (e.g., bpi, bank of the philippine islands). Exact phrases only block identical keywords.
 • Must-use: start with + (e.g., +philippine islands). Always used & shown even if it covers only 1 subject.
@@ -82,7 +82,7 @@ Billable | BPI Non-Voice
       </div>
     </section>
 
-    <section class="section" id="uncovSection" style="display:none;">
+    <section class="section initially-hidden" id="uncovSection">
       <header>
         <h3>Uncovered Subjects</h3>
         <div class="tiny muted">Contains subjects that had no matches & those matching only low-priority keywords (shown=1, non-must-use).</div>

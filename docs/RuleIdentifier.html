@@ -34,7 +34,7 @@
           <span id="alerts-file-name" class="muted-sm"></span>
           <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
           <button class="btn" id="btn-process" disabled>Process</button>
-          <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
+          <a id="download-link" class="btn initially-hidden" download="dlp-alerts-with-rules.csv">Download CSV</a>
         </div>
       </div>
     </div>
@@ -55,7 +55,7 @@
 
       <div class="section">
         <header>
-          <div style="font-weight:700">Alerts by Policy and Rule Name</div>
+          <div class="section-title">Alerts by Policy and Rule Name</div>
           <div class="muted">Select a policy or rule to show or hide its count</div>
         </header>
         <div class="pad">

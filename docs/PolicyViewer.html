@@ -46,7 +46,7 @@
     </div>
   </div>
 
-  <section class="section" style="margin-top:14px">
+  <section class="section stack-space">
     <header>
       <div>Rules</div>
       <div class="muted tiny" id="countInfo" title="Policy and rule counters">0 policies · 0 rules (0 shown)</div>
@@ -714,13 +714,13 @@ async function copyRowAsRichText(row){
   // HTML: each header/value pair becomes its own <tr>
   const htmlRows = headers.map((h, i) => {
     return `<tr>
-      <th scope="row" style="border:1px solid #ccc;padding:6px 8px;text-align:left;background:#f7f7f7;width:30%;">${escapeHtml(h)}</th>
-      <td style="border:1px solid #ccc;padding:6px 8px;">${escapeHtml(values[i])}</td>
+      <th scope="row">${escapeHtml(h)}</th>
+      <td>${escapeHtml(values[i])}</td>
     </tr>`;
   }).join('');
 
   const html =
-`<table style="border-collapse:collapse;width:100%;table-layout:fixed;">
+`<table>
   <tbody>
     ${htmlRows}
   </tbody>
