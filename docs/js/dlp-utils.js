@@ -86,6 +86,15 @@
     document.body.appendChild(preview);
   }
 
+  const ALERT_COPY_ORDER = ['ID', 'Event Time', 'Incident Time', 'Source', 'Destination', 'Policies', 'Channel', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Action', 'Severity'];
+
+  function getAlertRowCells(row) {
+    const source = row || {};
+    const canonical = ALERT_COPY_ORDER.filter(key => Object.prototype.hasOwnProperty.call(source, key));
+    const remaining = Object.keys(source).filter(key => !canonical.includes(key));
+    return [...canonical, ...remaining].map(key => [key, toText(source[key])]);
+  }
+
   global.DLPUtils = Object.freeze({
     query,
     queryAll,
@@ -95,6 +104,7 @@
     findMissingColumns,
     showUploadWarning,
     copyIconSvg,
-    showCopyPreview
+    showCopyPreview,
+    getAlertRowCells
   });
 })(window);

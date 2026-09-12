@@ -7,6 +7,7 @@
   let panel;
   let progress;
   let detail;
+  let versionLabel;
 
   function showPreparation() {
     if (!isTopLevel || panel) return;
@@ -17,6 +18,7 @@
     panel.innerHTML = `
       <div class="offline-preparation-card">
         <h1>Preparing DLP Analyzer for offline use</h1>
+        <p class="offline-preparation-version">Version: checking…</p>
         <p>Application files are being saved on this device.</p>
         <progress value="0" max="1" aria-label="Offline preparation progress"></progress>
         <p class="offline-preparation-detail">Starting…</p>
@@ -24,11 +26,13 @@
     document.body.append(panel);
     progress = panel.querySelector('progress');
     detail = panel.querySelector('.offline-preparation-detail');
+    versionLabel = panel.querySelector('.offline-preparation-version');
   }
 
-  function updatePreparation(completed, total, file) {
+  function updatePreparation(completed, total, file, version) {
     showPreparation();
     if (!panel) return;
+    if (version) versionLabel.textContent = `Version: ${version}`;
     progress.max = Math.max(total, 1);
     progress.value = completed;
     const percent = total ? Math.round((completed / total) * 100) : 0;
@@ -48,7 +52,7 @@
   navigator.serviceWorker.addEventListener('message', event => {
     const message = event.data || {};
     if (message.type === 'OFFLINE_CACHE_PROGRESS') {
-      updatePreparation(message.completed, message.total, message.file);
+      updatePreparation(message.completed, message.total, message.file, message.version);
     } else if (message.type === 'OFFLINE_CACHE_COMPLETE') {
       finishPreparation();
     }

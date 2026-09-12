@@ -112,12 +112,37 @@ initializeIgnoredValuesSettings();
 
 async function ingestFiles(files) {
   const warnings = [];
-  for (const f of files) {
+  const batches = [];
+  for (let index = 0; index < files.length; index++) {
+    const f = files[index];
+    setProcessingMessage(`Reading ${index + 1} of ${files.length}: ${f.name}`);
+    await new Promise(resolve => setTimeout(resolve, 0));
     const rows = await CSVUtils.parseFile(f);
     warnings.push({ fileName: f.name, missing: DLPUtils.findMissingColumns(rows, EXPECTED_ALERT_COLUMNS) });
-    ingest(rows);
+    batches.push(rows);
   }
+  setProcessingMessage('Building alert views…');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  ingest(batches.flat());
   DLPUtils.showUploadWarning(uploadWarning, warnings);
+}
+
+const processingOverlay = document.getElementById('alertProcessing');
+const processingText = document.getElementById('alertProcessingText');
+function setProcessingMessage(message) { processingText.textContent = message; }
+async function processUploadedFiles(files) {
+  processingOverlay.hidden = false;
+  document.body.setAttribute('aria-busy', 'true');
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  try {
+    await ingestFiles(files);
+  } catch (error) {
+    uploadWarning.hidden = false;
+    uploadWarning.textContent = `Unable to process the selected files: ${error.message}`;
+  } finally {
+    processingOverlay.hidden = true;
+    document.body.removeAttribute('aria-busy');
+  }
 }
 
 fileInput.addEventListener('change', async (e)=>{
@@ -134,7 +159,7 @@ fileInput.addEventListener('change', async (e)=>{
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
-  await ingestFiles(Array.from(files));
+  await processUploadedFiles(Array.from(files));
 });
 
 const drop = $('#drop');
@@ -154,7 +179,7 @@ drop.addEventListener('drop', async (e)=>{
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
   currentFilename = Array.from(files).map(f => f.name).join(', ');
-  await ingestFiles(Array.from(files));
+  await processUploadedFiles(Array.from(files));
 });
 
 document.getElementById('demoBtn').addEventListener('click', async () => {
