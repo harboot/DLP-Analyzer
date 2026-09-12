@@ -1,13 +1,13 @@
 /* Alert Analyzer: utils */
 
 const ICON_COL = '__Copy';
-  const VISIBLE_COLS = [ICON_COL, 'Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Size', 'Details', 'Status'];
+  const VISIBLE_COLS = [ICON_COL, 'Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Details'];
   const ALL_COLS = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
   const FILTERABLE_COLS = ['Time', 'Source', 'Policies', 'Channel', 'Destination', 'File Name', 'Details', 'Status'];
 
   const HEADER_LABELS = {
-    [ICON_COL]: '',
-    Time: 'First / Last Seen',
+    [ICON_COL]: 'Copy',
+    Time: 'Incident Date',
     Source: 'Source',
     Policies: 'Policies',
     Channel: 'Channel',

@@ -8,6 +8,7 @@
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
   <script src="js/risk-scoring.js"></script>
+  <script src="lib/xlsx.full.min.js"></script>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -17,27 +18,30 @@
     <header class="page-header split-header">
       <div class="page-intro"><h1>Risk Scoring</h1>
       <p class="page-description">Combine weighted Boolean rules to rank DLP alerts by risk.</p></div>
-      <div class="input-guide" aria-label="Input guide">
-        <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Forcepoint DLP alert CSV files for analysis. An exported Risk Scoring JSON file is optional when restoring a rule collection.</div>
-      </div>
     </header>
 
     <div class="panel">
-      <div class="row">
+      <div class="row risk-upload-row">
+        <div class="row-left"></div>
+        <div class="row-right">
+          <span id="csvName" class="muted-sm"></span>
+          <button class="btn" id="btnUpload" title="Upload DLP alert files">Upload DLP Alerts (CSV or XLSX)</button>
+          <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
+          <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
+          <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open AI Rule Generator" title="AI Rule Generator">⚙</button>
+          <input id="csvInput" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        </div>
+      </div>
+      <div class="row risk-actions-row">
         <div class="row-left">
           <button class="btn" id="btnNewFile" title="New rule">➕ New Rule</button>
           <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
           <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
-          <button class="btn" id="btnUpload" title="Upload CSV">📤 Upload</button>
-          <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
           <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
-          <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
-          <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
         <div class="row-right">
 		  <input id="search" class="textinput" placeholder="Search by name or content..." style="min-width:160px" />
-          <span id="csvName" class="muted-sm"></span>
         </div>
       </div>
     </div>
@@ -101,11 +105,12 @@
     </div>
 
     <div id="resultWrap">
-      <output id="onNames" class="muted-sm">Upload a CSV, then press RUN ALL to rank alerts by combined risk or RUN to inspect one rule.</output>
+      <output id="onNames" class="muted-sm">Upload DLP alerts, then press RUN ALL to rank them by combined risk or RUN to inspect one rule.</output>
     </div>
 
-    <details class="section cjs-card ai-filter-generator">
-      <summary id="aiFilterTitle">AI Rule Generator</summary>
+    <div id="aiSettingsDialog" class="settings-dialog" hidden>
+      <div class="settings-box ai-filter-generator" role="dialog" aria-modal="true" aria-labelledby="aiFilterTitle">
+      <div class="settings-heading"><strong id="aiFilterTitle">AI Rule Generator</strong><button id="aiSettingsClose" class="icon-btn" type="button" aria-label="Close AI Rule Generator">×</button></div>
       <div class="editor" aria-labelledby="aiFilterTitle">
         <div class="cjs-chatrow">
           <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
@@ -118,7 +123,8 @@
         </div>
         <div id="chatbot-status" class="status" aria-live="polite"></div>
       </div>
-    </details>
+      </div>
+    </div>
   </div>
 
 <script>let openAiApiKey = '';</script>
@@ -142,6 +148,11 @@ const escapeHtml = DLPUtils.escapeHtml;
 
 /* Converts a value to a display-safe string. */
 const safe = DLPUtils.toText;
+
+const aiSettingsDialog = $('#aiSettingsDialog');
+$('#settingsBtn').addEventListener('click', () => { aiSettingsDialog.hidden = false; });
+$('#aiSettingsClose').addEventListener('click', () => { aiSettingsDialog.hidden = true; });
+aiSettingsDialog.addEventListener('click', (event) => { if (event.target === aiSettingsDialog) aiSettingsDialog.hidden = true; });
 
 
 /* =================================================================== */
@@ -350,6 +361,25 @@ function getRowCell(fileId, cls) {
 /* Reads one CSV File and returns rows as an object array. */
 function parseCSVFile(file) {
   return CSVUtils.parseFile(file);
+}
+
+function incidentDate(row) {
+  return safe(row.IncidentTime).split(',')[0].trim();
+}
+
+function incidentTooltip(row) {
+  return `ID: ${safe(row.ID)}\nIncident Time: ${safe(row.IncidentTime)}\nEvent Time: ${safe(row.EventTime)}`;
+}
+
+function downloadAlertCsv(rows, filename) {
+  const columns = Array.from(new Set(rows.flatMap(row => Object.keys(row))));
+  const quote = value => `"${safe(value).replace(/"/g, '""')}"`;
+  const csv = [columns.map(quote).join(','), ...rows.map(row => columns.map(column => quote(row[column])).join(','))].join('\n');
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 /* Compiles a JS predicate safely (restricts dangerous global access). */
@@ -768,11 +798,11 @@ async function loadCsvFiles(files) {
     matchesCache.clear();
     $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
     out.textContent = totalRows ?
-      'CSV loaded. Press RUN ALL or open a rule and press RUN for that rule.' :
-      'CSV loaded with 0 parsed data rows.';
+      'DLP alerts loaded. Press RUN ALL or open a rule and press RUN for that rule.' :
+      'The uploaded alert files contain 0 parsed data rows.';
   } catch (err) {
     csvNameEl.textContent = '';
-    out.textContent = 'CSV error: ' + (err?.message || String(err));
+    out.textContent = 'Alert file error: ' + (err?.message || String(err));
   }
 }
 
@@ -799,7 +829,7 @@ $('#btnLoadSample').addEventListener('click', async (event) => {
 btnRunAll.addEventListener('click', async () => {
   const out = document.getElementById('onNames');
   if (!lastCSVRows) {
-    out.textContent = 'No CSV yet. Click Upload first.';
+    out.textContent = 'No DLP alerts loaded. Upload alerts first.';
     return;
   }
   matchesCache.clear();
@@ -831,7 +861,7 @@ if (elRunThis)
       return;
     }
     if (!lastCSVRows || !lastCSVRows.length) {
-      out.textContent = 'No CSV yet. Click Upload first.';
+      out.textContent = 'No DLP alerts loaded. Upload alerts first.';
       return;
     }
     await runOneFileInternal(currentFileId, { updateUI: true, openTable: true });
@@ -917,29 +947,29 @@ function openRiskTable(enabledFiles) {
       const rRaw = alert.row;
       const row = normalizedRowByRaw.get(rRaw);
       const ruleText = alert.matchedRules.map((rule) => `${rule.name} (+${rule.weight})`).join(', ');
-      const timeText = safe(row.IncidentTime);
-      return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
+      const dateText = incidentDate(row);
+      const timeTooltip = incidentTooltip(row);
+      const completeRow = { ...rRaw, Score: alert.score, 'Triggered rules': ruleText };
+      return `<tr data-row-json='${escapeHtml(JSON.stringify(completeRow))}'>
         <td class="copy-column"><button class="icon-copy" title="Copy row data" aria-label="Copy row data" data-act="copy-row">${DLPUtils.copyIconSvg()}</button></td>
         <td><strong class="risk-score">${alert.score}</strong></td>
         <td title="${escapeHtml(ruleText)}">${escapeHtml(ruleText)}</td>
-        <td title="${escapeHtml(timeText)}">${escapeHtml(timeText)}</td>
+        <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${escapeHtml(safe(row.Source))}">${escapeHtml(safe(row.Source))}</td>
         <td title="${escapeHtml(safe(row.Policies))}">${escapeHtml(safe(row.Policies))}</td>
         <td title="${escapeHtml(safe(row.Channel))}">${escapeHtml(safe(row.Channel))}</td>
         <td title="${escapeHtml(safe(row.Destination))}">${escapeHtml(safe(row.Destination))}</td>
         <td title="${escapeHtml(safe(row.FileName))}">${escapeHtml(safe(row.FileName))}</td>
+        <td title="${escapeHtml(safe(row.Details))}">${escapeHtml(safe(row.Details))}</td>
       </tr>`;
     }).join('');
 
     wrap.innerHTML = `<output id="onNames" class="muted-sm">Scored ${scored.length} of ${lastCSVRows.length} alerts with ${rules.length} enabled rules.</output>
     <section class="section risk-results">
-      <header><strong>Alerts ranked by combined risk</strong><div class="right">
-        <label class="muted-sm">Rows per page <select class="textinput" data-role="page-size"><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label>
-        <span class="muted-sm">${scored.length} scored alerts</span>
-      </div></header>
-      <div style="overflow:auto"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th>Risk score</th><th>Triggered rules</th><th>INC time</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th></tr></thead>
-      <tbody>${bodyHTML || '<tr><td colspan="9" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
-      <div class="pager" data-role="pager"><span class="muted-sm">${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length} • Page ${page} of ${pages}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div>
+      <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${scored.length} scored alerts</span></header>
+      <div style="overflow:auto"><table class="risk-result-cols"><thead><tr><th class="copy-column">Copy</th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
+      <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
+      <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right"><button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
     </section>`;
 
     wrap.querySelector('table').addEventListener('click', (event) => {
@@ -947,6 +977,7 @@ function openRiskTable(enabledFiles) {
       const rowElement = button?.closest('tr');
       if (rowElement?.dataset.rowJson) copyRowToClipboard(JSON.parse(rowElement.dataset.rowJson), button);
     });
+    wrap.querySelector('[data-act="export-alerts"]').addEventListener('click', () => downloadAlertCsv(scored.map(alert => ({ ...alert.row, Score: alert.score, 'Triggered rules': alert.matchedRules.map(rule => `${rule.name} (+${rule.weight})`).join(', ') })), 'risk-scoring-alerts.csv'));
     wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
       pageSize = Number(event.target.value) || 50;
       page = 1;
@@ -974,12 +1005,11 @@ function openResultTable(fileId) {
     return;
   }
   const rows = rec.rows || [];
-  const cols = [ // Add an empty column for the copy icon
-    '',
-    'INC time', 'Source', 'Policies', 'Channel', 'Destination',
-    'File Name', 'Details', 'Size'
+  const cols = [
+    'Copy', 'Incident Date', 'Source', 'Policies', 'Channel', 'Destination',
+    'File Name', 'Details'
   ];
-  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column" aria-label="Copy row"' : ''}>${index === 0 ? '' : escapeHtml(h)}</th>`).join('');
+  const headerHTML = cols.map((h, index) => `<th${index === 0 ? ' class="copy-column"' : ''}>${escapeHtml(h)}</th>`).join('');
   let page = 1;
   let pageSize = 50;
 
@@ -991,19 +1021,19 @@ function openResultTable(fileId) {
     const bodyHTML = pageRows
     .map((rRaw) => {
       const rc = normalizedRowByRaw.get(rRaw);
-      const timeText = safe(rc.IncidentTime);
+      const dateText = incidentDate(rc);
+      const timeTooltip = incidentTooltip(rc);
       // Add `data-row-json` to <tr> to store raw data
       // Add a <td> with a copy button
       return `<tr data-row-json='${escapeHtml(JSON.stringify(rRaw))}'>
         <td class="copy-column"><button class="icon-copy" title="Copy row data" aria-label="Copy row data" data-act="copy-row">${DLPUtils.copyIconSvg()}</button></td>
-        <td title="${timeText}">${escapeHtml(timeText)}</td>
+        <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${safe(rc.Source)}">${escapeHtml(safe(rc.Source))}</td>
         <td title="${safe(rc.Policies)}">${escapeHtml(safe(rc.Policies))}</td>
         <td title="${safe(rc.Channel)}">${escapeHtml(safe(rc.Channel))}</td>
         <td title="${safe(rc.Destination)}">${escapeHtml(safe(rc.Destination))}</td>
         <td title="${safe(rc.FileName)}">${escapeHtml(safe(rc.FileName))}</td>
         <td title="${safe(rc.Details)}">${escapeHtml(safe(rc.Details))}</td>
-        <td title="${safe(rRaw['Transaction Size (KB)'] ?? rc.Size)}">${escapeHtml(safe(rRaw['Transaction Size (KB)'] ?? rc.Size))}</td>
       </tr>`;
     })
     .join('');
@@ -1013,7 +1043,8 @@ function openResultTable(fileId) {
       <header>
         <strong>Results • ${escapeHtml(f.name)}</strong>
         <div class="right">
-          <label class="muted-sm">Rows per page
+          <button class="btn" data-act="export-alerts">Export CSV</button>
+          <label class="muted-sm">Rows/page
             <select class="textinput" data-role="page-size">
               <option value="50"${pageSize === 50 ? ' selected' : ''}>50</option>
               <option value="100"${pageSize === 100 ? ' selected' : ''}>100</option>
@@ -1055,6 +1086,7 @@ function openResultTable(fileId) {
           }
       });
     }
+    wrap.querySelector('[data-act="export-alerts"]').addEventListener('click', () => downloadAlertCsv(rows, `${f.name.replace(/\.[^.]+$/, '')}-matches.csv`));
 
     wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
       pageSize = Number(event.target.value) || 50;

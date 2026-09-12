@@ -11,24 +11,17 @@
 <div class="wrap">
   <header class="page-header split-header">
     <div class="page-intro">
-      <h1 title="Forcepoint DLP – Policy Viewer">Forcepoint DLP – Policy Viewer</h1>
+      <h1>Policy Viewer</h1>
       <p class="page-description">Validate and display Forcepoint DLP policies and rules in a searchable, filterable, copyable, and exportable table.</p>
-    </div>
-    <div class="input-guide" aria-label="Input guide">
-      <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>“Forcepoint DLP Extracted Policies” JSON files, selected individually, as multiple files, or as one folder.</div>
     </div>
   </header>
 
   <div class="panel">
     <div class="row">
       <div class="row-left">
-        <label class="drop" title="Pick one or multiple JSON files">
+        <label class="drop" title="Select one or more policy JSON files">
           <input id="fileInput" type="file" accept=".json" multiple />
-          Select JSON Files
-        </label>
-        <label class="drop" title="Pick a folder (recursive) to load many JSON files">
-          <input id="folderInput" type="file" webkitdirectory directory multiple />
-          Select Folder
+          Upload Policy (JSON)
         </label>
         <button class="btn" id="loadSampleBtn" title="Load a sample DLP policy">Load sample</button>
         <button class="btn" id="exportCsv" title="Export filtered rows (no exception details)">Export CSV (filtered)</button>
@@ -83,7 +76,6 @@
 (function(){
   /* ===================== Setup refs ===================== */
   const fileInput = document.getElementById('fileInput');
-  const folderInput = document.getElementById('folderInput');
   const loadSampleBtn = document.getElementById('loadSampleBtn');
   const rulesBody = document.getElementById('rulesBody');
   const logOut = document.getElementById('logOut');
@@ -234,7 +226,6 @@
   }
 
   fileInput.addEventListener('change', e => addFiles(e.target.files));
-  folderInput.addEventListener('change', e => addFiles(e.target.files));
   loadSampleBtn.addEventListener('click', async () => {
     loadSampleBtn.disabled = true;
     try {

@@ -3,28 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DLP Analyzer — Rule Identifier</title>
+<title>DLP Analyzer — Policies Matcher</title>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
+  <script src="lib/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="page-rule-identifier tool-page">
   <div class="wrap">
     <header class="page-header split-header">
-      <div class="page-intro"><h1>DLP Alerts ↔ Policies Matcher</h1>
+      <div class="page-intro"><h1>Policies Matcher</h1>
       <p class="page-description">Match alert classifiers to DLP policy rules, add <em>Rule Name</em> to the results, and provide charts, processing logs, and an output CSV.</p></div>
-      <div class="input-guide" aria-label="Input guide">
-        <div class="input-guide-item"><span class="input-guide-label">Uploaded files</span>Two CSV types: <strong>DLP Alerts</strong> exports and <strong>DLP Policies</strong> exports. Files or a folder can be selected together.</div>
-      </div>
     </header>
 
     <div class="panel">
       <div class="row">
-        <div class="drop" id="drop-zone">
-          <div style="font-size:16px;margin-bottom:8px"><b>Upload CSV (Alerts & Policies)</b></div>
-          <div class="muted" style="font-size:13.5px;margin-bottom:10px">Select files or folders, or drag & drop here</div>
-          <button class="btn" id="btn-select">Select files / folder</button>
-          <input id="file-all" type="file" accept=".csv,text/csv" multiple webkitdirectory />
+        <div class="row" id="drop-zone">
+          <label class="drop">Upload Policy (JSON)<input id="file-policies" type="file" accept=".json,application/json" multiple /></label>
+          <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
         </div>
         <div class="row" style="gap:10px">
           <button class="btn" id="btn-load-sample">Load sample</button>
@@ -188,15 +184,9 @@ function classifySetFromParsedHeader(header, rows){
 /* -------------------------- Upload handling ------------------------- */
 /* Single uploader with drag & drop and folder selection */
 const drop = $('#drop-zone');
-const btnSelect = $('#btn-select');
 const fileAll = $('#file-all');
+const filePolicies = $('#file-policies');
 let reading = false;
-
-btnSelect.addEventListener('click', () => {
-  // ensure folder selection is enabled
-  fileAll.setAttribute('webkitdirectory', '');
-  fileAll.click();
-});
 
 drop.addEventListener('dragover', e => {
   e.preventDefault();
@@ -213,9 +203,13 @@ drop.addEventListener('drop', async e => {
 });
 
 fileAll.addEventListener('change', async e => {
-  const files = [...e.target.files].filter(isCSVFile); // works with folder picker
+  const files = [...e.target.files].filter(isAlertFile);
   await handleFiles(files);  // <-- the existing function
   fileAll.value = '';        // avoid stale value blocking next change
+});
+filePolicies.addEventListener('change', async e => {
+  await handlePolicyJsonFiles([...e.target.files]);
+  filePolicies.value = '';
 });
 
 // ---- Helpers for robust CSV detection & folder DnD traversal ----
@@ -224,6 +218,35 @@ function isCSVFile(f){
   const type = (f && f.type || '').toLowerCase();
   // Some browsers set empty type for dropped files — rely on extension too
   return /\.csv$/i.test(name) || type.includes('csv');
+}
+function isAlertFile(f){
+  return isCSVFile(f) || /\.xlsx$/i.test((f && f.name) || '');
+}
+
+async function handlePolicyJsonFiles(files){
+  const warnings = [];
+  for (const file of files) {
+    try {
+      const data = JSON.parse(await file.text());
+      const policy = data.policy;
+      if (!policy || !Array.isArray(policy.rules)) throw new Error('policy.rules is required');
+      policy.rules.forEach(rule => policiesRows.push({
+        'Policy Name': policy.policy_name || '',
+        'Rule Name': rule.rule_name || '',
+        'Relation': rule.condition_relation_type || 'AND',
+        'Classifiers': (rule.classifiers || []).map(item => item.classifier_name || '').filter(Boolean).join('; ')
+      }));
+      logLine(`[Policies] ${file.name} OK (${policy.rules.length} rules)`);
+    } catch (error) {
+      warnings.push({ fileName: file.name, missing: ['valid policy.rules JSON'] });
+      logLine(`[Skipped] ${file.name} — ${error.message}`);
+    }
+  }
+  DLPUtils.showUploadWarning($('#uploadWarning'), warnings);
+  totalRules = policiesRows.length;
+  stat.noClassifiers = policiesRows.filter(p => !hasNonEmptyClassifiers(p)).length;
+  refreshKPIs();
+  $('#btn-process').disabled = !(alertsRows.length && policiesRows.length);
 }
 
 async function collectDroppedCSVFiles(dt){
@@ -271,17 +294,15 @@ async function handleFiles(files){
     let newAlerts=0, newRules=0;
 	const warnings = [];
 	for (const f of files){
-	  const text = await f.text();
-	  const textNoBom = text.replace(/\uFEFF/g, '');
-	  const firstLine = (textNoBom.split(/\r\n|\n|\r/)[0] || '').trim();
+	  const parsedRecords = await CSVUtils.parseFile(f);
+	  const header = parsedRecords.headers || Object.keys(parsedRecords[0] || {});
+	  const objs = Array.from(parsedRecords);
+	  const firstLine = header.join(',');
 
 	  // 1) Classify using raw header line (row #1 only)
 	  let kind = detectKindFromHeaderLine(firstLine);
 
-	  // 2) Parse CSV and also compute parsed header/rows
-	  const rows = await CSVUtils.parseText(textNoBom);
-	  const { header, rows: objs } = rowsToObjects(rows);
-	  Object.defineProperty(objs, 'headers', { value: header });
+	  // 2) Use the shared CSV/XLSX parser and compute expected columns.
 	  const alertMissing = DLPUtils.findMissingColumns(objs, ['Violation Triggers', 'Policies']);
 	  const policyMissing = DLPUtils.findMissingColumns(objs, ['Rule Name', 'Relation', 'Classifiers']);
 
