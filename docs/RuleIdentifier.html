@@ -34,6 +34,7 @@
           <span id="alerts-file-name" class="muted-sm"></span>
           <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
           <button class="btn" id="btn-process" disabled>Process</button>
+          <button class="btn" id="btn-reset" type="button">Reset</button>
           <a id="download-link" class="btn" style="display:none" download="dlp-alerts-with-rules.csv">Download CSV</a>
         </div>
       </div>
@@ -55,8 +56,8 @@
 
       <div class="section">
         <header>
-          <div style="font-weight:700">Alerts per Rule Name</div>
-          <div class="muted">sorted by count (descending)</div>
+          <div style="font-weight:700">Alerts by Policy and Rule Name</div>
+          <div class="muted">rules are grouped by policy</div>
         </header>
         <div class="pad">
           <canvas id="ruleChart" height="460"></canvas>
@@ -457,17 +458,26 @@ function buildCSV(header, rows){
 
 /* --------------------------- Bar chart ------------------------------ */
 function renderRuleChart(countMap){
-  const entries = Object.entries(countMap)
-    .filter(([k,v]) => k && k.trim() !== '' && v > 0)
-    .sort((a,b) => b[1] - a[1]); // largest first
+  const entries = [];
+  Object.entries(countMap)
+    .sort(([,a],[,b]) => {
+      const total = group => group.unmatched + Object.values(group.rules).reduce((sum, count) => sum + count, 0);
+      return total(b) - total(a);
+    })
+    .forEach(([policyName, group]) => {
+      const rules = Object.entries(group.rules).filter(([,count]) => count > 0).sort((a,b) => b[1] - a[1]);
+      if (rules.length) entries.push({ type: 'policy', label: policyName });
+      rules.forEach(([ruleName, count]) => entries.push({ type: 'rule', label: ruleName, count }));
+      if (group.unmatched > 0) entries.push({ type: 'unmatched', label: policyName, count: group.unmatched });
+    });
 
   // ---- Canvas sizing: full container width ----
   const container = chartCanvas.closest('.pad') || chartCanvas.parentElement || document.body;
   const cssW = Math.max(320, Math.floor(container.getBoundingClientRect().width || container.clientWidth || window.innerWidth));
   chartCanvas.style.width = '100%';                 // CSS width (for layout)
   const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-  const barH = 16, gap = 6;
-  const cssH = Math.max(120, 28 + entries.length * (barH + gap));
+  const barH = 16, gap = 6, rowH = barH + gap;
+  const cssH = Math.max(120, 28 + entries.length * rowH);
 
   chartCanvas.width  = cssW * dpr;                  // internal bitmap
   chartCanvas.height = cssH * dpr;
@@ -482,7 +492,7 @@ function renderRuleChart(countMap){
 
   // ---- Layout paddings (dynamic) ----
   c.font = '11px system-ui';
-  const maxVal = Math.max(1, ...entries.map(e => e[1]));
+  const maxVal = Math.max(1, ...entries.map(entry => entry.count || 0));
   const maxValW = c.measureText(String(maxVal)).width;
   const leftGutter = Math.min( Math.max(Math.floor(cssW * 0.40), 260), 460); // 28% width, min 260, max 460
   const pad = { t: 6, r: 18 + Math.ceil(maxValW) + 10, b: 26, l: leftGutter };
@@ -517,9 +527,16 @@ function renderRuleChart(countMap){
   }
 
   // ---- Bars + labels (no overlap) ----
-  entries.forEach((d, i) => {
-    const [rule, count] = d;
-    const y = y0 + i * (barH + gap);
+  entries.forEach((entry, i) => {
+    const y = y0 + i * rowH;
+    if (entry.type === 'policy') {
+      const label = ellipsize(entry.label, x0 - 18);
+      c.fillStyle = textCol;
+      c.font = 'bold 14px system-ui';
+      c.fillText(label, 8, y + barH - 3);
+      return;
+    }
+    const count = entry.count;
     const w = Math.max(0, (count / maxVal) * (x1 - x0));
 
     // bar
@@ -528,7 +545,8 @@ function renderRuleChart(countMap){
 
     // left label (Rule Name) — stays left in gutter
     const leftMax = x0 - 12;
-    const txt = ellipsize(rule, leftMax - 10);
+    const label = entry.type === 'rule' ? `  ${entry.label}` : entry.label;
+    const txt = ellipsize(label, leftMax - 10);
     c.fillStyle = textCol;
     c.font = '14px system-ui';
     c.textAlign = 'left';
@@ -623,7 +641,9 @@ function hardReset(){
   alertsHeader=[]; alertsRows=[]; policiesRows=[]; totalRules=0;
   stat.total=0; stat.processed=0; stat.pending=0; stat.identified=0; stat.unidentified=0; stat.noClassifiers=0;
   refreshKPIs(); setBar(0);
+  $('#btn-process').disabled=true;
   $('#download-link').style.display='none';
+  DLPUtils.showUploadWarning($('#uploadWarning'), []);
   fileAll.value='';
   filePolicies.value='';
   policyFileName.textContent='';
@@ -636,6 +656,7 @@ function hardReset(){
 
 /* ----------------------------- Bindings ----------------------------- */
 $('#btn-process').addEventListener('click', processAll);
+$('#btn-reset').addEventListener('click', hardReset);
 $('#btn-load-sample').addEventListener('click', async (event) => {
   const button = event.currentTarget;
   button.disabled = true;
