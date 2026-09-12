@@ -87,12 +87,51 @@
   }
 
   const ALERT_COPY_ORDER = ['ID', 'Event Time', 'Incident Time', 'Source', 'Destination', 'Policies', 'Channel', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Action', 'Severity'];
+  const ALERT_COPY_ALIASES = {
+    'Event Time': 'EventTime',
+    'Incident Time': 'IncidentTime',
+    'File Name': 'FileName',
+    'Transaction Size (KB)': 'Size'
+  };
+  const ALERT_ANALYSIS_FIELDS = new Set([
+    'sourceLower',
+    'destinationDomains',
+    'fileTokens',
+    'incidentDate',
+    'incidentHour',
+    'actionLower',
+    'channelLower'
+  ]);
 
   function getAlertRowCells(row) {
     const source = row || {};
-    const canonical = ALERT_COPY_ORDER.filter(key => Object.prototype.hasOwnProperty.call(source, key));
-    const remaining = Object.keys(source).filter(key => !canonical.includes(key));
-    return [...canonical, ...remaining].map(key => [key, toText(source[key])]);
+    if (Array.isArray(source.__uploadedColumns)) {
+      const uploaded = [...new Set(source.__uploadedColumns)]
+        .filter(key => key !== '__uploadedColumns' && Object.prototype.hasOwnProperty.call(source, key));
+      const uploadedSet = new Set(uploaded);
+      const ordered = [
+        ...ALERT_COPY_ORDER.filter(key => uploadedSet.has(key)),
+        ...uploaded.filter(key => !ALERT_COPY_ORDER.includes(key))
+      ];
+      return ordered.map(key => [key, toText(source[key])]);
+    }
+
+    const consumed = new Set();
+    const cells = [];
+
+    ALERT_COPY_ORDER.forEach(label => {
+      const key = Object.prototype.hasOwnProperty.call(source, label) ? label : ALERT_COPY_ALIASES[label];
+      if (!key || !Object.prototype.hasOwnProperty.call(source, key)) return;
+      cells.push([label, toText(source[key])]);
+      consumed.add(label);
+      consumed.add(key);
+    });
+
+    Object.values(ALERT_COPY_ALIASES).forEach(key => consumed.add(key));
+    Object.keys(source).forEach(key => {
+      if (!consumed.has(key) && !ALERT_ANALYSIS_FIELDS.has(key)) cells.push([key, toText(source[key])]);
+    });
+    return cells;
   }
 
   global.DLPUtils = Object.freeze({

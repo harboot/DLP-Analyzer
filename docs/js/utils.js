@@ -233,8 +233,8 @@ const ICON_COL = '__Copy';
 
   // Ensures all required columns exist in a data row
   function ensureCols(row) {
-    const o = {};
-    for (const c of ALL_COLS) o[c] = row[c] ?? '';
+    const o = { ...row };
+    for (const c of ALL_COLS) o[c] ??= '';
     return o;
   }
 
