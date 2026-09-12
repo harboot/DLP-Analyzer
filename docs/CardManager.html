@@ -80,9 +80,12 @@
             <div id="weightHelp" class="muted-sm">Added to an alert's risk score when this rule returns true.</div>
           </label>
 
-          <div id="builtInDetails" hidden>
+          <label>
             <div class="muted-sm">Rule description</div>
-            <textarea id="builtInDescription" class="textinput rule-description" rows="3" readonly aria-label="Rule description"></textarea>
+            <textarea id="inpDescription" class="textinput rule-description" rows="3" aria-label="Rule description" placeholder="Explain what this rule detects."></textarea>
+          </label>
+
+          <div id="builtInDetails" hidden>
             <div id="builtInSettings" class="built-in-settings"></div>
           </div>
 
@@ -283,7 +286,7 @@ const elRunThis = $('#btnRunThis');
 const defaultButton = $('#btnDefault');
 const codeEditorField = $('#codeEditorField');
 const builtInDetails = $('#builtInDetails');
-const builtInDescription = $('#builtInDescription');
+const elDescription = $('#inpDescription');
 const builtInSettings = $('#builtInSettings');
 
 const apiKeyInput = $('#apikey-input');
@@ -321,10 +324,14 @@ chatbotRunButton.addEventListener('click', async () => {
   chatbotRunButton.textContent = 'Generating...';
   chatbotStatus.textContent = 'Generating a JavaScript predicate...';
   try {
-    const code = await runChatbot(task);
-    if (!code) throw new Error('The model did not return any code.');
-    elCode.value = code;
-    chatbotStatus.textContent = 'Rule generated. Choose a name and weight, review the code, and save it.';
+    const generated = await runChatbot(task);
+    if (!currentFileId || fileById(currentFileId)?.builtIn) newFile();
+    elName.value = generated.ruleName;
+    elDescription.value = generated.description;
+    elWeight.value = generated.recommendedWeight;
+    elCode.value = generated.javascript;
+    elMeta.textContent = 'Unsaved AI-generated rule';
+    chatbotStatus.textContent = 'Rule name, description, recommended weight, and JavaScript generated. Review and save the rule.';
     elCode.focus();
   } catch (error) {
     chatbotStatus.textContent = `Generator error: ${error?.message || String(error)}`;
@@ -532,7 +539,8 @@ function openEditor(id) {
   codeEditorField.hidden = !!file.builtIn;
   builtInDetails.hidden = !file.builtIn;
   defaultButton.hidden = !file.builtIn;
-  builtInDescription.textContent = file.description || '';
+  elDescription.value = file.description || '';
+  elDescription.readOnly = !!file.builtIn;
   renderBuiltInSettings(file);
   elWeight.value = RiskScoring.normalizeWeight(file.weight);
   elPath.textContent = file.name;
@@ -619,7 +627,10 @@ function saveCurrent() {
     return;
   }
   file.name = newName;
-  if (!file.builtIn) file.code = elCode.value;
+  if (!file.builtIn) {
+    file.description = elDescription.value.trim();
+    file.code = elCode.value;
+  }
   if (file.builtIn) {
     file.settings ||= {};
     builtInSettings.querySelectorAll('[data-setting]').forEach(input => {
@@ -651,6 +662,8 @@ function deleteFile(id) {
 function clearEditor() {
   elTitle.textContent = 'Editor';
   elName.value = '';
+  elDescription.value = '';
+  elDescription.readOnly = false;
   elCode.value = '';
   elWeight.value = RiskScoring.DEFAULT_WEIGHT;
   elPath.textContent = '';
