@@ -5,8 +5,8 @@ async function runChatbot(prompt){
   if (!openAiApiKey) throw new Error('An OpenAI API Key has not been saved.');
 
   const preprompt = `
-Write a JavaScript predicate for Risk Scoring.
-The code is executed for each data row and must return a boolean.
+Create a complete Risk Scoring rule. The JavaScript code is executed for each
+data row and must return a boolean.
 
 Execution environment:
 - Full dataset: rows (Array<Row>)
@@ -48,9 +48,14 @@ const m = /^\s*(\d{1,2})\s+[A-Za-z]{3,}.?/.exec(s);
 const day = m ? parseInt(m[1], 10) : NaN;
 
 Output format:
-Output only JavaScript code (a plain anonymous function or statement block) whose final result is a boolean.
-Do not include "use strict"; or (function(){...}.
-Multi-statement is allowed; end with return ...;.
+Return only one valid JSON object with these properties:
+- "ruleName": a concise, descriptive English rule name.
+- "description": a concise English explanation of what the rule detects.
+- "recommendedWeight": a non-negative integer representing the recommended risk score.
+- "javascript": a plain anonymous function or statement block whose final result is a boolean.
+Do not wrap the JSON in Markdown fences. In the "javascript" value, do not include
+"use strict"; or (function(){...}. Multi-statement code is allowed and must end
+with return ...;.
 
 Task instruction:
   `;
@@ -64,6 +69,7 @@ Task instruction:
     body: JSON.stringify({
       model: "gpt-5-mini",
       temperature: 1,
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: preprompt },
         { role: "user", content: prompt }
@@ -81,7 +87,26 @@ Task instruction:
   }
 
   const data = await resp.json();
-  const content = data?.choices?.[0]?.message?.content || '';
-  const fenced = content.match(/```(?:javascript|js)?\s*([\s\S]*?)```/i);
-  return (fenced ? fenced[1] : content).trim();
+  return parseGeneratedRule(data?.choices?.[0]?.message?.content || '');
+}
+
+// Parses and validates the structured rule returned by the AI generator.
+function parseGeneratedRule(content) {
+  const trimmed = String(content || '').trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
+  let generated;
+  try {
+    generated = JSON.parse((fenced ? fenced[1] : trimmed).trim());
+  } catch (_) {
+    throw new Error('The model returned an invalid rule format. Please try again.');
+  }
+
+  const ruleName = typeof generated?.ruleName === 'string' ? generated.ruleName.trim() : '';
+  const description = typeof generated?.description === 'string' ? generated.description.trim() : '';
+  const javascript = typeof generated?.javascript === 'string' ? generated.javascript.trim() : '';
+  const recommendedWeight = Number(generated?.recommendedWeight);
+  if (!ruleName || !description || !javascript || !Number.isInteger(recommendedWeight) || recommendedWeight < 0) {
+    throw new Error('The generated rule is missing a name, description, recommended weight, or JavaScript code.');
+  }
+  return { ruleName, description, recommendedWeight, javascript };
 }
