@@ -305,16 +305,15 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
       resize:vertical
     }
     .cjs-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--color-accent-soft)}
-    .ai-filter-generator{margin-top:var(--space-3);padding:0}
-    .ai-filter-generator>summary{
-      cursor:pointer;
-      padding:var(--space-3) var(--space-3);
-      background:var(--color-surface-raised);
-      font-weight:700;
-      list-style-position:inside
-    }
-    .ai-filter-generator[open]>summary{border-bottom:1px solid var(--line)}
-    .ai-filter-generator>summary::marker{color:var(--accent)}
+    .settings-dialog{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:var(--space-6);background:var(--color-overlay-strong)}
+    .settings-dialog[hidden]{display:none}
+    .settings-box{width:min(540px,100%);padding:var(--space-4);border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:var(--panel);box-shadow:0 20px 60px var(--shadow-color)}
+    .settings-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+    .settings-heading .icon-btn{width:30px;height:30px;border:1px solid var(--color-border-strong);border-radius:var(--radius-control);font-size:18px}
+    .settings-heading .icon-btn:hover{background:var(--color-surface-hover)}
+    .settings-box label{display:grid;gap:var(--space-1);margin-top:var(--space-4);font-weight:700}
+    .settings-box .risk-ignore-setting{display:flex;align-items:center;gap:var(--space-2)}
+    .settings-box .risk-ignore-setting input{width:18px;height:18px;margin:0;accent-color:var(--accent2)}
     .textinput{
       padding:var(--space-2) var(--space-2);
       border:1px solid var(--line);
