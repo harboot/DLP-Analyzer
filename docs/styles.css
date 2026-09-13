@@ -1045,7 +1045,7 @@ body.page-dlp-tools .topbar {
   background: var(--color-surface-raised);
 }
 body.page-dlp-tools .brand { font-size: 15px; font-weight: 750; }
-body.page-dlp-tools .current-tool {
+body.page-dlp-tools .app-version {
   overflow: hidden;
   color: var(--color-text-muted);
   font-size: 13px;
@@ -1089,10 +1089,20 @@ body.page-dlp-tools .menu-popover .tab {
   min-height: 36px;
   padding: var(--space-2) var(--space-3);
   align-items: center;
+  gap: var(--space-3);
   border: 0;
   border-radius: var(--radius-control);
   background: transparent;
   text-align: left;
+}
+body.page-dlp-tools .menu-popover .menu-icon {
+  display: inline-flex;
+  width: 20px;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
 }
 body.page-dlp-tools .menu-popover .tab:hover { background: var(--color-surface-hover); }
 body.page-dlp-tools .menu-popover .tab[aria-checked="true"] {

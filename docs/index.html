@@ -14,19 +14,19 @@
   <div class="host">
     <header id="topbar" class="topbar" role="navigation" aria-label="Main menu">
       <div class="brand" aria-label="App title">DLP Analyzer</div>
-      <div class="current-tool" id="currentTool" aria-live="polite">Alert Analyzer</div>
+      <div class="app-version" aria-label="Version 26">v26</div>
       <nav class="menu" aria-label="Tools">
         <button class="menu-trigger" id="menuTrigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolMenu">
           <span class="sr-only">Open tools menu</span><span aria-hidden="true">&#8942;</span>
         </button>
         <div class="menu-popover" id="toolMenu" role="menu" hidden>
-          <button class="tab" data-key="AlertAnalyzer" role="menuitemradio" aria-checked="false">Alert Analyzer</button>
-          <button class="tab" data-key="CardManager" role="menuitemradio" aria-checked="false">Risk Scoring</button>
-          <button class="tab" data-key="PolicyViewer" role="menuitemradio" aria-checked="false">Policy Viewer</button>
-          <button class="tab" data-key="PolicyTuningAdvisor" role="menuitemradio" aria-checked="false">Policy Tuning Advisor</button>
-          <button class="tab" data-key="RuleIdentifier" role="menuitemradio" aria-checked="false">Policies Matcher</button>
-          <button class="tab" data-key="DocViewer" role="menuitemradio" aria-checked="false">Document Viewer</button>
-          <button class="tab" data-key="KeywordGenerator" role="menuitemradio" aria-checked="false">Keyword Generator</button>
+          <button class="tab" data-key="AlertAnalyzer" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#9888;</span><span>Alert Analyzer</span></button>
+          <button class="tab" data-key="CardManager" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#9830;</span><span>Risk Scoring</span></button>
+          <button class="tab" data-key="PolicyViewer" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128196;</span><span>Policy Viewer</span></button>
+          <button class="tab" data-key="PolicyTuningAdvisor" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#9881;</span><span>Policy Tuning Advisor</span></button>
+          <button class="tab" data-key="RuleIdentifier" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128269;</span><span>Policies Matcher</span></button>
+          <button class="tab" data-key="DocViewer" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128065;</span><span>Document Viewer</span></button>
+          <button class="tab" data-key="KeywordGenerator" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128273;</span><span>Keyword Generator</span></button>
         </div>
       </nav>
       <div id="spinner" class="spinner" aria-hidden="true"><span class="spin" aria-label="Loading" title="Loading..."></span></div>
@@ -46,7 +46,6 @@
     const tabs = Array.from(document.querySelectorAll('.tab'));
     const menuTrigger = document.getElementById('menuTrigger');
     const toolMenu = document.getElementById('toolMenu');
-    const currentTool = document.getElementById('currentTool');
     const frame = document.getElementById('appFrame');
     const spinner = document.getElementById('spinner');
     const overlay = document.getElementById('overlay');
@@ -64,7 +63,6 @@
 
     function setActiveTab(key){
       tabs.forEach(btn => btn.setAttribute('aria-checked', String(btn.dataset.key === key)));
-      currentTool.textContent = tabs.find(btn => btn.dataset.key === key)?.textContent || '';
     }
 
     function setMenuOpen(open, { focus = false } = {}) {
