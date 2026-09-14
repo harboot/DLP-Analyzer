@@ -393,6 +393,14 @@ function renderTableSection(tab){
     const heading = document.createElement('strong');
     heading.textContent = 'Top Sources (10)';
     summary.appendChild(heading);
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'icon-copy top-sources-copy';
+    copyButton.title = 'Copy top sources as a table';
+    copyButton.setAttribute('aria-label', 'Copy top sources as a table');
+    copyButton.innerHTML = DLPUtils.copyIconSvg();
+    copyButton.addEventListener('click', () => copyTopSources(topSources, copyButton));
+    summary.appendChild(copyButton);
     for (const [source, count] of topSources) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -422,6 +430,46 @@ function renderTableSection(tab){
 
   updatePager(tab, sec, tableEl);
   return sec;
+}
+
+// Copies the source summary in a compact, human-readable table format.
+async function copyTopSources(topSources, button){
+  const text = ['Source | Number', ...topSources.map(([source, count]) => `${source} | ${count}`)].join('\n');
+  const originalIcon = button.innerHTML;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      if (!copied) throw new Error('Clipboard copy was rejected');
+    }
+    button.innerHTML = '<span aria-hidden="true">✓</span>';
+    button.classList.add('is-copied');
+    button.title = 'Top sources copied';
+    button.setAttribute('aria-label', 'Top sources copied');
+  } catch (error) {
+    button.innerHTML = '<span aria-hidden="true">!</span>';
+    button.classList.add('copy-failed');
+    button.title = 'Failed to copy top sources';
+    button.setAttribute('aria-label', 'Failed to copy top sources');
+    console.error('Failed to copy top sources:', error);
+  }
+
+  window.setTimeout(() => {
+    button.innerHTML = originalIcon;
+    button.classList.remove('is-copied', 'copy-failed');
+    button.title = 'Copy top sources as a table';
+    button.setAttribute('aria-label', 'Copy top sources as a table');
+  }, 1800);
 }
 
 // Renders a tab data table with filtering, sorting, pagination, and metadata.
