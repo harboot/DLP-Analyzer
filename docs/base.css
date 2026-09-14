@@ -21,6 +21,8 @@
   --color-success: #80ed99;
   --color-warning: #ffd166;
   --color-danger: #ef476f;
+  --color-purple: #a78bfa;
+  --color-orange: #fb923c;
   --color-warning-strong: #f59e0b;
   --color-warning-text: #fde68a;
   --color-danger-text: #ff8ca5;
@@ -39,6 +41,8 @@
   --shadow-color: rgba(0, 0, 0, .45);
   --shadow-color-soft: rgba(0, 0, 0, .2);
   --color-danger-soft: rgba(239, 71, 111, .13);
+  --color-purple-soft: rgba(167, 139, 250, .13);
+  --color-orange-soft: rgba(251, 146, 60, .13);
   --shadow-panel: 0 12px 32px rgba(0, 0, 0, .12);
   --shadow-popover: 0 6px 18px rgba(0, 0, 0, .35);
   --shadow-dialog: 0 18px 48px rgba(0, 0, 0, .5);
