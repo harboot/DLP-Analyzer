@@ -6,7 +6,7 @@ body.tool-page .page-header {
   padding: var(--space-4);
   border: 1px solid var(--color-border-interactive);
   border-radius: var(--radius-card);
-  background: linear-gradient(120deg, var(--color-accent-soft), var(--color-purple-soft) 48%, var(--color-orange-soft));
+  background: linear-gradient(120deg, rgba(29, 78, 216, .24), rgba(14, 116, 144, .2) 55%, var(--color-surface-raised));
   box-shadow: var(--shadow-panel);
   margin-bottom: var(--space-4);
 }

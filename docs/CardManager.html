@@ -172,6 +172,13 @@ const escapeHtml = DLPUtils.escapeHtml;
 /* Converts a value to a display-safe string. */
 const safe = DLPUtils.toText;
 
+/* Adds a decorative channel-type icon while preserving the original channel label. */
+function channelWithIcon(value) {
+  const label = safe(value);
+  const icon = DLPUtils.channelIconEntity(label);
+  return icon ? `<span class="channel-icon" aria-hidden="true">${icon}</span>${escapeHtml(label)}` : escapeHtml(label);
+}
+
 const aiSettingsDialog = $('#aiSettingsDialog');
 $('#settingsBtn').addEventListener('click', () => { aiSettingsDialog.hidden = false; });
 $('#aiSettingsClose').addEventListener('click', () => { aiSettingsDialog.hidden = true; });
@@ -1017,7 +1024,7 @@ function openRiskTable(enabledFiles) {
         <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${escapeHtml(safe(row.Source))}">${escapeHtml(safe(row.Source))}</td>
         <td title="${escapeHtml(safe(row.Policies))}">${escapeHtml(safe(row.Policies))}</td>
-        <td title="${escapeHtml(safe(row.Channel))}">${escapeHtml(safe(row.Channel))}</td>
+        <td title="${escapeHtml(safe(row.Channel))}">${channelWithIcon(row.Channel)}</td>
         <td title="${escapeHtml(safe(row.Destination))}">${escapeHtml(safe(row.Destination))}</td>
         <td title="${escapeHtml(safe(row.FileName))}">${escapeHtml(safe(row.FileName))}</td>
         <td title="${escapeHtml(safe(row.Details))}">${escapeHtml(safe(row.Details))}</td>
@@ -1090,7 +1097,7 @@ function openResultTable(fileId) {
         <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${safe(rc.Source)}">${escapeHtml(safe(rc.Source))}</td>
         <td title="${safe(rc.Policies)}">${escapeHtml(safe(rc.Policies))}</td>
-        <td title="${safe(rc.Channel)}">${escapeHtml(safe(rc.Channel))}</td>
+        <td title="${escapeHtml(safe(rc.Channel))}">${channelWithIcon(rc.Channel)}</td>
         <td title="${safe(rc.Destination)}">${escapeHtml(safe(rc.Destination))}</td>
         <td title="${safe(rc.FileName)}">${escapeHtml(safe(rc.FileName))}</td>
         <td title="${safe(rc.Details)}">${escapeHtml(safe(rc.Details))}</td>

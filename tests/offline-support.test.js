@@ -26,6 +26,13 @@ test('the fetch handler only handles same-origin GET requests', () => {
   assert.match(workerSource, /url\.origin !== self\.location\.origin/);
 });
 
+test('installed clients only check for updates when requested', () => {
+  const offlineSource = fs.readFileSync(path.join(root, 'offline.js'), 'utf8');
+  assert.match(offlineSource, /navigator\.serviceWorker\.controller\s*\? navigator\.serviceWorker\.getRegistration/);
+  assert.match(offlineSource, /async checkForUpdate\(\)/);
+  assert.match(offlineSource, /await registration\.update\(\)/);
+});
+
 test('CSV parser supports quoted commas, escaped quotes, and newlines', async () => {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);

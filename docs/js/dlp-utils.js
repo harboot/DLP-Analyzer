@@ -27,6 +27,16 @@
     return toText(value).replace(/\t/g, ' ').replace(/[\r\n]/g, ' ');
   }
 
+  function channelIconEntity(value) {
+    const channel = toText(value).toUpperCase();
+    if (channel.includes('EMAIL')) return '&#9993;';
+    if (channel.includes('HTTP')) return '&#127760;';
+    if (channel.includes('PRINT')) return '&#128424;';
+    if (channel.includes('APPLICATION')) return '&#128172;';
+    if (channel.includes('REMOVABLE_MEDIA')) return '&#128190;';
+    return '';
+  }
+
   function findMissingColumns(rows, expectedColumns) {
     const available = new Set();
     (Array.isArray(rows?.headers) ? rows.headers : []).forEach(key => available.add(String(key).trim().toLowerCase()));
@@ -140,6 +150,7 @@
     toText,
     escapeHtml,
     sanitizeForTSV,
+    channelIconEntity,
     findMissingColumns,
     showUploadWarning,
     copyIconSvg,

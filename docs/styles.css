@@ -1111,6 +1111,23 @@ body.page-dlp-tools .menu-popover .tab {
   background: transparent;
   text-align: left;
 }
+body.page-dlp-tools .menu-popover .menu-action {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  align-items: center;
+  gap: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+body.page-dlp-tools .menu-popover .menu-action:hover { background: var(--color-surface-hover); }
+body.page-dlp-tools .menu-popover .menu-action:disabled { color: var(--color-text-muted); cursor: wait; }
+body.page-dlp-tools .menu-popover .menu-separator { height: 1px; margin: var(--space-2) var(--space-3); background: var(--color-border); }
+.channel-icon { display: inline-block; min-width: 20px; margin-right: var(--space-1); text-align: center; text-decoration: none; }
 body.page-dlp-tools .menu-popover .menu-icon {
   display: inline-flex;
   width: 20px;

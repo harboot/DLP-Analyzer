@@ -573,7 +573,11 @@ function renderDataTable(tab){
         const a = document.createElement('a');
         a.href = '#';
         a.className = 'link copy-cell';
-        a.textContent = shown;
+        if (col === 'Channel' && DLPUtils.channelIconEntity(full)) {
+          a.innerHTML = `<span class="channel-icon" aria-hidden="true">${DLPUtils.channelIconEntity(full)}</span>${escapeHtml(shown)}`;
+        } else {
+          a.textContent = shown;
+        }
         a.title = full;
         a.dataset.value = full;
         a.addEventListener('click',(e)=>{
