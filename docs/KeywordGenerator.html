@@ -100,6 +100,7 @@ Billable | BPI Non-Voice
   </div>
 
   <script src="js/dlp-utils.js"></script>
+  <script src="js/sample-loader.js"></script>
   <script src="js/KG_script.js"></script>
   <script>
     document.getElementById('loadSampleBtn').addEventListener('click', async (event) => {
@@ -107,12 +108,11 @@ Billable | BPI Non-Voice
       button.disabled = true;
       try {
         const [subjects, rules] = await Promise.all([
-          fetch('sample/keywords.txt'),
-          fetch('sample/keyword-rules.txt')
+          loadSample('sample/keywords.txt'),
+          loadSample('sample/keyword-rules.txt')
         ]);
-        if (!subjects.ok || !rules.ok) throw new Error('A sample file could not be retrieved.');
-        document.getElementById('subjects').value = await subjects.text();
-        document.getElementById('rules').value = await rules.text();
+        document.getElementById('subjects').value = subjects;
+        document.getElementById('rules').value = rules;
         document.getElementById('genBtn').click();
       } catch (error) {
         const container = document.getElementById('errorContainer');

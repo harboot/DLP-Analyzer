@@ -7,6 +7,7 @@
 
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
+  <script src="js/sample-loader.js"></script>
   <script src="js/risk-scoring.js"></script>
   <script src="lib/xlsx.full.min.js"></script>
 
@@ -855,9 +856,8 @@ $('#btnLoadSample').addEventListener('click', async (event) => {
   const button = event.currentTarget;
   button.disabled = true;
   try {
-    const response = await fetch('sample/alerts.csv');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const file = new File([await response.blob()], 'alerts.csv', { type: 'text/csv' });
+    const contents = await loadSample('sample/alerts.csv');
+    const file = new File([contents], 'alerts.csv', { type: 'text/csv' });
     await loadCsvFiles([file]);
   } catch (error) {
     document.getElementById('onNames').textContent = `Unable to load the sample data: ${error.message}`;
