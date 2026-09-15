@@ -260,7 +260,7 @@ function renderOverview(rows){
                      <span class="tiny muted">${volume.pairs.length} ${volume.granularity}s</span></header>`;
   const cw = document.createElement('div');
   cw.className='chart-wrap';
-  cw.appendChild(makeLineChart(volume.pairs));
+  cw.appendChild(makeLineChart(volume.pairs, volume.granularity));
   vol.appendChild(cw);
   wrap.appendChild(vol);
 
@@ -336,7 +336,15 @@ function aggregateDomains(rows){
 }
 
 // Draws a responsive SVG line chart with axes, grid, and interactive tooltips.
-function makeLineChart(pairs){
+function formatVolumeLabel(value, granularity, compact = false) {
+  const date = new Date(granularity === 'hour' ? `${value}:00Z` : `${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-US', granularity === 'hour'
+    ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }
+    : { month: 'short', day: 'numeric', year: compact ? undefined : 'numeric', timeZone: 'UTC' }).format(date);
+}
+
+function makeLineChart(pairs, granularity = 'day'){
   const dates=pairs.map(p=>p[0]), values=pairs.map(p=>p[1]);
   const w=Math.max(600, document.querySelector('.wrap').clientWidth - 40);
   const h=220, pl=48, pr=12, pt=12, pb=28;
@@ -362,7 +370,7 @@ function makeLineChart(pairs){
   const step=Math.ceil(dates.length/12)||1;
   for(let i=0;i<dates.length;i+=step){
     const tx=x(i);
-    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',tx); label.setAttribute('y',h-8); label.setAttribute('text-anchor','middle'); label.setAttribute('fill',labelColor); label.setAttribute('font-size','12'); label.textContent=dates[i]; svg.appendChild(label);
+    const label=document.createElementNS(svg.namespaceURI,'text'); label.setAttribute('x',tx); label.setAttribute('y',h-8); label.setAttribute('text-anchor','middle'); label.setAttribute('fill',labelColor); label.setAttribute('font-size','12'); label.textContent=formatVolumeLabel(dates[i], granularity, true); svg.appendChild(label);
   }
 
   const poly=document.createElementNS(svg.namespaceURI,'polyline'); poly.setAttribute('points', values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')); poly.setAttribute('fill','none'); poly.setAttribute('stroke','currentColor'); poly.setAttribute('stroke-width','2'); svg.appendChild(poly);
@@ -375,7 +383,7 @@ function makeLineChart(pairs){
     const rect=svg.getBoundingClientRect(); const px=e.clientX-rect.left;
     const t=Math.max(0, Math.min(1,(px-pl)/(w-pl-pr))); const i=Math.round(t*(values.length-1));
     const cx=x(i), cy=y(values[i]); dot.setAttribute('cx',cx); dot.setAttribute('cy',cy); dot.style.display='';
-    tooltip.style.display='block'; tooltip.textContent=`${dates[i]} • ${values[i]} alerts`;
+    tooltip.style.display='block'; tooltip.textContent=`${formatVolumeLabel(dates[i], granularity)} • ${values[i]} alerts`;
     tooltip.style.left=(rect.left+window.scrollX+cx+12)+'px'; tooltip.style.top=(rect.top+window.scrollY+cy-10)+'px';
   });
   hit.addEventListener('mouseleave', ()=>{ dot.style.display='none'; tooltip.style.display='none'; });

@@ -477,7 +477,7 @@ function createRuleRow(fl) {
   tr.className = 'file';
   tr.setAttribute('data-id', fl.id);
   tr.innerHTML = `
-    <td class="name" title="${escapeHtml(fl.name)}"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"> <span>${escapeHtml(fl.name)}</span>${fl.builtIn ? ' <span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</td>
+    <td class="name" title="${escapeHtml(fl.name)}"><div class="rule-name-content"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"><span class="rule-name-label">${escapeHtml(fl.name)}</span>${fl.builtIn ? '<span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</div></td>
     <td class="weight" title="Risk weight">${fl.weight}</td>
     <td class="matches" data-role="matches"><span class="badge" title="Run to compute matches">—</span></td>
     <td class="actions">${fl.builtIn ? '' : `<button class="icon-btn" title="Delete rule" data-act="del" data-id="${fl.id}">🗑️</button>`}</td>`;
@@ -583,6 +583,8 @@ function renderBuiltInSettings(file) {
           ]
       : file.key === 'weirdTld'
         ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
+      : file.key === 'destinationCompetitor'
+        ? [{ key: 'domains', label: 'Competitor domain list', type: 'textarea' }]
       : file.key === 'ransomwareAttachment'
         ? [{ key: 'encExtRegex', label: 'Encrypted extension regular expression', type: 'textarea' }]
         : [];
