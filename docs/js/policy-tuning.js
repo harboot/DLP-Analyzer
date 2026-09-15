@@ -1,16 +1,20 @@
 (function (global) {
   'use strict';
 
-  const value = (row, names) => {
+  const createHeaderIndex = rows => {
+    const index = new Map();
+    Object.keys(rows?.[0] || {}).forEach(key => index.set(key.trim().toLowerCase(), key));
+    return index;
+  };
+  const value = (row, headerIndex, names) => {
     for (const name of names) {
-      const key = Object.keys(row || {}).find(candidate => candidate.trim().toLowerCase() === name.toLowerCase());
+      const key = headerIndex.get(name.toLowerCase());
       if (key && String(row[key] ?? '').trim()) return String(row[key]).trim();
     }
     return '';
   };
   const split = input => String(input || '').split(/[;|\n]+/).map(item => item.trim()).filter(Boolean);
   const normalized = input => String(input || '').toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const policies = row => split(value(row, ['Policies', 'Policy', 'Policy Name']));
   const domain = input => {
     const text = String(input || '').toLowerCase();
     const email = text.match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
@@ -22,7 +26,12 @@
   const pct = ratio => `${Math.round(ratio * 100)}%`;
   const countBy = (items, mapper) => {
     const map = new Map();
-    items.forEach(item => { const key = mapper(item); if (key) map.set(key, (map.get(key) || []).concat(item)); });
+    items.forEach(item => {
+      const key = mapper(item);
+      if (!key) return;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
     return map;
   };
   const top = map => [...map.entries()].sort((a, b) => b[1].length - a[1].length)[0];
@@ -66,6 +75,23 @@
     }).sort((a, b) => b.points - a.points || b.alertIds.length - a.alertIds.length);
   }
 
+  function findBurstIds(rows) {
+    const signatureGroups = countBy(rows.filter(row => row.__time), row => row.__signature);
+    const burstIds = new Set();
+    signatureGroups.forEach(group => {
+      group.sort((a, b) => a.__time - b.__time);
+      let left = 0;
+      let markedThrough = -1;
+      for (let right = 0; right < group.length; right++) {
+        while (group[right].__time - group[left].__time > 10 * 60 * 1000) left++;
+        if (right - left < 2) continue;
+        for (let index = Math.max(left, markedThrough + 1); index <= right; index++) burstIds.add(group[index].__advisorId);
+        markedThrough = right;
+      }
+    });
+    return burstIds;
+  }
+
   function analyzePolicy(name, rows) {
     const total = rows.length;
     const findings = [];
@@ -77,36 +103,28 @@
         `${pct(winner[1].length / total)} of policy alerts`, review));
     };
 
-    const signatures = countBy(rows, row => [normalized(value(row, ['Source'])), domain(value(row, ['Destination'])), templateName(value(row, ['File Name']))].join('|'));
+    const signatures = countBy(rows, row => row.__signature);
     const repeated = [...signatures.values()].filter(group => group.length >= 3).flat();
     if (repeated.length >= 3) findings.push(finding('Repeated alert signature', repeated.length / total >= .6 ? 'High' : 'Medium', 16, repeated,
       `${repeated.length} alerts repeat a source, destination, and filename template.`, `${pct(repeated.length / total)} of alerts match repeated signatures`, 'Repeated workflow controls'));
 
-    const sorted = [...rows].filter(row => row.__time).sort((a, b) => a.__time - b.__time);
-    const burstIds = new Set();
-    for (let start = 0; start < sorted.length; start++) {
-      const group = sorted.filter((row, index) => index >= start && row.__time - sorted[start].__time <= 10 * 60 * 1000 && row.__signature === sorted[start].__signature);
-      if (group.length >= 3) group.forEach(row => burstIds.add(row.__advisorId));
-    }
+    const burstIds = findBurstIds(rows);
     const burstRows = rows.filter(row => burstIds.has(row.__advisorId));
     if (burstRows.length) findings.push(finding('Duplicate/repeated alert bursts', burstRows.length / total >= .5 ? 'High' : 'Medium', 18, burstRows,
       `${burstRows.length} alerts occur in repeated-signature groups within ten-minute windows.`, `${pct(burstRows.length / total)} of policy alerts are in bursts`, 'Incident aggregation or burst suppression'));
 
-    addDominance('Destination', row => domain(value(row, ['Destination'])), 'Destination exception scope and business approval', 12);
-    addDominance('Trigger', row => normalized(value(row, ['Violation Triggers', 'Violation Trigger', 'Trigger'])), 'Detector and trigger thresholds', 10);
-    addDominance('Source + destination', row => `${normalized(value(row, ['Source']))} → ${domain(value(row, ['Destination']))}`, 'User workflow and destination exception scope', 14);
-    addDominance('Source', row => normalized(value(row, ['Source'])), 'User or service-account workflow', 10);
+    addDominance('Destination', row => row.__destination, 'Destination exception scope and business approval', 12);
+    addDominance('Trigger', row => row.__trigger, 'Detector and trigger thresholds', 10);
+    addDominance('Source + destination', row => `${row.__source} → ${row.__destination}`, 'User workflow and destination exception scope', 14);
+    addDominance('Source', row => row.__source, 'User or service-account workflow', 10);
 
-    const destinations = countBy(rows, row => domain(value(row, ['Destination'])));
-    const destination = top(destinations);
-
-    const filenames = rows.flatMap(row => split(value(row, ['File Name', 'Filename'])).map(file => ({ row, file })));
+    const filenames = rows.flatMap(row => split(row.__fileName).map(file => ({ row, file })));
     const template = top(countBy(filenames, item => templateName(item.file)));
     if (template && template[1].length >= 3) findings.push(finding('Repeated filename/document template', template[1].length / Math.max(1, filenames.length) >= .5 ? 'High' : 'Medium', 12,
       [...new Map(template[1].map(item => [item.row.__advisorId, item.row])).values()],
       `${template[1].length} attachments share the filename template “${template[0]}”.`, `${pct(template[1].length / Math.max(1, filenames.length))} of attachment names`, 'Document template and detector combination'));
     const internal = rows.filter(row => {
-      const sourceDomain = domain(value(row, ['Source'])); const destinationDomain = domain(value(row, ['Destination']));
+      const sourceDomain = domain(row.__sourceRaw); const destinationDomain = row.__destination;
       return sourceDomain.includes('.') && sourceDomain === destinationDomain;
     });
     if (internal.length >= 3 && internal.length / total >= .3) findings.push(finding('Internal destination pattern', 'Low', 7, internal,
@@ -120,20 +138,76 @@
     return { name, alertCount: total, score, opportunity, opportunities, findings: opportunities };
   }
 
-  function analyze(inputRows) {
-    const rows = (inputRows || []).map((source, index) => {
-      const row = Object.assign({}, source);
-      row.__advisorId = index;
-      row.__time = Date.parse(value(row, ['Incident Time', 'Event Time', 'Date', 'Time'])) || 0;
-      row.__signature = [normalized(value(row, ['Source'])), domain(value(row, ['Destination'])), templateName(value(row, ['File Name', 'Filename']))].join('|');
-      return row;
-    });
-    const grouped = new Map();
-    rows.forEach(row => (policies(row).length ? policies(row) : ['(No policy specified)']).forEach(policy => {
-      if (!grouped.has(policy)) grouped.set(policy, []); grouped.get(policy).push(row);
-    }));
-    return { alerts: rows, policies: [...grouped.entries()].map(([name, policyRows]) => analyzePolicy(name, policyRows)).sort((a, b) => b.score - a.score || b.alertCount - a.alertCount) };
+  function prepareRow(source, index, headerIndex) {
+    const row = Object.assign({}, source);
+    row.__advisorId = index;
+    row.__sourceRaw = value(row, headerIndex, ['Source']);
+    row.__source = normalized(row.__sourceRaw);
+    row.__destination = domain(value(row, headerIndex, ['Destination']));
+    row.__fileName = value(row, headerIndex, ['File Name', 'Filename']);
+    row.__trigger = normalized(value(row, headerIndex, ['Violation Triggers', 'Violation Trigger', 'Trigger']));
+    row.__policies = split(value(row, headerIndex, ['Policies', 'Policy', 'Policy Name']));
+    row.__time = Date.parse(value(row, headerIndex, ['Incident Time', 'Event Time', 'Date', 'Time'])) || 0;
+    row.__signature = [row.__source, row.__destination, templateName(row.__fileName)].join('|');
+    return row;
   }
 
-  global.PolicyTuning = Object.freeze({ analyze, normalized, templateName, genericName });
+  function groupRow(grouped, row) {
+    const rowPolicies = row.__policies.length ? row.__policies : ['(No policy specified)'];
+    rowPolicies.forEach(policy => {
+      if (!grouped.has(policy)) grouped.set(policy, []);
+      grouped.get(policy).push(row);
+    });
+  }
+
+  function createReport(rows, grouped, onProgress) {
+    const entries = [...grouped.entries()];
+    const results = entries.map(([name, policyRows], index) => {
+      const result = analyzePolicy(name, policyRows);
+      onProgress?.({ phase: 'policies', completed: index + 1, total: entries.length, policy: name });
+      return result;
+    });
+    return { alerts: rows, policies: results.sort((a, b) => b.score - a.score || b.alertCount - a.alertCount) };
+  }
+
+  function analyze(inputRows, options = {}) {
+    const sources = inputRows || [];
+    const headerIndex = createHeaderIndex(sources);
+    const rows = sources.map((source, index) => prepareRow(source, index, headerIndex));
+    const grouped = new Map();
+    rows.forEach(row => groupRow(grouped, row));
+    return createReport(rows, grouped, options.onProgress);
+  }
+
+  async function analyzeAsync(inputRows, options = {}) {
+    const sources = inputRows || [];
+    const headerIndex = createHeaderIndex(sources);
+    const rows = [];
+    const grouped = new Map();
+    const batchSize = options.batchSize || 2000;
+    const yieldControl = options.yieldControl || (() => new Promise(resolve => setTimeout(resolve, 0)));
+    for (let start = 0; start < sources.length; start += batchSize) {
+      if (options.isCancelled?.()) throw new Error('Analysis cancelled.');
+      const end = Math.min(start + batchSize, sources.length);
+      for (let index = start; index < end; index++) {
+        const row = prepareRow(sources[index], index, headerIndex);
+        rows.push(row);
+        groupRow(grouped, row);
+      }
+      options.onProgress?.({ phase: 'rows', completed: end, total: sources.length });
+      await yieldControl();
+    }
+    const entries = [...grouped.entries()];
+    const policyResults = [];
+    for (let index = 0; index < entries.length; index++) {
+      if (options.isCancelled?.()) throw new Error('Analysis cancelled.');
+      const [name, policyRows] = entries[index];
+      policyResults.push(analyzePolicy(name, policyRows));
+      options.onProgress?.({ phase: 'policies', completed: index + 1, total: entries.length, policy: name });
+      await yieldControl();
+    }
+    return { alerts: rows, policies: policyResults.sort((a, b) => b.score - a.score || b.alertCount - a.alertCount) };
+  }
+
+  global.PolicyTuning = Object.freeze({ analyze, analyzeAsync, findBurstIds, normalized, templateName, genericName });
 })(typeof window === 'undefined' ? globalThis : window);

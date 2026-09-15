@@ -8,9 +8,11 @@
   const status = document.getElementById('status');
   const fileName = document.getElementById('advisorFileName');
   const warning = document.getElementById('uploadWarning');
+  const cancelButton = document.getElementById('cancelAnalysis');
   const recommended = ['Policies', 'Source', 'Destination', 'File Name', 'Channel'];
   const displayed = ['ID', 'Incident Time', 'Source', 'Destination', 'File Name', 'Channel'];
   let report = null;
+  let activeAnalysis = null;
 
   const esc = DLPUtils.escapeHtml;
   const get = (row, name) => {
@@ -35,8 +37,8 @@
           </details>`).join('')}</div>` : '<p class="no-findings">No tuning pattern crossed the deterministic thresholds for this policy.</p>'}
       </article>`).join('') : '<div class="advisor-empty"><strong>No policies match these filters.</strong><span>Change the policy text or opportunity level.</span></div>';
   }
-  function showReport(rows, label, warnings) {
-    report = PolicyTuning.analyze(rows);
+  function showReport(rows, analyzedReport, warnings) {
+    report = analyzedReport;
     const high = report.policies.filter(policy => policy.opportunity === 'High').length;
     const findings = report.policies.reduce((sum, policy) => sum + policy.opportunities.length, 0);
     status.hidden = true;
@@ -44,6 +46,43 @@
     summary.innerHTML = `<div><strong>${rows.length}</strong><span>Alerts analyzed</span></div><div><strong>${report.policies.length}</strong><span>Policies</span></div><div><strong>${findings}</strong><span>Tuning opportunities</span></div><div><strong>${high}</strong><span>High opportunities</span></div>`;
     DLPUtils.showUploadWarning(warning, warnings);
     render();
+  }
+  function cancelAnalysis() {
+    if (!activeAnalysis) return;
+    activeAnalysis.worker.postMessage({ type: 'cancel', jobId: activeAnalysis.jobId });
+    activeAnalysis.worker.terminate();
+    activeAnalysis.reject(new Error('Analysis cancelled.'));
+    activeAnalysis = null;
+    cancelButton.hidden = true;
+  }
+  function analyzeInWorker(rows) {
+    cancelAnalysis();
+    return new Promise((resolve, reject) => {
+      const worker = new Worker('worker/PolicyTuning.worker.js');
+      const jobId = `${Date.now()}-${Math.random()}`;
+      activeAnalysis = { worker, jobId, reject };
+      cancelButton.hidden = false;
+      worker.onmessage = ({ data }) => {
+        if (data.jobId !== jobId) return;
+        if (data.type === 'progress') {
+          const subject = data.phase === 'rows' ? 'alerts' : 'policies';
+          status.textContent = `Analyzing ${subject}: ${data.completed} of ${data.total}…`;
+          return;
+        }
+        worker.terminate();
+        activeAnalysis = null;
+        cancelButton.hidden = true;
+        if (data.type === 'complete') resolve(data.report);
+        else reject(new Error(data.message || 'Analysis cancelled.'));
+      };
+      worker.onerror = event => {
+        worker.terminate();
+        activeAnalysis = null;
+        cancelButton.hidden = true;
+        reject(new Error(event.message || 'The analysis worker failed.'));
+      };
+      worker.postMessage({ type: 'analyze', jobId, rows });
+    });
   }
   async function loadFiles(files) {
     if (!files.length) return;
@@ -55,14 +94,21 @@
       await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
       const batches = await Promise.all(files.map(file => CSVUtils.parseFile(file)));
       const warnings = batches.map((rows, index) => ({ fileName: files[index].name, missing: DLPUtils.findMissingColumns(rows, recommended) }));
-      showReport(batches.flat(), `${files.length} ${files.length === 1 ? 'file' : 'files'}`, warnings);
+      const rows = batches.flat();
+      showReport(rows, await analyzeInWorker(rows), warnings);
     } catch (error) {
-      status.textContent = `Unable to analyze the selected data: ${error.message}`;
+      status.textContent = error.message === 'Analysis cancelled.' ? error.message : `Unable to analyze the selected data: ${error.message}`;
     } finally {
       status.classList.remove('is-loading');
     }
   }
   fileInput.addEventListener('change', event => loadFiles([...event.target.files]));
+  cancelButton.addEventListener('click', () => {
+    cancelAnalysis();
+    status.hidden = false;
+    status.textContent = 'Analysis cancelled.';
+    status.classList.remove('is-loading');
+  });
   ['dragenter', 'dragover'].forEach(name => drop.addEventListener(name, event => { event.preventDefault(); drop.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach(name => drop.addEventListener(name, event => { event.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', event => loadFiles([...event.dataTransfer.files]));
@@ -85,7 +131,7 @@
     try {
       const contents = await loadSample('sample/alerts.csv');
       const rows = await CSVUtils.parseText(contents, { header: true });
-      showReport(rows, 'the sample', [{ fileName: 'alerts.csv', missing: DLPUtils.findMissingColumns(rows, recommended) }]);
-    } catch (error) { status.textContent = `Unable to load the sample data: ${error.message}`; }
+      showReport(rows, await analyzeInWorker(rows), [{ fileName: 'alerts.csv', missing: DLPUtils.findMissingColumns(rows, recommended) }]);
+    } catch (error) { status.textContent = error.message === 'Analysis cancelled.' ? error.message : `Unable to load the sample data: ${error.message}`; }
   });
 })();
