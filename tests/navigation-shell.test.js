@@ -41,4 +41,9 @@ test('risk scoring rules have labeled, explicitly sized columns', () => {
   assert.match(stylesSource, /#tbl col\.name-column\{width:68%\}/);
   assert.match(stylesSource, /\.layout[\s\S]*?align-items: stretch/);
   assert.match(stylesSource, /\.list\{flex:1;min-height:0;overflow:auto\}/);
+  assert.equal((riskScoringSource.match(/class="risk-filter-icon"/g) || []).length, 3);
+  assert.match(riskScoringSource, /function openRuleFilter\(button\)/);
+  assert.match(riskScoringSource, /data-sort="asc"/);
+  assert.match(riskScoringSource, /data-sort="desc"/);
+  assert.match(riskScoringSource, /function sortRules\(list\)/);
 });

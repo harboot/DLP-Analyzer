@@ -263,6 +263,15 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  overflow: hidden;
 	  text-overflow: ellipsis; /* only the name column uses an ellipsis */
 	}
+	#tbl thead th{overflow:visible}
+	#tbl thead th>span{vertical-align:middle}
+	#tbl .risk-filter-icon{all:unset;display:inline-flex;margin-left:var(--space-1);padding:2px;vertical-align:middle;cursor:pointer;opacity:.6;border-radius:var(--radius-control)}
+	#tbl .risk-filter-icon:hover,#tbl .risk-filter-icon.is-active{opacity:1;color:var(--accent)}
+	#tbl .risk-filter-icon:focus-visible{outline:2px solid var(--color-focus);outline-offset:1px}
+	#tbl .risk-filter-pop{position:absolute;top:calc(100% + 6px);right:var(--space-2);display:grid;gap:var(--space-2);min-width:220px;padding:var(--space-3);border:1px solid var(--line);border-radius:var(--radius-control);background:var(--color-surface-subtle);color:var(--text);box-shadow:0 6px 18px var(--shadow-color);z-index:5;text-align:left;font-weight:400}
+	#tbl .risk-filter-pop .risk-sort-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+	#tbl .risk-filter-pop .btn.is-selected{outline:1px solid var(--accent)}
+	#tbl .risk-filter-pop input{box-sizing:border-box;width:100%}
 
     #tbl .rule-name-content{display:flex;align-items:center;min-width:0}
     #tbl .rule-name-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
