@@ -22,3 +22,10 @@ test('every navigation item has a decorative icon before its label', () => {
   assert.equal(tabs.length, 7);
   tabs.forEach(tab => assert.match(tab, /<span class="menu-icon" aria-hidden="true">.+<\/span><span>.+<\/span>/));
 });
+
+test('update checks are explicitly available below the tool navigation', () => {
+  assert.match(indexSource, /class="menu-separator" role="separator"/);
+  assert.match(indexSource, /id="checkUpdate"[^>]*role="menuitem"/);
+  assert.match(indexSource, />Check for updates</);
+  assert.match(indexSource, /DLPOffline\?\.checkForUpdate\(\)/);
+});

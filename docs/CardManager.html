@@ -9,6 +9,19 @@
   <script src="js/dlp-utils.js"></script>
   <script src="js/sample-loader.js"></script>
   <script src="js/risk-scoring.js"></script>
+  <script src="js/detectors/index.js"></script>
+  <script src="js/detectors/email-sent-to-self.js"></script>
+  <script src="js/detectors/email-sent-to-self-by-character.js"></script>
+  <script src="js/detectors/email-broadcast-domains.js"></script>
+  <script src="js/detectors/short-subject.js"></script>
+  <script src="js/detectors/out-of-hours.js"></script>
+  <script src="js/detectors/attachment-no-extension.js"></script>
+  <script src="js/detectors/sensitive-keywords.js"></script>
+  <script src="js/detectors/weird-tld.js"></script>
+  <script src="js/detectors/destination-competitor.js"></script>
+  <script src="js/detectors/destination-domain-once.js"></script>
+  <script src="js/detectors/destination-email-subdomain.js"></script>
+  <script src="js/detectors/ransomware-attachment.js"></script>
   <script src="lib/xlsx.full.min.js"></script>
 
   <link rel="stylesheet" href="base.css" />
@@ -159,6 +172,13 @@ const escapeHtml = DLPUtils.escapeHtml;
 /* Converts a value to a display-safe string. */
 const safe = DLPUtils.toText;
 
+/* Adds a decorative channel-type icon while preserving the original channel label. */
+function channelWithIcon(value) {
+  const label = safe(value);
+  const icon = DLPUtils.channelIconEntity(label);
+  return icon ? `<span class="channel-icon" aria-hidden="true">${icon}</span>${escapeHtml(label)}` : escapeHtml(label);
+}
+
 const aiSettingsDialog = $('#aiSettingsDialog');
 $('#settingsBtn').addEventListener('click', () => { aiSettingsDialog.hidden = false; });
 $('#aiSettingsClose').addEventListener('click', () => { aiSettingsDialog.hidden = true; });
@@ -256,7 +276,7 @@ function save(items) {
     if (localStorage.getItem(LS_KEY)) return;
     const v4 = localStorage.getItem('jsSnippetItems:v4');
     const legacy = JSON.parse(v4 || localStorage.getItem('jsSnippetItems:v3') || localStorage.getItem('jsSnippetItems:v2') || '[]');
-    const migrated = RiskScoring.migrateRules(legacy, !!v4).map((rule) => ({ ...rule, id: rule.id || uid() }));
+    const migrated = RiskDetectors.migrateRules(legacy, !!v4).map((rule) => ({ ...rule, id: rule.id || uid() }));
     if (migrated.length) localStorage.setItem(LS_KEY, JSON.stringify(migrated));
   } catch {}
 })();
@@ -264,7 +284,7 @@ function save(items) {
 let items = load();
 const storedBuiltIns = new Map(items.filter(item => item.builtIn).map(item => [item.id, item]));
 items = [
-  ...RiskScoring.builtInRules().map(rule => {
+  ...RiskDetectors.builtInRules().map(rule => {
     const stored = storedBuiltIns.get(rule.id);
     return stored ? { ...rule, enabled: !!stored.enabled, weight: RiskScoring.normalizeWeight(stored.weight), settings: { ...rule.settings, ...(stored.settings || {}) } } : rule;
   }),
@@ -571,27 +591,7 @@ function openEditor(id) {
 function renderBuiltInSettings(file) {
   builtInSettings.replaceChildren();
   if (!file.builtIn) return;
-  const fields = file.key === 'shortSubject'
-    ? [{ key: 'subjectLength', label: 'Maximum subject length', type: 'number', min: 1, max: 200 }]
-    : file.key === 'selfByCharacter'
-      ? [{ key: 'minimumCharacters', label: 'Minimum matching characters', type: 'number', min: 1, max: 200 }]
-    : file.key === 'emailBroadcastDomains'
-      ? [{ key: 'minimumDomains', label: 'Minimum destination domains', type: 'number', min: 1, max: 1000 }]
-    : file.key === 'outOfHours'
-      ? [{ key: 'startTime', label: 'Start time', type: 'time' }, { key: 'endTime', label: 'End time', type: 'time' }]
-      : file.key === 'sensitiveKeywords'
-        ? [
-            { key: 'keywords', label: 'Sensitive keyword list', type: 'textarea' },
-            { key: 'detectFileName', label: 'Detect in attachment filename', type: 'checkbox' },
-            { key: 'detectSubject', label: 'Detect in email subject', type: 'checkbox' }
-          ]
-      : file.key === 'weirdTld'
-        ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
-      : file.key === 'destinationCompetitor'
-        ? [{ key: 'domains', label: 'Competitor domain list', type: 'textarea' }]
-      : file.key === 'ransomwareAttachment'
-        ? [{ key: 'encExtRegex', label: 'Encrypted extension regular expression', type: 'textarea' }]
-        : [];
+  const fields = file.settingFields || [];
   fields.forEach(field => {
     const label = document.createElement('label');
     label.className = field.type === 'textarea' ? 'setting-wide' : '';
@@ -623,7 +623,7 @@ function renderBuiltInSettings(file) {
 function restoreBuiltInDefaults() {
   const file = fileById(currentFileId);
   if (!file?.builtIn) return;
-  const defaults = RiskScoring.builtInRules().find(rule => rule.id === file.id);
+  const defaults = RiskDetectors.builtInRules().find(rule => rule.id === file.id);
   if (!defaults) return;
   elWeight.value = defaults.weight;
   renderBuiltInSettings(defaults);
@@ -946,7 +946,7 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
   }
   let predicate;
   try {
-    predicate = f.builtIn ? ((row, rows) => RiskScoring.matchesBuiltIn(f, row, rows)) : secureCompilePredicate(f.code || '');
+    predicate = f.builtIn ? ((row, rows) => RiskDetectors.matchesBuiltIn(f, row, rows)) : secureCompilePredicate(f.code || '');
   } catch (err) {
     if (updateUI && cell) cell.innerHTML = `<span class="badge" title="Compile error">ERR</span>`;
     console.error('Compile error for', f.name, err);
@@ -1024,7 +1024,7 @@ function openRiskTable(enabledFiles) {
         <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${escapeHtml(safe(row.Source))}">${escapeHtml(safe(row.Source))}</td>
         <td title="${escapeHtml(safe(row.Policies))}">${escapeHtml(safe(row.Policies))}</td>
-        <td title="${escapeHtml(safe(row.Channel))}">${escapeHtml(safe(row.Channel))}</td>
+        <td title="${escapeHtml(safe(row.Channel))}">${channelWithIcon(row.Channel)}</td>
         <td title="${escapeHtml(safe(row.Destination))}">${escapeHtml(safe(row.Destination))}</td>
         <td title="${escapeHtml(safe(row.FileName))}">${escapeHtml(safe(row.FileName))}</td>
         <td title="${escapeHtml(safe(row.Details))}">${escapeHtml(safe(row.Details))}</td>
@@ -1097,7 +1097,7 @@ function openResultTable(fileId) {
         <td title="${escapeHtml(timeTooltip)}">${escapeHtml(dateText)}</td>
         <td title="${safe(rc.Source)}">${escapeHtml(safe(rc.Source))}</td>
         <td title="${safe(rc.Policies)}">${escapeHtml(safe(rc.Policies))}</td>
-        <td title="${safe(rc.Channel)}">${escapeHtml(safe(rc.Channel))}</td>
+        <td title="${escapeHtml(safe(rc.Channel))}">${channelWithIcon(rc.Channel)}</td>
         <td title="${safe(rc.Destination)}">${escapeHtml(safe(rc.Destination))}</td>
         <td title="${safe(rc.FileName)}">${escapeHtml(safe(rc.FileName))}</td>
         <td title="${safe(rc.Details)}">${escapeHtml(safe(rc.Details))}</td>

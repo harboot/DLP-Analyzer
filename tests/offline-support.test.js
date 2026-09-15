@@ -26,6 +26,26 @@ test('the fetch handler only handles same-origin GET requests', () => {
   assert.match(workerSource, /url\.origin !== self\.location\.origin/);
 });
 
+test('initial caching uses a limited worker pool and retains required-file failures', () => {
+  assert.match(workerSource, /const CACHE_CONCURRENCY = 6/);
+  assert.match(workerSource, /Math\.min\(CACHE_CONCURRENCY, APPLICATION_FILES\.length\)/);
+  assert.match(workerSource, /Promise\.all\(Array\.from\(\{ length: workerCount \}/);
+  assert.match(workerSource, /if \(!response\.ok\) throw new Error/);
+});
+
+test('offline progress shows only the percentage and current filename', () => {
+  const offlineSource = fs.readFileSync(path.join(root, 'offline.js'), 'utf8');
+  assert.match(offlineSource, /`\$\{percent\}% — Saved: \$\{file\}`/);
+  assert.doesNotMatch(offlineSource, /Saved \$\{completed\} of \$\{total\} files/);
+});
+
+test('installed clients only check for updates when requested', () => {
+  const offlineSource = fs.readFileSync(path.join(root, 'offline.js'), 'utf8');
+  assert.match(offlineSource, /navigator\.serviceWorker\.controller\s*\? navigator\.serviceWorker\.getRegistration/);
+  assert.match(offlineSource, /async checkForUpdate\(\)/);
+  assert.match(offlineSource, /await registration\.update\(\)/);
+});
+
 test('CSV parser supports quoted commas, escaped quotes, and newlines', async () => {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);

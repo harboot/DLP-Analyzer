@@ -8,6 +8,7 @@
   let progress;
   let detail;
   let versionLabel;
+  let registrationPromise;
 
   function showPreparation() {
     if (!isTopLevel || panel) return;
@@ -37,8 +38,8 @@
     progress.value = completed;
     const percent = total ? Math.round((completed / total) * 100) : 0;
     detail.textContent = file
-      ? `${percent}% — Saved ${completed} of ${total} files: ${file}`
-      : `${percent}% — Saved ${completed} of ${total} files.`;
+      ? `${percent}% — Saved: ${file}`
+      : `${percent}%`;
   }
 
   function finishPreparation(version) {
@@ -69,7 +70,22 @@
   });
 
   const workerUrl = new URL('service-worker.js', document.currentScript.src);
-  navigator.serviceWorker.register(workerUrl).then(registration => {
+  registrationPromise = navigator.serviceWorker.controller
+    ? navigator.serviceWorker.getRegistration(workerUrl)
+    : navigator.serviceWorker.register(workerUrl);
+
+  window.DLPOffline = {
+    async checkForUpdate() {
+      const registration = await registrationPromise;
+      if (!registration) throw new Error('Offline service worker is unavailable.');
+      const previousWorker = registration.waiting || registration.installing;
+      await registration.update();
+      return !!(registration.waiting || registration.installing) && (registration.waiting || registration.installing) !== previousWorker;
+    }
+  };
+
+  registrationPromise.then(registration => {
+    if (!registration) return;
     const worker = registration.installing;
     if (!worker) return;
     showPreparation();

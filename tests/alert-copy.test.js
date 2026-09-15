@@ -8,7 +8,17 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'dlp-uti
 const context = { window: {}, document: {} };
 vm.runInNewContext(source, context);
 
-const { getAlertRowCells } = context.window.DLPUtils;
+const { channelIconEntity, getAlertRowCells } = context.window.DLPUtils;
+
+test('channel icons cover the supported channel families', () => {
+  assert.equal(channelIconEntity('Network email'), '&#9993;');
+  assert.equal(channelIconEntity('HTTPS upload'), '&#127760;');
+  assert.equal(channelIconEntity('HTTP request'), '&#127760;');
+  assert.equal(channelIconEntity('Print'), '&#128424;');
+  assert.equal(channelIconEntity('Application sharing'), '&#128172;');
+  assert.equal(channelIconEntity('Removable_Media'), '&#128190;');
+  assert.equal(channelIconEntity('Other'), '');
+});
 
 test('alert copy excludes aliases and internal analysis fields', () => {
   const cells = getAlertRowCells({

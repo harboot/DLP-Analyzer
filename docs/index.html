@@ -14,7 +14,7 @@
   <div class="host">
     <header id="topbar" class="topbar" role="navigation" aria-label="Main menu">
       <div class="brand" aria-label="App title">DLP Analyzer</div>
-      <div class="app-version" aria-label="Version 33">v33</div>
+      <div class="app-version" aria-label="Version 36">v36</div>
       <nav class="menu" aria-label="Tools">
         <button class="menu-trigger" id="menuTrigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolMenu">
           <span class="sr-only">Open tools menu</span><span aria-hidden="true">&#8942;</span>
@@ -27,6 +27,8 @@
           <button class="tab" data-key="RuleIdentifier" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128269;</span><span>Policies Matcher</span></button>
           <button class="tab" data-key="DocViewer" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128065;</span><span>Document Viewer</span></button>
           <button class="tab" data-key="KeywordGenerator" role="menuitemradio" aria-checked="false"><span class="menu-icon" aria-hidden="true">&#128273;</span><span>Keyword Generator</span></button>
+          <div class="menu-separator" role="separator"></div>
+          <button class="menu-action" id="checkUpdate" type="button" role="menuitem"><span class="menu-icon" aria-hidden="true">&#8635;</span><span>Check for updates</span></button>
         </div>
       </nav>
       <div id="spinner" class="spinner" aria-hidden="true"><span class="spin" aria-label="Loading" title="Loading..."></span></div>
@@ -46,6 +48,7 @@
     const tabs = Array.from(document.querySelectorAll('.tab'));
     const menuTrigger = document.getElementById('menuTrigger');
     const toolMenu = document.getElementById('toolMenu');
+    const checkUpdate = document.getElementById('checkUpdate');
     const frame = document.getElementById('appFrame');
     const spinner = document.getElementById('spinner');
     const overlay = document.getElementById('overlay');
@@ -126,6 +129,22 @@
           navigateTo(key);
         }
       });
+    });
+
+    checkUpdate.addEventListener('click', async () => {
+      setMenuOpen(false);
+      const label = checkUpdate.lastElementChild;
+      label.textContent = 'Checking for updates…';
+      checkUpdate.disabled = true;
+      try {
+        const found = await window.DLPOffline?.checkForUpdate();
+        label.textContent = found ? 'Update found' : 'DLP Analyzer is up to date';
+      } catch (_) {
+        label.textContent = 'Unable to check for updates';
+      } finally {
+        checkUpdate.disabled = false;
+        window.setTimeout(() => { label.textContent = 'Check for updates'; }, 2500);
+      }
     });
 
     menuTrigger.addEventListener('click', () => {
