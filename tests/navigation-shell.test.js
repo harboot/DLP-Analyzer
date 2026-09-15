@@ -32,7 +32,7 @@ test('update checks are explicitly available below the tool navigation', () => {
   assert.match(indexSource, /DLP Analyzer is up to date\./);
 });
 
-test('risk scoring rules have labeled, explicitly sized columns', () => {
+test('risk scoring rules have labeled columns while ranked alerts provide filter and sort controls', () => {
   const riskScoringSource = fs.readFileSync(path.join(docs, 'CardManager.html'), 'utf8');
   const stylesSource = fs.readFileSync(path.join(docs, 'styles.css'), 'utf8');
 
@@ -41,9 +41,10 @@ test('risk scoring rules have labeled, explicitly sized columns', () => {
   assert.match(stylesSource, /#tbl col\.name-column\{width:68%\}/);
   assert.match(stylesSource, /\.layout[\s\S]*?align-items: stretch/);
   assert.match(stylesSource, /\.list\{flex:1;min-height:0;overflow:auto\}/);
-  assert.equal((riskScoringSource.match(/class="risk-filter-icon"/g) || []).length, 3);
-  assert.match(riskScoringSource, /function openRuleFilter\(button\)/);
+  assert.doesNotMatch(riskScoringSource, /data-column="(?:name|weight|matches)"/);
+  assert.match(riskScoringSource, /function openResultFilter\(button, filters, currentSort, apply\)/);
+  assert.match(riskScoringSource, /data-result-column="\$\{column\}"/);
   assert.match(riskScoringSource, /data-sort="asc"/);
   assert.match(riskScoringSource, /data-sort="desc"/);
-  assert.match(riskScoringSource, /function sortRules\(list\)/);
+  assert.match(riskScoringSource, /const visibleAlerts = \(\) => scored/);
 });
