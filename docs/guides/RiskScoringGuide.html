@@ -24,7 +24,7 @@
     <h2>Features</h2>
     <ul>
       <li>Evaluates weighted Boolean rules against normalized DLP alerts and ranks each alert by the total weight of all matches.</li>
-      <li>Includes application-maintained rule packs with editable weights and parameters, plus reusable custom rule collections that can be imported or exported.</li>
+      <li>Includes a collapsible Built-in detectors group with editable weights and parameters, plus reusable custom rule collections that can be imported or exported.</li>
       <li>Provides isolated JavaScript rule testing and optional OpenAI-assisted rule generation without sending uploaded alert rows to OpenAI.</li>
     </ul>
   </section>
@@ -37,7 +37,7 @@
       <li>Select <strong>RUN ALL</strong>. Every enabled rule is evaluated for every alert.</li>
       <li>The tool adds the weights of all matching rules and ranks alerts from highest to lowest score.</li>
     </ol>
-    <p>Predefined rules are maintained by the application. You can enable or disable them and change their weight. Rules with parameters also expose those parameters in the editor, and <strong>Default</strong> restores their original weight and settings before you save. Their names, descriptions, and matching logic cannot be changed or deleted.</p>
+    <p>The <strong>Built-in detectors</strong> group can be collapsed to make more room for custom rules. Predefined rules are maintained by the application. You can enable or disable them and change their weight. Rules with parameters also expose those parameters in the editor, and <strong>Default</strong> restores their original weight and settings before you save. Their names, descriptions, and matching logic cannot be changed or deleted.</p>
   </section>
 
   <section class="section">
@@ -67,7 +67,8 @@
       <li>Only import snippets from sources you trust, and review generated code before running it.</li>
     </ul>
 
-    <h3>Sample: attachment resembles a ransomware note or encrypted file</h3>
+    <h3>Built-in detector: attachment resembles a ransomware note or encrypted file</h3>
+    <p>This predefined detector recognizes common ransom-note names, encryption wording, suspicious appended identifiers, and encrypted-file extensions. Open it in the rule editor to customize its <code>encExtRegex</code> setting.</p>
     <pre><code>"use strict";
 const fn = String(row.FileName || "");
 if (!fn) return false;

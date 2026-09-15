@@ -8,6 +8,11 @@ vm.runInContext(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), context);
 
 const { exportRuleConfigs, migrateRules, normalizeWeight, scoreAlerts } = context.RiskScoring;
 
+const riskScoringPage = fs.readFileSync('docs/CardManager.html', 'utf8');
+assert.match(riskScoringPage, /Built-in detectors/);
+assert.match(riskScoringPage, /aria-expanded="\$\{!builtInCollapsed\}"/);
+assert.match(riskScoringPage, /Encrypted extension regular expression/);
+
 assert.equal(normalizeWeight(undefined), 1);
 assert.equal(normalizeWeight('4'), 4);
 assert.equal(normalizeWeight(0), 0);
@@ -31,22 +36,23 @@ assert.deepEqual(Array.from(result, (alert) => alert.score), [13, 8, 6]);
 assert.deepEqual(Array.from(result[0].matchedRules, (rule) => rule.name), ['External destination', 'Large transfer']);
 
 const builtIns = context.RiskScoring.builtInRules();
-assert.equal(builtIns.length, 6);
+assert.equal(builtIns.length, 7);
 assert.equal(builtIns.every(rule => rule.type === 'file' && rule.builtIn), true);
 assert.deepEqual(Array.from(builtIns, rule => rule.name), [
-  'Email Sent to Self', 'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest'
+  'Email Sent to Self', 'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest',
+  'Attachment Looks Like Ransomware Notes or Encryption'
 ]);
 const rule = key => builtIns.find(item => item.key === key);
-assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
+assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5, 8]);
 const exported = exportRuleConfigs([...builtIns, { id: 'disabled-custom', name: 'Disabled custom', type: 'file', code: 'return true;', enabled: false, weight: 2 }]);
-assert.equal(exported.length, 7);
+assert.equal(exported.length, 8);
 assert.equal(exported.every(item => item.type === 'file'), true);
-assert.equal(exported.filter(item => item.builtIn).length, 6);
+assert.equal(exported.filter(item => item.builtIn).length, 7);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settings.subjectLength, 15);
 assert.equal(exported.find(item => item.id === 'disabled-custom').enabled, false);
 assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
-assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5]);
+assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5, 8]);
 assert.equal(migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('shortSubject'), { Channel: 'Network email', Details: 'Hello' }), true);
@@ -54,6 +60,13 @@ assert.equal(context.RiskScoring.matchesBuiltIn(rule('noExtension'), { FileName:
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('sensitiveKeywords'), { Details: 'Confidential payroll export' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.xyz' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.party' }), true);
+const ransomwareAttachment = rule('ransomwareAttachment');
+assert.equal(context.RiskScoring.matchesBuiltIn(ransomwareAttachment, { FileName: 'invoice.pdf; HOW_TO_DECRYPT.txt' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf.locked' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf' }), false);
+ransomwareAttachment.settings.encExtRegex = String.raw`\.companylocked$`;
+assert.equal(context.RiskScoring.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf.companylocked' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.foo' }), false);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 03:20:11 AM GMT+0800' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 05:00:00 AM GMT+0800' }), false);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 11:30:00 PM GMT+0800' }), true);
