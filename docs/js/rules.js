@@ -31,7 +31,7 @@ async function computeBuiltInRuleMatchesChunked(rows, onProgress, CHUNK_SIZE = 6
   for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
     const end = Math.min(start + CHUNK_SIZE, rows.length);
     for (let i = start; i < end; i++) {
-      for (const rule of rules) if (evaluateRule(rows[i], rule, indices)) matches[rule.key].push(rows[i]);
+      for (const rule of rules) if (evaluateRule(rows[i], rule, indices)) matches[rule.key].push(i);
     }
     if (onProgress) onProgress(end, rows.length);
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -82,18 +82,85 @@ function evaluateRule(row, rule, indexes){
   }
 }
 
-// Executes built-in rules or user predicates without blocking rendering/input.
-function runAnalyzerWorker(type, rows, options = {}, onProgress){
-  return new Promise((resolve, reject) => {
-    const worker = new Worker('worker/AlertAnalyzer.worker.js');
-    worker.onmessage = ({data}) => {
-      if (data.type === 'progress' && onProgress) onProgress(data.processed, data.total);
-      else if (data.type === 'complete') { worker.terminate(); resolve(data.result); }
-      else if (data.type === 'error') { worker.terminate(); reject(new Error(data.message)); }
+let analyzerWorker;
+let analyzerDatasetVersion;
+let analyzerRequestSequence = 0;
+const analyzerRequests = new Map();
+
+// Copies only fields consumed by the declarative evaluator. This keeps the
+// persistent worker dataset substantially smaller than the display records.
+function makeAnalysisRows(rows, rules = []){
+  const textFields = new Set(rules.flatMap(rule => rule.operator === 'text-regex' ? (rule.fields || []) : []));
+  return rows.map(row => {
+    const compact = {
+      source: txt(row.Source),
+      sourceLower: row.sourceLower || txt(row.Source).trim().toLowerCase(),
+      destinations: splitDestParts(row.Destination),
+      destinationDomains: Array.from(row.destinationDomains || []),
+      fileTokens: Array.from(row.fileTokens || []),
+      incidentHour: row.incidentHour == null ? null : row.incidentHour,
+      actionLower: row.actionLower || txt(row.Action).toLowerCase(),
+      channelLower: row.channelLower || txt(row.Channel).toLowerCase(),
+      text: {}
     };
-    worker.onerror = error => { worker.terminate(); reject(error); };
-    worker.postMessage({ type, rows, ...options });
+    for (const field of textFields) compact.text[field] = txt(row[field]);
+    return compact;
   });
+}
+
+function getAnalyzerWorker(){
+  if (analyzerWorker) return analyzerWorker;
+  analyzerWorker = new Worker('worker/AlertAnalyzer.worker.js');
+  analyzerWorker.onmessage = ({data}) => {
+    const request = analyzerRequests.get(data.requestId);
+    if (!request || data.datasetVersion !== request.datasetVersion) return;
+    if (data.type === 'progress') request.onProgress?.(data.processed, data.total);
+    else if (data.type === 'complete' || data.type === 'ready') {
+      analyzerRequests.delete(data.requestId);
+      request.resolve(data.result);
+    } else if (data.type === 'cancelled') {
+      analyzerRequests.delete(data.requestId);
+      request.reject(new Error('Analysis cancelled.'));
+    } else if (data.type === 'error') {
+      analyzerRequests.delete(data.requestId);
+      request.reject(new Error(data.message));
+    }
+  };
+  analyzerWorker.onerror = error => {
+    for (const request of analyzerRequests.values()) request.reject(error);
+    analyzerRequests.clear();
+    analyzerWorker?.terminate();
+    analyzerWorker = null;
+    analyzerDatasetVersion = null;
+  };
+  return analyzerWorker;
+}
+
+function postAnalyzerRequest(message, onProgress){
+  const requestId = ++analyzerRequestSequence;
+  const promise = new Promise((resolve, reject) => {
+    analyzerRequests.set(requestId, {resolve, reject, onProgress, datasetVersion: message.datasetVersion});
+    getAnalyzerWorker().postMessage({...message, requestId});
+  });
+  promise.cancel = () => getAnalyzerWorker().postMessage({type: 'cancel', requestId, datasetVersion: message.datasetVersion});
+  return promise;
+}
+
+// Reuses one worker and one compact dataset; subsequent rule runs send rules only.
+async function runAnalyzerWorker(type, rows, options = {}, onProgress){
+  const datasetVersion = options.datasetVersion || computeDatasetHash(rows);
+  if (analyzerDatasetVersion !== datasetVersion) {
+    analyzerDatasetVersion = datasetVersion;
+    for (const [requestId, request] of analyzerRequests) {
+      request.reject(new Error('Dataset changed during analysis.'));
+      analyzerRequests.delete(requestId);
+    }
+    await postAnalyzerRequest({
+      type: 'initialize', datasetVersion,
+      rows: type === 'custom' ? rows : makeAnalysisRows(rows, options.rules)
+    });
+  }
+  return postAnalyzerRequest({type: 'analyze', analysisType: type, datasetVersion, ...options}, onProgress);
 }
 
 // Binds click handlers once to metric/rule cards to open ad hoc tabs.
@@ -120,14 +187,15 @@ function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
       const def = ruleDefs.find(x => x.key === rkey);
       if (!def) return;
 
-      if (!a.__matches) {
+      if (!a.__matchIndices) {
         a.innerHTML = `<span class="spin" aria-label="Loading"></span>`;
         const matchesByRule = await computeBuiltInRuleMatchesChunked(rows);
-        const matches = matchesByRule[rkey] || [];
-        a.__matches = matches;
-        a.textContent = matches.length;
+        const rawIndexByRow = new Map(state.raw.map((row, index) => [row, index]));
+        a.__matchIndices = Uint32Array.from(matchesByRule[rkey] || [], index => rawIndexByRow.get(rows[index]));
+        a.textContent = a.__matchIndices.length;
       }
-      openAdHocTab(`${def.label} (${a.__matches.length})`, a.__matches);
+      const matches = Array.from(a.__matchIndices, index => state.raw[index]).filter(Boolean);
+      openAdHocTab(`${def.label} (${matches.length})`, matches);
     }
   });
 }
