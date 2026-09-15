@@ -79,6 +79,7 @@
       const entry = zip.file(name);
       if (!entry) continue;
       let value = xmlText(await entry.async('text'));
+      if (type === 'XLSX' && name === 'xl/sharedStrings.xml') value = value.replace(/\s+/g, ' ');
       if (value) parts.push(`--- ${name} ---\n${value}`);
     }
     return parts.join('\n\n');
@@ -86,6 +87,7 @@
   function classifyZip(names) {
     if (names.includes('[Content_Types].xml') && names.some(name => name.startsWith('word/'))) return 'DOCX';
     if (names.some(name => name.startsWith('ppt/'))) return 'PPTX';
+    if (names.some(name => name.startsWith('xl/'))) return 'XLSX';
     if (names.includes('content.xml')) return 'OpenDocument';
     return 'ZIP';
   }
@@ -106,6 +108,7 @@
     let result = '';
     if (type === 'DOCX') result = await extractOfficeText(zip, names.filter(name => /^word\/(?:document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(name)), type);
     else if (type === 'PPTX') result = await extractOfficeText(zip, names.filter(name => /^ppt\/(?:slides\/slide\d+|notesSlides\/notesSlide\d+)\.xml$/.test(name)).sort(), type);
+    else if (type === 'XLSX') result = await extractOfficeText(zip, names.filter(name => name === 'xl/sharedStrings.xml' || /^xl\/worksheets\/sheet\d+\.xml$/.test(name)).sort(), type);
     else if (type === 'OpenDocument') result = await extractOfficeText(zip, ['content.xml'], type);
     else {
       const first = entries.find(entry => !entry.dir && zipTextExtensions.test(entry.name));

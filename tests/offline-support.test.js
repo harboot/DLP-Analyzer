@@ -64,6 +64,14 @@ test('alert upload tools expose CSV-only file controls without the XLSX library'
   assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), false);
 });
 
+test('Document Viewer retains XLSX detection and text extraction without the XLSX library', () => {
+  const source = fs.readFileSync(path.join(root, 'js/doc-viewer.js'), 'utf8');
+  assert.equal(source.includes("name.startsWith('xl/'))) return 'XLSX'"), true);
+  assert.equal(source.includes("type === 'XLSX'"), true);
+  assert.equal(source.includes("name === 'xl/sharedStrings.xml'"), true);
+  assert.equal(source.includes('xl\\/worksheets\\/sheet'), true);
+});
+
 test('CSV parser supports quoted commas, escaped quotes, and newlines', async () => {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);
