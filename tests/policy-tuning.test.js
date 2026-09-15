@@ -7,7 +7,7 @@ const test = require('node:test');
 const source = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'policy-tuning.js'), 'utf8');
 const context = {};
 vm.runInNewContext(source, context);
-const { analyze, normalized, templateName, genericName } = context.PolicyTuning;
+const { analyze, findBurstIds, normalized, templateName, genericName } = context.PolicyTuning;
 
 const row = (id, overrides = {}) => ({
   ID: String(id), Policies: 'Customer PII', Source: 'alex@corp.example', Destination: 'crm.example.com',
@@ -51,6 +51,35 @@ test('burst rule requires three matching signatures in ten minutes', () => {
   const opportunity = analyze(rows).policies[0].opportunities[0];
   assert.ok(opportunity.signals.some(item => item.type === 'Duplicate/repeated alert bursts'));
   assert.equal(opportunity.alertIds.length, 3);
+});
+
+function legacyBurstIds(rows) {
+  const sorted = [...rows].filter(item => item.__time).sort((a, b) => a.__time - b.__time);
+  const result = new Set();
+  for (let start = 0; start < sorted.length; start++) {
+    const group = sorted.filter((item, index) => index >= start && item.__time - sorted[start].__time <= 10 * 60 * 1000 && item.__signature === sorted[start].__signature);
+    if (group.length >= 3) group.forEach(item => result.add(item.__advisorId));
+  }
+  return [...result].sort((a, b) => a - b);
+}
+
+test('sliding burst windows match the legacy algorithm at timestamp edge cases', () => {
+  const rows = [
+    row(1, { Source: 'same', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:00:00Z' }),
+    row(2, { Source: 'same', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:00:00Z' }),
+    row(3, { Source: 'same', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:10:00Z' }),
+    row(4, { Source: 'same', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:10:00.001Z' }),
+    row(5, { Source: 'other', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:05:00Z' }),
+    row(6, { Source: 'same', Destination: 'same.example', 'File Name': 'same.pdf', 'Incident Time': 'not-a-timestamp' })
+  ];
+  const prepared = analyze(rows).alerts;
+  assert.deepEqual([...findBurstIds(prepared)].sort((a, b) => a - b), legacyBurstIds(prepared));
+  assert.deepEqual([...findBurstIds(prepared)].sort((a, b) => a - b), [0, 1, 2]);
+});
+
+test('column aliases are indexed once and remain case insensitive', () => {
+  const report = analyze([row(1, { Policies: undefined, ' policy name ': 'Alias Policy' })]);
+  assert.equal(report.policies[0].name, 'Alias Policy');
 });
 
 test('removed tuning patterns are excluded and strong findings produce a high opportunity', () => {
