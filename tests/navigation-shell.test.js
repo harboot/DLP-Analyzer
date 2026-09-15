@@ -28,4 +28,17 @@ test('update checks are explicitly available below the tool navigation', () => {
   assert.match(indexSource, /id="checkUpdate"[^>]*role="menuitem"/);
   assert.match(indexSource, />Check for updates</);
   assert.match(indexSource, /DLPOffline\?\.checkForUpdate\(\)/);
+  assert.match(indexSource, /id="updateStatus"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(indexSource, /DLP Analyzer is up to date\./);
+});
+
+test('risk scoring rules have labeled, explicitly sized columns', () => {
+  const riskScoringSource = fs.readFileSync(path.join(docs, 'CardManager.html'), 'utf8');
+  const stylesSource = fs.readFileSync(path.join(docs, 'styles.css'), 'utf8');
+
+  assert.match(riskScoringSource, /<thead>[\s\S]*Detector[\s\S]*Weight[\s\S]*Matches[\s\S]*Actions[\s\S]*<\/thead>/);
+  assert.match(riskScoringSource, /<col class="name-column"/);
+  assert.match(stylesSource, /#tbl col\.name-column\{width:68%\}/);
+  assert.match(stylesSource, /\.layout[\s\S]*?align-items: stretch/);
+  assert.match(stylesSource, /\.list\{flex:1;min-height:0;overflow:auto\}/);
 });

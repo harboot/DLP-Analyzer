@@ -72,6 +72,20 @@
         </header>
         <div class="list">
           <table id="tbl" aria-label="Risk scoring rules">
+            <colgroup>
+              <col class="name-column" />
+              <col class="weight-column" />
+              <col class="matches-column" />
+              <col class="actions-column" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="name" scope="col">Detector</th>
+                <th class="weight" scope="col">Weight</th>
+                <th class="matches" scope="col">Matches</th>
+                <th class="actions" scope="col">Actions</th>
+              </tr>
+            </thead>
             <tbody id="tbody"></tbody>
           </table>
         </div>
