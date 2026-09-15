@@ -573,6 +573,10 @@ function renderBuiltInSettings(file) {
   if (!file.builtIn) return;
   const fields = file.key === 'shortSubject'
     ? [{ key: 'subjectLength', label: 'Maximum subject length', type: 'number', min: 1, max: 200 }]
+    : file.key === 'selfByCharacter'
+      ? [{ key: 'minimumCharacters', label: 'Minimum matching characters', type: 'number', min: 1, max: 200 }]
+    : file.key === 'emailBroadcastDomains'
+      ? [{ key: 'minimumDomains', label: 'Minimum destination domains', type: 'number', min: 1, max: 1000 }]
     : file.key === 'outOfHours'
       ? [{ key: 'startTime', label: 'Start time', type: 'time' }, { key: 'endTime', label: 'End time', type: 'time' }]
       : file.key === 'sensitiveKeywords'

@@ -9,6 +9,8 @@
   const destinationDomainFrequencyCache = new WeakMap();
   const BUILT_IN_RULES = [
     { id: 'builtin-self', key: 'self', name: 'Email Sent to Self', description: 'Matches email alerts when a recipient address resembles the sender address.', weight: 6, settings: {} },
+    { id: 'builtin-self-by-character', key: 'selfByCharacter', name: 'Email Sent to Self (by character)', description: 'Matches email alerts when the sender and destination share a sequence of the configured number of letters.', weight: 6, settings: { minimumCharacters: 5 } },
+    { id: 'builtin-email-broadcast-domains', key: 'emailBroadcastDomains', name: 'Email Broadcast Multiple Destination Domain', description: 'Matches email alerts sent to at least the configured number of unique destination domains or consumer-mail local parts.', weight: 6, settings: { minimumDomains: 5 } },
     { id: 'builtin-short-subject', key: 'shortSubject', name: 'Short Subject', description: 'Matches email alerts with an empty subject or a subject shorter than the configured length.', weight: 3, settings: { subjectLength: 15 } },
     { id: 'builtin-out-of-hours', key: 'outOfHours', name: 'Out-of-Hours', description: 'Matches alerts whose incident time falls within the configured monitoring window.', weight: 5, settings: { startTime: '23:00', endTime: '05:00' } },
     { id: 'builtin-no-extension', key: 'noExtension', name: 'Attachment No Ext', description: 'Matches alerts containing at least one attachment without a file extension.', weight: 4, settings: {} },
@@ -99,6 +101,37 @@
     if (rule.key === 'self') {
       const source = localPart(row.Source);
       return !!source && String(row.Destination || '').split(/[;,|]+/).some(value => localPart(value) === source);
+    }
+    if (rule.key === 'selfByCharacter') {
+      const isEmail = channel.includes('email') || /@/.test(String(row.Destination || '')) || /@/.test(String(row.Source || ''));
+      if (!isEmail) return false;
+      const clean = value => String(value || '').replace(/[^A-Za-z]+/g, '').toLowerCase();
+      const source = clean(row.Source);
+      const destination = clean(row.Destination);
+      const minimum = Math.max(1, Math.floor(Number(settings.minimumCharacters) || 5));
+      if (source.length < minimum || destination.length < minimum) return false;
+      const sourceSequences = new Set();
+      for (let index = 0; index <= source.length - minimum; index++) sourceSequences.add(source.slice(index, index + minimum));
+      for (let index = 0; index <= destination.length - minimum; index++) {
+        if (sourceSequences.has(destination.slice(index, index + minimum))) return true;
+      }
+      return false;
+    }
+    if (rule.key === 'emailBroadcastDomains') {
+      if (!/^\s*\d+(?:\.\d+)?(?:E\+?\d+)?\s*$/.test(String(row.Size || ''))) return false;
+      const domains = new Set();
+      const consumerLocals = new Set();
+      const emailPattern = /([A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+)@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/;
+      for (const part of String(row.Destination || '').split(/;+/)) {
+        const match = emailPattern.exec(part.trim());
+        if (!match) continue;
+        const local = match[1].toLowerCase();
+        const domain = match[2].toLowerCase();
+        if (['gmail', 'google', 'yahoo', 'microsoft', 'outlook'].some(provider => domain.includes(provider))) consumerLocals.add(local);
+        else domains.add(domain);
+      }
+      const minimum = Math.max(1, Math.floor(Number(settings.minimumDomains) || 5));
+      return domains.size + consumerLocals.size >= minimum;
     }
     if (rule.key === 'shortSubject') {
       return channel.includes('email') && String(row.Details || '').trim().length < Number(settings.subjectLength ?? 15);
