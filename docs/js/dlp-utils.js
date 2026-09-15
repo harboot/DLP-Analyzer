@@ -50,16 +50,24 @@
   function showUploadWarning(element, missingByFile) {
     if (!element) return;
     const entries = (missingByFile || []).filter(entry => entry.missing?.length);
+    const messages = (missingByFile || []).map(entry => entry.message).filter(Boolean);
     element.replaceChildren();
-    element.hidden = entries.length === 0;
-    if (!entries.length) return;
+    element.hidden = entries.length === 0 && messages.length === 0;
+    if (!entries.length && !messages.length) return;
 
-    const strong = document.createElement('strong');
-    strong.textContent = 'Missing expected columns: ';
-    element.appendChild(strong);
-    const columns = document.createElement('code');
-    columns.textContent = [...new Set(entries.flatMap(entry => entry.missing))].join(', ');
-    element.appendChild(columns);
+    if (entries.length) {
+      const strong = document.createElement('strong');
+      strong.textContent = 'Missing expected columns: ';
+      element.appendChild(strong);
+      const columns = document.createElement('code');
+      columns.textContent = [...new Set(entries.flatMap(entry => entry.missing))].join(', ');
+      element.appendChild(columns);
+    }
+    for (const message of messages) {
+      const text = document.createElement('span');
+      text.textContent = `${entries.length ? ' ' : ''}${message}`;
+      element.appendChild(text);
+    }
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'upload-warning-close';

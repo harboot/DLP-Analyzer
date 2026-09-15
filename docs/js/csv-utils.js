@@ -1,66 +1,36 @@
 (function (global) {
   'use strict';
-
-  function parseRows(text) {
-    const rows = [];
-    let row = [];
-    let field = '';
-    let quoted = false;
-    const input = String(text ?? '').replace(/^\uFEFF/, '');
-
-    for (let index = 0; index < input.length; index++) {
-      const character = input[index];
-      if (quoted) {
-        if (character === '"' && input[index + 1] === '"') {
-          field += '"';
-          index++;
-        } else if (character === '"') {
-          quoted = false;
-        } else {
-          field += character;
-        }
-      } else if (character === '"' && field === '') {
-        quoted = true;
-      } else if (character === ',') {
-        row.push(field);
-        field = '';
-      } else if (character === '\n' || character === '\r') {
-        if (character === '\r' && input[index + 1] === '\n') index++;
-        row.push(field);
-        rows.push(row);
-        row = [];
-        field = '';
-      } else {
-        field += character;
-      }
-    }
-    if (field !== '' || row.length) {
-      row.push(field);
-      rows.push(row);
-    }
-    return rows.filter(values => values.some(value => value !== ''));
+  function ingest(files, options = {}) {
+    const worker = new Worker('worker/DataIngest.worker.js');
+    let settled = false;
+    let rejectTask;
+    const promise = new Promise((resolve, reject) => {
+      rejectTask = reject;
+      worker.onmessage = event => {
+        const message = event.data;
+        options.onMessage?.(message);
+        if (message.type === 'complete') { settled = true; worker.terminate(); resolve(message); }
+        else if (message.type === 'error' || message.type === 'cancelled') { settled = true; worker.terminate(); reject(new Error(message.message || 'Ingestion cancelled.')); }
+      };
+      worker.onerror = event => { settled = true; worker.terminate(); reject(new Error(event.message || 'The ingestion worker failed.')); };
+      worker.postMessage({ type: 'ingest', files: Array.from(files), normalizeAlerts: options.normalizeAlerts, batchSize: options.batchSize });
+    });
+    return { promise, cancel() { if (!settled) { settled = true; worker.postMessage({ type: 'cancel' }); worker.terminate(); rejectTask(new Error('Ingestion cancelled.')); } } };
   }
-
-  function parseText(text, options = {}) {
-    const rows = parseRows(text);
-    if (!options.header) return rows;
-    const headers = rows.shift() || [];
-    const records = rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ''])));
-    Object.defineProperty(records, 'headers', { value: headers });
-    return records;
+  async function collect(files, options) {
+    const rows = []; let headers = [];
+    const task = ingest(files, { ...options, onMessage(message) {
+      if (message.type === 'headers' && message.fileIndex === 0) headers = message.headers;
+      if (message.type === 'batch') rows.push(...message.rows);
+      options?.onMessage?.(message);
+    } });
+    await task.promise;
+    Object.defineProperty(rows, 'headers', { value: headers });
+    return rows;
   }
-
   global.CSVUtils = Object.freeze({
-    async parseFile(file, options) {
-      const name = String(file?.name || '');
-      const type = String(file?.type || '').toLowerCase();
-      if (!/\.csv$/i.test(name) && !type.includes('csv')) {
-        throw new Error('Only CSV files are supported.');
-      }
-      return parseText(await file.text(), Object.assign({ header: true }, options));
-    },
-    parseText(text, options) {
-      return Promise.resolve(parseText(text, Object.assign({ header: false }, options)));
-    }
+    ingest,
+    parseFile(file, options) { return collect([file], options); },
+    parseText(text, options) { return collect([new File([String(text ?? '')], 'inline.csv', { type: 'text/csv' })], options); }
   });
 })(window);
