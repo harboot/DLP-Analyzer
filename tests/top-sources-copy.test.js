@@ -12,5 +12,9 @@ test('top sources summary includes an accessible copy control', () => {
 });
 
 test('top sources are copied using the requested table layout', () => {
-  assert.match(uiSource, /\['Source \| Number', \.\.\.topSources\.map\(\(\[source, count\]\) => `\$\{source\} \| \$\{count\}`\)\]\.join\('\\n'\)/);
+  assert.match(uiSource, /source\.replace\(\/\[\\t\\r\\n\]\+\/g, ' '\)\}\\t\$\{count\}/);
+  assert.match(uiSource, /<tr><td>\$\{DLPUtils\.escapeHtml\(source\)\}<\/td><td>\$\{DLPUtils\.escapeHtml\(count\)\}<\/td><\/tr>/);
+  assert.doesNotMatch(uiSource, /Source \| Number/);
+  assert.match(uiSource, /navigator\.clipboard\.write\(\[item\]\)/);
+  assert.match(uiSource, /DLPUtils\.showCopyPreview\(cells\)/);
 });

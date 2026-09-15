@@ -1,18 +1,38 @@
 /* Shared controls and reusable interface components. */
 /* A consistent introduction block used at the top of every tool page. */
 body.tool-page .page-header {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-interactive);
+  border-radius: var(--radius-card);
+  background: linear-gradient(120deg, var(--color-accent-soft), var(--color-purple-soft) 48%, var(--color-orange-soft));
+  box-shadow: var(--shadow-panel);
   margin-bottom: var(--space-4);
+}
+
+body.tool-page .page-header::after {
+  content: "";
+  position: absolute;
+  top: -72px;
+  right: -48px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-accent-medium), transparent 68%);
+  pointer-events: none;
 }
 
 body.tool-page .page-header h1 {
   margin: 0 0 var(--space-2);
+  color: var(--color-text-info);
 }
 
 body.tool-page .page-header .page-description {
   width: 100%;
   max-width: none;
   margin: 0;
-  color: var(--muted);
+  color: var(--color-text-soft);
   line-height: 1.55;
 }
 
@@ -278,6 +298,34 @@ body.tool-page thead th {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .02em;
+}
+body.tool-page .section > header strong,
+body.tool-page .section > header h2,
+body.tool-page .section > header h3,
+body.tool-page .section-title {
+  color: var(--color-text-info);
+}
+body.tool-page .section:nth-of-type(3n+2) > header strong,
+body.tool-page .section:nth-of-type(3n+2) > header h2,
+body.tool-page .section:nth-of-type(3n+2) > header h3 {
+  color: var(--color-purple);
+}
+body.tool-page .section:nth-of-type(3n) > header strong,
+body.tool-page .section:nth-of-type(3n) > header h2,
+body.tool-page .section:nth-of-type(3n) > header h3 {
+  color: var(--color-success);
+}
+body.tool-page .card h3,
+body.tool-page .input-guide-label {
+  color: var(--color-text-soft);
+}
+body.tool-page .card b,
+body.tool-page .kpi .num,
+body.tool-page .score strong {
+  color: var(--color-accent);
+}
+body.tool-page tbody tr:nth-child(even) {
+  background: rgba(76, 201, 240, .025);
 }
 body.tool-page .tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 body.tool-page .tab-btn,
