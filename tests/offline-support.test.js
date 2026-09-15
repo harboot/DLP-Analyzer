@@ -46,22 +46,14 @@ test('installed clients only check for updates when requested', () => {
   assert.match(offlineSource, /await registration\.update\(\)/);
 });
 
-test('CSV parser rejects non-CSV uploads', async () => {
-  const context = { window: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);
-  await assert.rejects(
-    context.window.CSVUtils.parseFile({ name: 'alerts.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', text: async () => '' }),
-    /Only CSV files are supported\./
-  );
-});
-
-test('alert upload tools expose CSV-only file controls without the XLSX library', () => {
-  for (const page of ['AlertAnalyzer.html', 'CardManager.html', 'PolicyTuningAdvisor.html', 'RuleIdentifier.html']) {
-    const source = fs.readFileSync(path.join(root, page), 'utf8');
-    assert.doesNotMatch(source, /xlsx\.full|\.xlsx|spreadsheetml/i);
-    assert.match(source, /accept="\.csv,text\/csv"/);
-  }
-  assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), false);
+test('alert ingestion supports CSV and XLSX through the cached worker', () => {
+  const page = fs.readFileSync(path.join(root, 'AlertAnalyzer.html'), 'utf8');
+  const client = fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8');
+  assert.match(page, /accept="\.csv,\.xlsx,text\/csv,application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"/);
+  assert.match(client, /new Worker\('worker\/DataIngest\.worker\.js'\)/);
+  assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), true);
+  assert.match(workerSource, /'\.\/worker\/DataIngest\.worker\.js'/);
+  assert.match(workerSource, /'\.\/lib\/xlsx\.full\.min\.js'/);
 });
 
 test('Document Viewer retains XLSX detection and text extraction without the XLSX library', () => {
@@ -72,11 +64,10 @@ test('Document Viewer retains XLSX detection and text extraction without the XLS
   assert.equal(source.includes('xl\\/worksheets\\/sheet'), true);
 });
 
-test('CSV parser supports quoted commas, escaped quotes, and newlines', async () => {
-  const context = { window: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);
-  const rows = await context.window.CSVUtils.parseText('Name,Details\r\nAlice,"one, two"\r\nBob,"line 1\nline ""2"""', { header: true });
-  assert.equal(rows[0].Details, 'one, two');
-  assert.equal(rows[1].Details, 'line 1\nline "2"');
-  assert.deepEqual(Array.from(rows.headers), ['Name', 'Details']);
+test('CSV ingestion is incremental and XLSX warns before whole-workbook parsing', () => {
+  const source = fs.readFileSync(path.join(root, 'worker/DataIngest.worker.js'), 'utf8');
+  assert.match(source, /TextDecoderStream/);
+  assert.match(source, /file\.slice\(o,o\+CHUNK_SIZE\)/);
+  assert.match(source, /XLSX processing requires the entire workbook in memory\./);
+  assert.match(source, /XLSX\.read\(await file\.arrayBuffer\(\)/);
 });

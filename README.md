@@ -4,7 +4,7 @@
 
 A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. It is a companion analysis utility, not an official Forcepoint product.
 
-Processing happens in the browser: uploaded file contents are not sent to an application server. CSV uploads use the shared local parser in `docs/js/csv-utils.js`.
+Processing happens in the browser: uploaded file contents are not sent to an application server. CSV uploads are decoded incrementally by `docs/worker/DataIngest.worker.js`. XLSX uploads are parsed there with SheetJS, but still require the entire workbook in memory; the application warns when a workbook exceeds the 50 MB safe limit.
 
 ## Forcepoint DLP compatibility
 
@@ -48,7 +48,7 @@ When served over HTTPS, including on GitHub Pages, the application prepares all 
     │   ├── KG_script.js         # Keyword Generator logic
     │   ├── ai.js                # AI-assisted filter generation
     │   ├── csv.js               # Alert ingestion and tab construction
-    │   ├── csv-utils.js         # Shared local CSV parser
+    │   ├── csv-utils.js         # Shared ingestion-worker client
     │   ├── dlp-utils.js         # Shared DOM and output-safety helpers
     │   ├── risk-scoring.js      # Weighted alert-score aggregation
     │   ├── rules.js             # Alert Analyzer rule execution
@@ -57,6 +57,8 @@ When served over HTTPS, including on GitHub Pages, the application prepares all 
     │   └── utils.js             # Alert Analyzer data helpers and state
     ├── worker/                  # CPU-intensive background processing
     │   ├── AlertAnalyzer.worker.js
+    │   ├── DataIngest.worker.js
+    │   ├── PolicyTuning.worker.js
     │   └── RuleIdentifier.worker.js
     └── rules/                   # Declarative JSON risk-rule packs
         ├── destination-risk.json

@@ -1,40 +1,8 @@
 /* Alert Analyzer: csv */
 
 function ingest(rows){
-  // Append rows so files from one upload action are combined
-  const mapped = rows.map(r => {
-    const uploadedRow = sanitizeHeaders(r);
-    const row = ensureCols(uploadedRow);
-    row.__uploadedColumns = Object.keys(uploadedRow);
-    row['File Name'] = normalizeFileList(row['File Name']);
-    row.IncidentTime = row['Incident Time'];
-    row.EventTime    = row['Event Time'];
-    row.FileName     = row['File Name'];
-    row.Size         = row['Transaction Size (KB)'];
-
-    // Values shared by summaries and rules are derived once during ingestion.
-    // Keeping them on the row also means the worker receives them through the
-    // structured clone instead of repeatedly parsing the original CSV cells.
-    const incidentDate = parseIncidentTime(row['Incident Time']);
-    row.sourceLower = txt(row['Source']).trim().toLowerCase();
-    row.destinationDomains = Array.from(new Set(
-      splitDestParts(row['Destination']).map(getBaseDomain).filter(Boolean)
-    ));
-    // normalizeFileList uses semicolons as separators. Commas can legitimately
-    // be part of a filename (for example, "SURNAME, GIVEN NAME.pdf").
-    row.fileTokens = txt(row['File Name'])
-      .split(/[;\n]/)
-      .map(token => token.trim())
-      .filter(Boolean);
-    row.incidentDate = incidentDate;
-    row.incidentHour = incidentDate ? incidentDate.getHours() : null;
-    row.actionLower = txt(row['Action']).toLowerCase();
-    row.channelLower = txt(row['Channel']).toLowerCase();
-    return row;
-  });
-
   if (!Array.isArray(state.raw)) state.raw = [];
-  state.raw.push(...mapped);
+  state.raw.push(...rows);
 
   buildTabs();
   updateIncidentRange();
@@ -118,38 +86,50 @@ function initializeIgnoredValuesSettings() {
 
 initializeIgnoredValuesSettings();
 
+let activeIngest = null;
 async function ingestFiles(files) {
   const warnings = [];
-  const batches = [];
-  for (let index = 0; index < files.length; index++) {
-    const f = files[index];
-    setProcessingMessage(`Reading ${index + 1} of ${files.length}: ${f.name}`);
-    await new Promise(resolve => setTimeout(resolve, 0));
-    const rows = await CSVUtils.parseFile(f);
-    warnings.push({ fileName: f.name, missing: DLPUtils.findMissingColumns(rows, EXPECTED_ALERT_COLUMNS) });
-    batches.push(rows);
-  }
+  const task = CSVUtils.ingest(files, { normalizeAlerts: true, onMessage(message) {
+    if (message.type === 'batch') {
+      state.raw.push(...message.rows);
+      const percent = message.totalBytes ? Math.round(message.processedBytes / message.totalBytes * 100) : 100;
+      setProcessingMessage(`Processing alerts… ${percent}% (${message.rowCount.toLocaleString()} rows)`);
+    }
+    if (message.type === 'warning') warnings.push({ message: message.message });
+    if (message.type === 'file-complete') warnings.push({ fileName: files[message.fileIndex].name, missing: DLPUtils.findMissingColumns(Object.assign([], { headers: message.headers }), EXPECTED_ALERT_COLUMNS) });
+  } });
+  activeIngest = task;
+  await task.promise;
+  if (activeIngest === task) activeIngest = null;
   setProcessingMessage('Building alert views…');
   await new Promise(resolve => setTimeout(resolve, 0));
-  ingest(batches.flat());
+  buildTabs();
+  updateIncidentRange();
   DLPUtils.showUploadWarning(uploadWarning, warnings);
 }
 
 const processingOverlay = document.getElementById('alertProcessing');
 const processingText = document.getElementById('alertProcessingText');
 function setProcessingMessage(message) { processingText.textContent = message; }
+let processingSequence = 0;
 async function processUploadedFiles(files) {
+  const sequence = ++processingSequence;
+  activeIngest?.cancel();
   processingOverlay.hidden = false;
   document.body.setAttribute('aria-busy', 'true');
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  if (sequence !== processingSequence) return;
   try {
     await ingestFiles(files);
   } catch (error) {
+    if (error.message === 'Ingestion cancelled.') return;
     uploadWarning.hidden = false;
     uploadWarning.textContent = `Unable to process the selected files: ${error.message}`;
   } finally {
-    processingOverlay.hidden = true;
-    document.body.removeAttribute('aria-busy');
+    if (sequence === processingSequence) {
+      processingOverlay.hidden = true;
+      document.body.removeAttribute('aria-busy');
+    }
   }
 }
 
@@ -196,7 +176,7 @@ document.getElementById('demoBtn').addEventListener('click', async () => {
   button.textContent = 'Loading sample…';
   try {
     const contents = await loadSample('sample/alerts.csv');
-    const demo = await CSVUtils.parseText(contents, { header: true });
+    const demo = await CSVUtils.parseText(contents, { normalizeAlerts: true });
     clearRuleCaches();
     state.raw = [];
     state.datasetFiles = [{ name: 'alerts.csv', size: 0, lastModified: 0 }];
