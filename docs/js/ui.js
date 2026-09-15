@@ -432,13 +432,22 @@ function renderTableSection(tab){
   return sec;
 }
 
-// Copies the source summary in a compact, human-readable table format.
+// Copies the source summary like an alert row: HTML for spreadsheet-aware
+// clients and tab-separated plain text as a fallback. The data has no header.
 async function copyTopSources(topSources, button){
-  const text = ['Source | Number', ...topSources.map(([source, count]) => `${source} | ${count}`)].join('\n');
+  const cells = topSources.map(([source, count]) => [String(source), String(count)]);
+  const text = cells.map(([source, count]) => `${source.replace(/[\t\r\n]+/g, ' ')}\t${count}`).join('\n') + '\n';
+  const html = `<!doctype html><html><body><table>${cells.map(([source, count]) => `<tr><td>${DLPUtils.escapeHtml(source)}</td><td>${DLPUtils.escapeHtml(count)}</td></tr>`).join('')}</table></body></html>`;
   const originalIcon = button.innerHTML;
 
   try {
-    if (navigator.clipboard?.writeText) {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' })
+      });
+      await navigator.clipboard.write([item]);
+    } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
     } else {
       const textarea = document.createElement('textarea');
@@ -452,6 +461,7 @@ async function copyTopSources(topSources, button){
       textarea.remove();
       if (!copied) throw new Error('Clipboard copy was rejected');
     }
+    DLPUtils.showCopyPreview(cells);
     button.innerHTML = '<span aria-hidden="true">✓</span>';
     button.classList.add('is-copied');
     button.title = 'Top sources copied';
