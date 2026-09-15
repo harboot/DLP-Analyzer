@@ -37,6 +37,7 @@
       <li>Select <strong>RUN ALL</strong>. Every enabled rule is evaluated for every alert.</li>
       <li>The tool adds the weights of all matching rules and ranks alerts from highest to lowest score.</li>
     </ol>
+    <p>The ranked result table is the review workspace. Use the funnel beside any result column to filter by text or sort in either direction. Filters can be combined across columns; the alert count, pagination, and CSV export all follow the filtered result set. Select <strong>Clear filters</strong> to return to the complete ranking. The detector list remains in its intentional built-in/custom order so it is easy to manage rules.</p>
     <p>The <strong>Built-in detectors</strong> group can be collapsed to make more room for custom rules. Predefined rules are maintained by the application. You can enable or disable them and change their weight. Rules with parameters also expose those parameters in the editor, and <strong>Default</strong> restores their original weight and settings before you save. Their names, descriptions, and matching logic cannot be changed or deleted.</p>
     <p><strong>Email Broadcast Multiple Destination Domain</strong> counts unique destination domains on each alert. For Gmail, Google, Yahoo, Microsoft, and Outlook destinations, it counts unique local parts instead so multiple consumer-mail recipients are retained. Set <strong>Minimum destination domains</strong> to choose the match threshold. <strong>Email Sent to Self (by character)</strong> compares normalized sender and destination text and matches when they share a sequence at least as long as <strong>Minimum matching characters</strong>, which defaults to five.</p>
   </section>
@@ -46,11 +47,12 @@
     <ol>
       <li>Select the settings button beside Guide to open the settings box. Enable <strong>Ignored values</strong> to exclude alerts using the source and destination patterns saved in Alert Analyzer.</li>
       <li>In <strong>AI Rule Generator</strong>, enter your OpenAI API key, choose how many days it may be kept in this browser, and select <strong>Save API key</strong>.</li>
-      <li>Select <strong>New Rule</strong>, then describe the condition in plain English and select <strong>Generate rule</strong>.</li>
+      <li>Select <strong>New Rule</strong>, then use the larger prompt box to describe the condition, fields, thresholds, separators, and exceptions in plain English. Select <strong>Generate rule</strong>.</li>
       <li>Review the generated rule name, description, recommended weight, and JavaScript carefully, then select <strong>Save</strong>.</li>
       <li>Use <strong>RUN</strong> to validate the rule against uploaded alerts before enabling it for <strong>RUN ALL</strong>.</li>
     </ol>
     <p>The API key is stored only in the current browser for the selected retention period. Generating a rule sends your written instruction to OpenAI, but it does not send the uploaded CSV rows. Generated code should always be reviewed before it is run.</p>
+    <p>The generator combines your prompt with the documented execution environment and asks for a name, description, recommended weight, and JavaScript statement block. It places those values into a new custom rule without saving or enabling it. This review step is deliberate: confirm the field names, parsing assumptions, and return value before selecting <strong>Save</strong>.</p>
     <p>The ranked table displays a compact alert summary plus Score and Triggered rules. Row copy and CSV export retain every original uploaded column.</p>
     <h3>Example request</h3>
     <pre><code>Match Network email alerts when the attachment is larger than 10 MB and the destination is outside example.com.</code></pre>
@@ -67,6 +69,58 @@
       <li>Use <strong>RUN</strong> to inspect one rule before enabling it for combined scoring.</li>
       <li>Only import snippets from sources you trust, and review generated code before running it.</li>
     </ul>
+
+    <h3>Variables and data model</h3>
+    <dl>
+      <dt><code>row</code></dt><dd>The normalized alert currently being evaluated. Read fields with exact, case-sensitive names such as <code>row.Source</code> or <code>row.FileName</code>.</dd>
+      <dt><code>rows</code></dt><dd>The complete normalized dataset. Use it for comparisons such as finding destinations that occur only once. Do not modify this array.</dd>
+      <dt><code>i</code></dt><dd>The zero-based position of <code>row</code> inside <code>rows</code>. It is useful when comparing the current alert with neighboring or earlier alerts.</dd>
+    </dl>
+    <p>All row fields are strings, including <code>Size</code>. Blank or unavailable values are empty strings. <code>Size</code> represents kilobytes and may use uppercase scientific notation, such as <code>3.12E+4</code>. Validate it before converting. <code>FileName</code>, <code>Policies</code>, and <code>Destination</code> can contain multiple values separated by semicolons.</p>
+
+    <h3>How to structure a reliable snippet</h3>
+    <ol>
+      <li>Convert the field to a string and handle a blank value first.</li>
+      <li>Normalize case and whitespace when the comparison should be case-insensitive.</li>
+      <li>Split multi-value fields, trim each item, and remove empty items.</li>
+      <li>Validate numbers or dates before comparing them.</li>
+      <li>Apply explicit exceptions before the match condition.</li>
+      <li>End with <code>return true;</code> or <code>return false;</code>; every execution path should produce a Boolean.</li>
+    </ol>
+    <pre><code>const destinations = String(row.Destination || "")
+  .split(";")
+  .map(value =&gt; value.trim().toLowerCase())
+  .filter(Boolean);
+if (!destinations.length) return false;
+
+const sizeText = String(row.Size || "").trim();
+if (!/^\d+(?:\.\d+)?(?:E\+?\d+)?$/.test(sizeText)) return false;
+const sizeKb = Number(sizeText);
+
+const trustedDomain = "example.com";
+const hasExternalDestination = destinations.some(value =&gt;
+  !value.endsWith(`@${trustedDomain}`) &amp;&amp; value !== trustedDomain
+);
+return sizeKb &gt; 1024 &amp;&amp; hasExternalDestination;</code></pre>
+
+    <h3>Cross-row rules</h3>
+    <p>Use <code>rows</code> only when the condition depends on the dataset, because scanning the full array for every alert is more expensive than a row-only test. This example identifies a destination text that appears only on the current row:</p>
+    <pre><code>const destination = String(row.Destination || "").trim().toLowerCase();
+if (!destination) return false;
+let occurrences = 0;
+for (const candidate of rows) {
+  if (String(candidate.Destination || "").trim().toLowerCase() === destination) occurrences++;
+  if (occurrences &gt; 1) return false;
+}
+return occurrences === 1;</code></pre>
+
+    <h3>Prompt-writing checklist</h3>
+    <p>A precise AI prompt states the channel or scope, exact field names, units, how multiple values should be treated, exceptions, and boundary behavior. For example:</p>
+    <pre><code>Match only Network email alerts. Parse row.Size as KB and require it to be
+strictly greater than 10 MB. Split row.Destination on semicolons. Match when
+at least one destination is outside example.com, but ignore blank destinations
+and the trusted partner.org domain. Return false when Size is invalid.</code></pre>
+    <p>Avoid vague requests such as “find risky emails.” State what constitutes risk and provide one matching and one non-matching example when the logic is nuanced.</p>
 
     <h3>Built-in detector: attachment resembles a ransomware note or encrypted file</h3>
     <p>This predefined detector recognizes common ransom-note names, encryption wording, suspicious appended identifiers, and encrypted-file extensions. Open it in the rule editor to customize its <code>encExtRegex</code> setting.</p>

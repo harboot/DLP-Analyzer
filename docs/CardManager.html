@@ -80,9 +80,9 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="name" scope="col"><span>Detector</span><button class="risk-filter-icon" type="button" data-column="name" aria-label="Filter or sort by detector" title="Filter or sort by detector"></button></th>
-                <th class="weight" scope="col"><span>Weight</span><button class="risk-filter-icon" type="button" data-column="weight" aria-label="Filter or sort by weight" title="Filter or sort by weight"></button></th>
-                <th class="matches" scope="col"><span>Matches</span><button class="risk-filter-icon" type="button" data-column="matches" aria-label="Filter or sort by matches" title="Filter or sort by matches"></button></th>
+                <th class="name" scope="col">Detector</th>
+                <th class="weight" scope="col">Weight</th>
+                <th class="matches" scope="col">Matches</th>
                 <th class="actions" scope="col">Actions</th>
               </tr>
             </thead>
@@ -142,24 +142,29 @@
     </div>
 
     <div id="aiSettingsDialog" class="settings-dialog" hidden>
-      <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="riskSettingsTitle">
+      <div class="settings-box risk-settings-box" role="dialog" aria-modal="true" aria-labelledby="riskSettingsTitle">
         <div class="settings-heading"><strong id="riskSettingsTitle">Settings</strong><button id="aiSettingsClose" class="icon-btn" type="button" aria-label="Close settings">×</button></div>
-        <label class="risk-ignore-setting"><input id="useIgnoredValues" type="checkbox" /> Ignored values</label>
-        <p class="tiny muted">Exclude alerts using the saved Ignored values settings from Alert Analyzer.</p>
-        <hr />
-        <strong id="aiFilterTitle">AI Rule Generator</strong>
-        <div class="editor" aria-labelledby="aiFilterTitle">
-          <div class="cjs-chatrow">
-            <input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" />
-            <label class="muted-sm">Save for (days) <input id="apikey-retention-days" class="textinput input-compact" type="number" min="1" max="90" value="90" /></label>
-            <button class="btn" id="save-apikey">Save API key</button>
+        <p class="settings-intro">Configure alert exclusions and optional AI-assisted rule creation.</p>
+        <section class="settings-group" aria-labelledby="alertProcessingTitle">
+          <div class="settings-group-heading"><strong id="alertProcessingTitle">Alert processing</strong><span class="muted-sm">Applied when alerts are loaded</span></div>
+          <label class="risk-ignore-setting"><input id="useIgnoredValues" type="checkbox" /> <span><strong>Use ignored values</strong><small>Exclude alerts using the source and destination patterns saved in Alert Analyzer.</small></span></label>
+        </section>
+        <section class="settings-group" aria-labelledby="aiFilterTitle">
+          <div class="settings-group-heading"><strong id="aiFilterTitle">AI Rule Generator</strong><span class="muted-sm">Your uploaded alerts are not sent</span></div>
+          <div class="editor settings-editor">
+            <label class="settings-field"><span>OpenAI API key</span><input id="apikey-input" class="textinput" type="password" autocomplete="new-password" placeholder="Enter your OpenAI API key" /></label>
+            <div class="api-key-actions">
+              <label class="settings-field retention-field"><span>Save for</span><span class="input-with-suffix"><input id="apikey-retention-days" class="textinput input-compact" type="number" min="1" max="90" value="90" /><span>days</span></span></label>
+              <button class="btn" id="save-apikey">Save API key</button>
+            </div>
+            <label class="settings-field prompt-field"><span>Rule prompt</span><textarea id="chatbot-input" class="textinput ai-rule-prompt" rows="6" placeholder="Describe the alert conditions, exceptions, and expected behavior. For example: Match Network email alerts when the attachment is larger than 1 MB and every destination is outside example.com."></textarea></label>
+            <div class="generator-actions">
+              <span class="muted-sm">Include thresholds, fields, separators, and exceptions for a more precise rule.</span>
+              <button class="btn" id="chatbot-run">Generate rule</button>
+            </div>
+            <div id="chatbot-status" class="status" aria-live="polite"></div>
           </div>
-          <div class="cjs-chatrow">
-            <input id="chatbot-input" class="textinput" type="text" placeholder="Describe a rule, for example: file size greater than 1 MB" />
-            <button class="btn" id="chatbot-run">Generate rule</button>
-          </div>
-          <div id="chatbot-status" class="status" aria-live="polite"></div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -308,8 +313,6 @@ save(items);
 
 let currentFileId = null;
 let filter = '';
-const columnFilters = {};
-let columnSort = null;
 const BUILT_IN_COLLAPSED_KEY = 'riskScoringBuiltInCollapsed';
 let builtInCollapsed = localStorage.getItem(BUILT_IN_COLLAPSED_KEY) === 'true';
 const elTbody = $('#tbody');
@@ -399,29 +402,7 @@ function applyFilter(list) {
       (x) => x.name.toLowerCase().includes(q) || (x.code || x.description || '').toLowerCase().includes(q)
     );
   }
-  return filtered.filter((rule) => Object.entries(columnFilters).every(([column, value]) =>
-    getRuleColumnValue(rule, column).toLowerCase().includes(value.toLowerCase())
-  ));
-}
-
-/* Returns the display value used to filter and sort a rule-table column. */
-function getRuleColumnValue(rule, column) {
-  if (column === 'name') return rule.name || '';
-  if (column === 'weight') return String(RiskScoring.normalizeWeight(rule.weight));
-  if (column === 'matches') return matchesCache.has(rule.id) ? String(matchesCache.get(rule.id).count) : '—';
-  return '';
-}
-
-/* Orders rules using the selected column while keeping stable ties. */
-function sortRules(list) {
-  if (!columnSort) return list;
-  const direction = columnSort.direction === 'asc' ? 1 : -1;
-  return list.map((rule, index) => ({ rule, index })).sort((a, b) => {
-    const av = getRuleColumnValue(a.rule, columnSort.column);
-    const bv = getRuleColumnValue(b.rule, columnSort.column);
-    const comparison = av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
-    return comparison ? comparison * direction : a.index - b.index;
-  }).map(({ rule }) => rule);
+  return filtered;
 }
 
 /* Gets the cell in a given file row for a specified class. */
@@ -556,8 +537,8 @@ function render() {
     if (a.builtIn && b.builtIn) return items.indexOf(a) - items.indexOf(b);
     return a.name.localeCompare(b.name);
   });
-  const builtIns = sortRules(fileList.filter(file => file.builtIn));
-  const customRules = sortRules(fileList.filter(file => !file.builtIn));
+  const builtIns = fileList.filter(file => file.builtIn);
+  const customRules = fileList.filter(file => !file.builtIn);
   const rows = [];
   if (builtIns.length) {
     const groupRow = document.createElement('tr');
@@ -566,10 +547,14 @@ function render() {
     rows.push(groupRow);
     if (!builtInCollapsed) rows.push(...builtIns.map(createRuleRow));
   }
-  rows.push(...customRules.map(createRuleRow));
+  if (customRules.length) {
+    const customGroupRow = document.createElement('tr');
+    customGroupRow.className = 'rule-group-row custom-rule-group-row';
+    customGroupRow.innerHTML = `<td colspan="4"><div class="rule-group-label"><span>Custom detectors</span><span class="badge">${customRules.length}</span></div></td>`;
+    rows.push(customGroupRow, ...customRules.map(createRuleRow));
+  }
   elTbody.replaceChildren(...rows);
   elCount.textContent = fileList.length;
-  updateRuleFilterIcons();
   elTbody.querySelector('.rule-group-toggle')?.addEventListener('click', () => {
     builtInCollapsed = !builtInCollapsed;
     localStorage.setItem(BUILT_IN_COLLAPSED_KEY, String(builtInCollapsed));
@@ -600,63 +585,6 @@ function render() {
   });
   bindOpenMatches();
 }
-
-const riskFilterSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2l-7 8v5l-4 1v-6L3 6z"/></svg>';
-
-/* Reflects active filters and sorting in the table-header controls. */
-function updateRuleFilterIcons() {
-  $$('.risk-filter-icon').forEach((button) => {
-    const column = button.dataset.column;
-    const active = !!columnFilters[column] || columnSort?.column === column;
-    button.innerHTML = riskFilterSvg;
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
-}
-
-/* Opens the same filter and ascending/descending sort controls used by Alert Analyzer. */
-function openRuleFilter(button) {
-  document.querySelector('.risk-filter-pop')?.remove();
-  const column = button.dataset.column;
-  const popover = document.createElement('div');
-  popover.className = 'risk-filter-pop';
-  popover.innerHTML = `
-    <div class="risk-sort-actions">
-      <button class="btn" type="button" data-sort="asc" aria-label="Sort ascending" title="Ascending">↑</button>
-      <button class="btn" type="button" data-sort="desc" aria-label="Sort descending" title="Descending">↓</button>
-    </div>
-    <input class="textinput" type="text" aria-label="Filter ${column}" placeholder="contains... (leave blank to clear)" value="${escapeHtml(columnFilters[column] || '')}" />
-    <div class="muted-sm">Enter to apply filter • Esc to close</div>`;
-  button.closest('th').appendChild(popover);
-  popover.querySelectorAll('[data-sort]').forEach((sortButton) => {
-    if (columnSort?.column === column && columnSort.direction === sortButton.dataset.sort) sortButton.classList.add('is-selected');
-    sortButton.addEventListener('click', () => {
-      columnSort = { column, direction: sortButton.dataset.sort };
-      popover.remove();
-      render();
-    });
-  });
-  const input = popover.querySelector('input');
-  input.focus();
-  input.select();
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      const value = input.value.trim();
-      if (value) columnFilters[column] = value;
-      else delete columnFilters[column];
-      popover.remove();
-      render();
-    } else if (event.key === 'Escape') popover.remove();
-  });
-}
-
-$$('.risk-filter-icon').forEach((button) => button.addEventListener('click', (event) => {
-  event.stopPropagation();
-  openRuleFilter(button);
-}));
-document.addEventListener('click', (event) => {
-  if (!event.target.closest('.risk-filter-pop') && !event.target.closest('.risk-filter-icon')) document.querySelector('.risk-filter-pop')?.remove();
-});
 
 /* Creates a new empty file and opens it in the editor. */
 function newFile() {
@@ -1096,6 +1024,44 @@ function bindOpenMatches() {
   });
 }
 
+const riskFilterSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2l-7 8v5l-4 1v-6L3 6z"/></svg>';
+
+/* Opens filter and sort controls for a ranked-alert column. */
+function openResultFilter(button, filters, currentSort, apply) {
+  document.querySelector('.risk-filter-pop')?.remove();
+  const column = button.dataset.resultColumn;
+  const label = button.closest('th').querySelector('span').textContent;
+  const popover = document.createElement('div');
+  popover.className = 'risk-filter-pop';
+  popover.innerHTML = `<div class="risk-sort-actions">
+      <button class="btn${currentSort.column === column && currentSort.direction === 'asc' ? ' is-selected' : ''}" type="button" data-sort="asc">Sort A–Z / low–high</button>
+      <button class="btn${currentSort.column === column && currentSort.direction === 'desc' ? ' is-selected' : ''}" type="button" data-sort="desc">Sort Z–A / high–low</button>
+    </div>
+    <label><span class="muted-sm">Filter ${escapeHtml(label)}</span><input class="textinput" type="text" placeholder="Contains…" value="${escapeHtml(filters[column] || '')}" /></label>
+    <div class="risk-filter-actions"><button class="btn" type="button" data-filter-clear>Clear</button><button class="btn" type="button" data-filter-apply>Apply</button></div>`;
+  button.closest('th').appendChild(popover);
+  const input = popover.querySelector('input');
+  const finish = (sort = currentSort) => {
+    const value = input.value.trim();
+    if (value) filters[column] = value;
+    else delete filters[column];
+    popover.remove();
+    apply(sort);
+  };
+  popover.querySelectorAll('[data-sort]').forEach(sortButton => sortButton.addEventListener('click', () => finish({ column, direction: sortButton.dataset.sort })));
+  popover.querySelector('[data-filter-apply]').addEventListener('click', () => finish());
+  popover.querySelector('[data-filter-clear]').addEventListener('click', () => { input.value = ''; finish(); });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') finish();
+    if (event.key === 'Escape') popover.remove();
+  });
+  input.focus();
+}
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.risk-filter-pop') && !event.target.closest('.risk-filter-icon')) document.querySelector('.risk-filter-pop')?.remove();
+});
+
 /* Ranks alerts by the sum of every enabled Boolean rule that matched them. */
 function openRiskTable(enabledFiles) {
   const matchSets = new Map(enabledFiles.map((file) => [file.id, new Set(matchesCache.get(file.id)?.indices || [])]));
@@ -1108,12 +1074,48 @@ function openRiskTable(enabledFiles) {
   const wrap = document.getElementById('resultWrap');
   let page = 1;
   let pageSize = 50;
+  const resultFilters = {};
+  let resultSort = { column: 'score', direction: 'desc' };
+  const resultColumns = [
+    ['score', 'Score'], ['rules', 'Triggered rules'], ['date', 'Incident Date'], ['source', 'Source'],
+    ['policies', 'Policies'], ['channel', 'Channel'], ['destination', 'Destination'], ['filename', 'File Name'], ['details', 'Details']
+  ];
+
+  const resultValue = (alert, column) => {
+    const row = normalizedRowByRaw.get(alert.row);
+    if (column === 'score') return alert.score;
+    if (column === 'rules') return alert.matchedRules.map(rule => rule.name).join(', ');
+    if (column === 'date') return incidentDate(row);
+    if (column === 'source') return safe(row.Source);
+    if (column === 'policies') return safe(row.Policies);
+    if (column === 'channel') return safe(row.Channel);
+    if (column === 'destination') return safe(row.Destination);
+    if (column === 'filename') return safe(row.FileName);
+    if (column === 'details') return safe(row.Details);
+    return '';
+  };
+
+  const visibleAlerts = () => scored
+    .filter(alert => Object.entries(resultFilters).every(([column, value]) =>
+      String(resultValue(alert, column)).toLowerCase().includes(value.toLowerCase())
+    ))
+    .map((alert, index) => ({ alert, index }))
+    .sort((a, b) => {
+      const av = resultValue(a.alert, resultSort.column);
+      const bv = resultValue(b.alert, resultSort.column);
+      const comparison = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
+      return comparison ? comparison * (resultSort.direction === 'asc' ? 1 : -1) : a.index - b.index;
+    })
+    .map(item => item.alert);
+
+  const resultHeader = ([column, label]) => `<th><span>${label}</span><button class="risk-filter-icon${resultFilters[column] || resultSort.column === column ? ' is-active' : ''}" type="button" data-result-column="${column}" aria-label="Filter or sort by ${label}" aria-pressed="${String(!!resultFilters[column] || resultSort.column === column)}" title="Filter or sort by ${label}">${riskFilterSvg}</button></th>`;
 
   const renderPage = () => {
-    const pages = Math.max(1, Math.ceil(scored.length / pageSize));
+    const displayed = visibleAlerts();
+    const pages = Math.max(1, Math.ceil(displayed.length / pageSize));
     page = Math.min(Math.max(1, page), pages);
     const start = (page - 1) * pageSize;
-    const pageAlerts = scored.slice(start, start + pageSize);
+    const pageAlerts = displayed.slice(start, start + pageSize);
     const bodyHTML = pageAlerts.map((alert) => {
       const rRaw = alert.row;
       const row = normalizedRowByRaw.get(rRaw);
@@ -1137,10 +1139,10 @@ function openRiskTable(enabledFiles) {
 
     wrap.innerHTML = `<output id="onNames" class="muted-sm">Scored ${scored.length} of ${lastCSVRows.length} alerts with ${rules.length} enabled rules.</output>
     <section class="section risk-results">
-      <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${scored.length} scored alerts</span></header>
-      <div class="table-scroll"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th><th class="score-column">Score</th><th>Triggered rules</th><th>Incident Date</th><th>Source</th><th>Policies</th><th>Channel</th><th>Destination</th><th>File Name</th><th>Details</th></tr></thead>
+      <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${displayed.length === scored.length ? `${scored.length} scored alerts` : `${displayed.length} of ${scored.length} scored alerts`}</span></header>
+      <div class="table-scroll"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th>${resultColumns.map(resultHeader).join('')}</tr></thead>
       <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
-      <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${scored.length ? start + 1 : 0}–${Math.min(start + pageSize, scored.length)} of ${scored.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right"><button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
+      <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${displayed.length ? start + 1 : 0}–${Math.min(start + pageSize, displayed.length)} of ${displayed.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right">${Object.keys(resultFilters).length ? '<button class="btn" data-act="clear-result-filters">Clear filters</button>' : ''}<button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
     </section>`;
 
     wrap.querySelector('table').addEventListener('click', (event) => {
@@ -1148,7 +1150,20 @@ function openRiskTable(enabledFiles) {
       const rowElement = button?.closest('tr');
       if (rowElement?.dataset.rowJson) copyRowToClipboard(JSON.parse(rowElement.dataset.rowJson), button);
     });
-    wrap.querySelector('[data-act="export-alerts"]').addEventListener('click', () => downloadAlertCsv(scored.map(alert => ({ ...alert.row, Score: alert.score, 'Triggered rules': alert.matchedRules.map(rule => `${rule.name} (+${rule.weight})`).join(', ') })), 'risk-scoring-alerts.csv'));
+    wrap.querySelector('[data-act="export-alerts"]').addEventListener('click', () => downloadAlertCsv(displayed.map(alert => ({ ...alert.row, Score: alert.score, 'Triggered rules': alert.matchedRules.map(rule => `${rule.name} (+${rule.weight})`).join(', ') })), 'risk-scoring-alerts.csv'));
+    wrap.querySelector('[data-act="clear-result-filters"]')?.addEventListener('click', () => {
+      Object.keys(resultFilters).forEach(column => delete resultFilters[column]);
+      page = 1;
+      renderPage();
+    });
+    wrap.querySelectorAll('[data-result-column]').forEach(button => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openResultFilter(button, resultFilters, resultSort, (nextSort) => {
+        resultSort = nextSort;
+        page = 1;
+        renderPage();
+      });
+    }));
     wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
       pageSize = Number(event.target.value) || 50;
       page = 1;
