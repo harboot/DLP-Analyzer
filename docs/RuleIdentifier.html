@@ -7,7 +7,6 @@
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
   <script src="js/sample-loader.js"></script>
-  <script src="lib/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components.css" />
@@ -35,7 +34,7 @@
         <div class="row-left"></div>
         <div class="row-right">
           <span id="alerts-file-name" class="muted-sm"></span>
-          <label class="drop">Upload DLP Alerts (CSV or XLSX)<input id="file-all" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple /></label>
+          <label class="drop">Upload DLP Alerts (CSV)<input id="file-all" type="file" accept=".csv,text/csv" multiple /></label>
           <button class="btn" id="btn-process" disabled>Process</button>
           <a id="download-link" class="btn initially-hidden" download="dlp-alerts-with-rules.csv">Download CSV</a>
         </div>
@@ -235,9 +234,7 @@ function isCSVFile(f){
   // Some browsers set empty type for dropped files — rely on extension too
   return /\.csv$/i.test(name) || type.includes('csv');
 }
-function isAlertFile(f){
-  return isCSVFile(f) || /\.xlsx$/i.test((f && f.name) || '');
-}
+function isAlertFile(f){ return isCSVFile(f); }
 
 async function handlePolicyJsonFiles(files){
   policyFileName.textContent = files.map(file => file.name).join(', ');
@@ -319,7 +316,7 @@ async function handleFiles(files){
 	  // 1) Classify using raw header line (row #1 only)
 	  let kind = detectKindFromHeaderLine(firstLine);
 
-	  // 2) Use the shared CSV/XLSX parser and compute expected columns.
+	  // 2) Use the shared CSV parser and compute expected columns.
 	  const alertMissing = DLPUtils.findMissingColumns(objs, ['Violation Triggers', 'Policies']);
 	  const policyMissing = DLPUtils.findMissingColumns(objs, ['Rule Name', 'Relation', 'Classifiers']);
 
@@ -455,7 +452,7 @@ function buildCSV(header, rows){
     lines.push(header.map(h => esc(r[h])).join(',')); // rows follow header order
   }
 
-  // ⚠️ Use CRLF for Excel compatibility and a BOM so encoding is detected as UTF-8
+  // ⚠️ Use CRLF for spreadsheet compatibility and a BOM so encoding is detected as UTF-8
   const csv = '\uFEFF' + lines.join('\r\n');
   return csv;
 }

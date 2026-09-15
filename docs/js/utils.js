@@ -152,7 +152,7 @@ const ICON_COL = '__Copy';
     return DLPUtils.getAlertRowCells(row);
   }
 
-  // Builds an HTML table for the clipboard (Excel/Office)
+  // Builds an HTML table for the clipboard (spreadsheet applications)
   function buildRowClipboardHTML(row) {
     const cells = getRowCells(row);
     const head = '';

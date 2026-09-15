@@ -46,6 +46,24 @@ test('installed clients only check for updates when requested', () => {
   assert.match(offlineSource, /await registration\.update\(\)/);
 });
 
+test('CSV parser rejects non-CSV uploads', async () => {
+  const context = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);
+  await assert.rejects(
+    context.window.CSVUtils.parseFile({ name: 'alerts.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', text: async () => '' }),
+    /Only CSV files are supported\./
+  );
+});
+
+test('alert upload tools expose CSV-only file controls without the XLSX library', () => {
+  for (const page of ['AlertAnalyzer.html', 'CardManager.html', 'PolicyTuningAdvisor.html', 'RuleIdentifier.html']) {
+    const source = fs.readFileSync(path.join(root, page), 'utf8');
+    assert.doesNotMatch(source, /xlsx\.full|\.xlsx|spreadsheetml/i);
+    assert.match(source, /accept="\.csv,text\/csv"/);
+  }
+  assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), false);
+});
+
 test('CSV parser supports quoted commas, escaped quotes, and newlines', async () => {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8'), context);

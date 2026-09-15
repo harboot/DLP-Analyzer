@@ -22,7 +22,6 @@
   <script src="js/detectors/destination-domain-once.js"></script>
   <script src="js/detectors/destination-email-subdomain.js"></script>
   <script src="js/detectors/ransomware-attachment.js"></script>
-  <script src="lib/xlsx.full.min.js"></script>
 
   <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="styles.css" />
@@ -41,11 +40,11 @@
         <div class="row-left"></div>
         <div class="row-right">
           <span id="csvName" class="muted-sm"></span>
-          <button class="btn" id="btnUpload" title="Upload DLP alert files">Upload DLP Alerts (CSV or XLSX)</button>
+          <button class="btn" id="btnUpload" title="Upload DLP alert files">Upload DLP Alerts (CSV)</button>
           <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
           <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
           <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open settings" title="Settings">⚙</button>
-          <input id="csvInput" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
       </div>
     </div>
@@ -216,7 +215,7 @@ function getRowCells(row) {
 // Sanitizes a string for TSV (Tab-Separated Values)
 const sanitizeForTSV = DLPUtils.sanitizeForTSV;
 
-// Builds an HTML table for the clipboard (Excel/Office)
+// Builds an HTML table for the clipboard (spreadsheet applications)
 function buildRowClipboardHTML(row) {
   const cells = getRowCells(row);
   const head = '';
