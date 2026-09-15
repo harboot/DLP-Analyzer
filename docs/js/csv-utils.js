@@ -50,26 +50,13 @@
     return records;
   }
 
-  function isExcelFile(file) {
-    return /\.xlsx$/i.test(String(file?.name || '')) ||
-      file?.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  }
-
-  async function parseExcelFile(file) {
-    if (!global.XLSX) throw new Error('Excel support requires lib/xlsx.full.min.js.');
-    const workbook = global.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return [];
-    const sheet = workbook.Sheets[firstSheetName];
-    const records = global.XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-    const headerRows = global.XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, blankrows: false });
-    Object.defineProperty(records, 'headers', { value: headerRows[0] || [] });
-    return records;
-  }
-
   global.CSVUtils = Object.freeze({
     async parseFile(file, options) {
-      if (isExcelFile(file)) return parseExcelFile(file);
+      const name = String(file?.name || '');
+      const type = String(file?.type || '').toLowerCase();
+      if (!/\.csv$/i.test(name) && !type.includes('csv')) {
+        throw new Error('Only CSV files are supported.');
+      }
       return parseText(await file.text(), Object.assign({ header: true }, options));
     },
     parseText(text, options) {

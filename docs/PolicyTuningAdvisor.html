@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="offline.js" defer></script>
   <title>DLP Analyzer — Policy Tuning Advisor</title>
-  <script src="lib/xlsx.full.min.js"></script>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
   <script src="js/sample-loader.js"></script>
@@ -24,7 +23,7 @@
       <div class="row-left"></div>
       <div class="row-right">
         <span id="advisorFileName" class="muted-sm"></span>
-        <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />Upload DLP Alerts (CSV or XLSX)</label>
+        <label class="drop" id="drop"><input id="file" type="file" multiple accept=".csv,text/csv" />Upload DLP Alerts (CSV)</label>
         <button class="btn" id="sampleBtn" type="button">Load sample</button>
         <a class="btn link" href="guides/PolicyTuningAdvisorGuide.html" target="_blank" rel="noopener">📖 Guide</a>
       </div>

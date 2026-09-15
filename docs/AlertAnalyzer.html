@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="offline.js" defer></script>
   <title>DLP Analyzer — Alert Analyzer</title>
-  <script src="lib/xlsx.full.min.js"></script>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
   <script src="js/sample-loader.js"></script>
@@ -39,8 +38,8 @@
       <div class="row-right">
         <span id="rangeLabel" class=""><span id="rangeVal">–</span></span>
         <label class="drop" id="drop">
-          <input id="file" type="file" multiple accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-          Upload DLP Alerts (CSV or XLSX)
+          <input id="file" type="file" multiple accept=".csv,text/csv" />
+          Upload DLP Alerts (CSV)
         </label>
         <button id="demoBtn" class="btn">Load sample</button>
         <a class="btn link" href="guides/AlertAnalyzerGuide.html" target="_blank" rel="noopener" title="Open the Alert Analyzer guide">📖 Guide</a>
