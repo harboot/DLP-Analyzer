@@ -274,6 +274,8 @@ save(items);
 
 let currentFileId = null;
 let filter = '';
+const BUILT_IN_COLLAPSED_KEY = 'riskScoringBuiltInCollapsed';
+let builtInCollapsed = localStorage.getItem(BUILT_IN_COLLAPSED_KEY) === 'true';
 const elTbody = $('#tbody');
 const elCount = $('#count');
 const elSearch = $('#search');
@@ -467,29 +469,46 @@ async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800,
   return { rows: out, indices };
 }
 
-/* Renders the file list in the left table and attaches row event handlers. */
+/* Renders one rule row in the left table. */
+function createRuleRow(fl) {
+  if (typeof fl.enabled !== 'boolean') fl.enabled = false;
+  fl.weight = RiskScoring.normalizeWeight(fl.weight);
+  const tr = document.createElement('tr');
+  tr.className = 'file';
+  tr.setAttribute('data-id', fl.id);
+  tr.innerHTML = `
+    <td class="name" title="${escapeHtml(fl.name)}"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"> <span>${escapeHtml(fl.name)}</span>${fl.builtIn ? ' <span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</td>
+    <td class="weight" title="Risk weight">${fl.weight}</td>
+    <td class="matches" data-role="matches"><span class="badge" title="Run to compute matches">—</span></td>
+    <td class="actions">${fl.builtIn ? '' : `<button class="icon-btn" title="Delete rule" data-act="del" data-id="${fl.id}">🗑️</button>`}</td>`;
+  return tr;
+}
+
+/* Renders the rule list, including a collapsible group for built-in detectors. */
 function render() {
   const fileList = applyFilter(files()).sort((a, b) => {
     if (!!a.builtIn !== !!b.builtIn) return a.builtIn ? -1 : 1;
     if (a.builtIn && b.builtIn) return items.indexOf(a) - items.indexOf(b);
     return a.name.localeCompare(b.name);
   });
+  const builtIns = fileList.filter(file => file.builtIn);
+  const customRules = fileList.filter(file => !file.builtIn);
   const rows = [];
-  fileList.forEach((fl) => {
-    if (typeof fl.enabled !== 'boolean') fl.enabled = false;
-    fl.weight = RiskScoring.normalizeWeight(fl.weight);
-    const tr = document.createElement('tr');
-    tr.className = 'file';
-    tr.setAttribute('data-id', fl.id);
-    tr.innerHTML = `
-      <td class="name" title="${escapeHtml(fl.name)}"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"> <span>${escapeHtml(fl.name)}</span>${fl.builtIn ? ' <span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</td>
-      <td class="weight" title="Risk weight">${fl.weight}</td>
-      <td class="matches" data-role="matches"><span class="badge" title="Run to compute matches">—</span></td>
-      <td class="actions">${fl.builtIn ? '' : `<button class="icon-btn" title="Delete rule" data-act="del" data-id="${fl.id}">🗑️</button>`}</td>`;
-    rows.push(tr);
-  });
+  if (builtIns.length) {
+    const groupRow = document.createElement('tr');
+    groupRow.className = 'rule-group-row';
+    groupRow.innerHTML = `<td colspan="4"><button class="rule-group-toggle" type="button" aria-expanded="${!builtInCollapsed}" aria-controls="tbody"><span class="rule-group-chevron" aria-hidden="true">${builtInCollapsed ? '▶' : '▼'}</span><span>Built-in detectors</span><span class="badge">${builtIns.length}</span></button></td>`;
+    rows.push(groupRow);
+    if (!builtInCollapsed) rows.push(...builtIns.map(createRuleRow));
+  }
+  rows.push(...customRules.map(createRuleRow));
   elTbody.replaceChildren(...rows);
   elCount.textContent = fileList.length;
+  elTbody.querySelector('.rule-group-toggle')?.addEventListener('click', () => {
+    builtInCollapsed = !builtInCollapsed;
+    localStorage.setItem(BUILT_IN_COLLAPSED_KEY, String(builtInCollapsed));
+    render();
+  });
   $$('#tbody [data-act="toggle"]').forEach((control) => {
     control.addEventListener('click', (event) => event.stopPropagation());
     control.addEventListener('change', () => {
@@ -564,6 +583,8 @@ function renderBuiltInSettings(file) {
           ]
       : file.key === 'weirdTld'
         ? [{ key: 'tlds', label: 'Unusual TLD list', type: 'text' }]
+      : file.key === 'ransomwareAttachment'
+        ? [{ key: 'encExtRegex', label: 'Encrypted extension regular expression', type: 'textarea' }]
         : [];
   fields.forEach(field => {
     const label = document.createElement('label');
