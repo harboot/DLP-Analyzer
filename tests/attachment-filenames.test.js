@@ -18,7 +18,7 @@ const analyzerContext = vm.createContext({
 vm.runInContext(read('docs/js/utils.js'), analyzerContext);
 vm.runInContext(read('docs/js/rules.js'), analyzerContext);
 vm.runInContext(
-  'this.testApi = { normalizeFileList, ruleAttachmentNoExtension };',
+  'this.testApi = { normalizeFileList, fileTokensForRow, freqMapTokens, ruleAttachmentNoExtension };',
   analyzerContext
 );
 
@@ -32,6 +32,20 @@ assert.equal(
   'byte-size metadata should be removed without merging attachments'
 );
 assert.equal(fileTokens.length, 2, 'both attachments should remain independently parsed');
+
+const summaryRows = [
+  {'File Name': 'report.pdf; salary.xlsx'},
+  {'File Name': 'report.pdf'}
+];
+const filenameCounts = analyzerContext.testApi.freqMapTokens(summaryRows, analyzerContext.testApi.fileTokensForRow);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(Array.from(filenameCounts.entries()))),
+  [['report.pdf', 2], ['salary.xlsx', 1]],
+  'Top File Names should count every normalized filename independently'
+);
+const uiSource = read('docs/js/ui.js');
+assert.match(uiSource, /freqMapTokens\(rows, fileTokensForRow\)/, 'the filename summary should use token-level counts');
+assert.match(uiSource, /filter\.col === 'File Name'[\s\S]*fileTokensForRow\(row\)\.includes\(filter\.value\)/, 'filename drill-down should match individual tokens');
 assert.equal(
   analyzerContext.testApi.ruleAttachmentNoExtension({fileTokens}),
   false,
