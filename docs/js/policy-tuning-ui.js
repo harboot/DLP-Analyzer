@@ -83,9 +83,8 @@
     fileName.textContent = 'alerts.csv';
     status.textContent = 'Loading sample…';
     try {
-      const response = await fetch('sample/alerts.csv');
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const rows = await CSVUtils.parseText(await response.text(), { header: true });
+      const contents = await loadSample('sample/alerts.csv');
+      const rows = await CSVUtils.parseText(contents, { header: true });
       showReport(rows, 'the sample', [{ fileName: 'alerts.csv', missing: DLPUtils.findMissingColumns(rows, recommended) }]);
     } catch (error) { status.textContent = `Unable to load the sample data: ${error.message}`; }
   });

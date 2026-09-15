@@ -6,6 +6,7 @@
 <title>DLP Analyzer — Policies Matcher</title>
   <script src="js/csv-utils.js"></script>
   <script src="js/dlp-utils.js"></script>
+  <script src="js/sample-loader.js"></script>
   <script src="lib/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="styles.css" />
@@ -623,9 +624,8 @@ $('#btn-load-sample').addEventListener('click', async (event) => {
     hardReset();
     const paths = ['sample/rule-alerts.csv', 'sample/policies.csv'];
     const files = await Promise.all(paths.map(async path => {
-      const response = await fetch(path);
-      if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
-      return new File([await response.blob()], path.split('/').pop(), { type: 'text/csv' });
+      const contents = await loadSample(path);
+      return new File([contents], path.split('/').pop(), { type: 'text/csv' });
     }));
     await handleFiles(files);
   } catch (error) {

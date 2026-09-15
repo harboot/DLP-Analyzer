@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DLP Analyzer — Policy Viewer</title>
   <script src="js/dlp-utils.js"></script>
+  <script src="js/sample-loader.js"></script>
   <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components.css" />
@@ -242,9 +243,8 @@
   loadSampleBtn.addEventListener('click', async () => {
     loadSampleBtn.disabled = true;
     try {
-      const response = await fetch('sample/policy.json');
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      addFiles([new File([await response.blob()], 'policy.json', { type: 'application/json' })]);
+      const contents = await loadSample('sample/policy.json');
+      addFiles([new File([contents], 'policy.json', { type: 'application/json' })]);
     } catch (error) {
       log(`Unable to load the sample policy: ${error.message}`);
     } finally {

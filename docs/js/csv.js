@@ -195,9 +195,8 @@ document.getElementById('demoBtn').addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = 'Loading sample…';
   try {
-    const response = await fetch('sample/alerts.csv');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const demo = await CSVUtils.parseText(await response.text(), { header: true });
+    const contents = await loadSample('sample/alerts.csv');
+    const demo = await CSVUtils.parseText(contents, { header: true });
     clearRuleCaches();
     state.raw = [];
     state.datasetFiles = [{ name: 'alerts.csv', size: 0, lastModified: 0 }];
