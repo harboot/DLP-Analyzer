@@ -940,7 +940,7 @@ async function runOneFileInternal(fileId, { updateUI = false, openTable = false 
   }
   let predicate;
   try {
-    predicate = f.builtIn ? (row => RiskScoring.matchesBuiltIn(f, row)) : secureCompilePredicate(f.code || '');
+    predicate = f.builtIn ? ((row, rows) => RiskScoring.matchesBuiltIn(f, row, rows)) : secureCompilePredicate(f.code || '');
   } catch (err) {
     if (updateUI && cell) cell.innerHTML = `<span class="badge" title="Compile error">ERR</span>`;
     console.error('Compile error for', f.name, err);
