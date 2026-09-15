@@ -14,7 +14,7 @@
   <div class="host">
     <header id="topbar" class="topbar" role="navigation" aria-label="Main menu">
       <div class="brand" aria-label="App title">DLP Analyzer</div>
-      <div class="app-version" aria-label="Version 36">v36</div>
+      <div class="app-version" aria-label="Version 39">v39</div>
       <nav class="menu" aria-label="Tools">
         <button class="menu-trigger" id="menuTrigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="toolMenu">
           <span class="sr-only">Open tools menu</span><span aria-hidden="true">&#8942;</span>
@@ -34,6 +34,8 @@
       <div id="spinner" class="spinner" aria-hidden="true"><span class="spin" aria-label="Loading" title="Loading..."></span></div>
     </header>
 
+    <div id="updateStatus" class="update-status" role="status" aria-live="polite" hidden></div>
+
     <main id="content" class="content">
       <iframe id="appFrame" class="frame" title="DLP Analyzer content" loading="eager" referrerpolicy="no-referrer"></iframe>
       <div id="overlay" class="overlay" role="status" aria-live="polite"></div>
@@ -49,14 +51,24 @@
     const menuTrigger = document.getElementById('menuTrigger');
     const toolMenu = document.getElementById('toolMenu');
     const checkUpdate = document.getElementById('checkUpdate');
+    const updateStatus = document.getElementById('updateStatus');
     const frame = document.getElementById('appFrame');
     const spinner = document.getElementById('spinner');
     const overlay = document.getElementById('overlay');
 
     let currentKey = null;
+    let updateStatusTimer = null;
     const frameCache = {}; // cache DOM iframes to avoid reloads
 
     const pathFor = key => BASE_PATH + key + '.html';
+
+    function showUpdateStatus(message, state = 'success') {
+      window.clearTimeout(updateStatusTimer);
+      updateStatus.textContent = message;
+      updateStatus.dataset.state = state;
+      updateStatus.hidden = false;
+      updateStatusTimer = window.setTimeout(() => { updateStatus.hidden = true; }, 5000);
+    }
 
     function keyFromHash(){
       const raw = (location.hash || '').replace(/^#+/,'').trim();
@@ -138,9 +150,12 @@
       checkUpdate.disabled = true;
       try {
         const found = await window.DLPOffline?.checkForUpdate();
+        const message = found ? 'Update found. DLP Analyzer will reload automatically.' : 'DLP Analyzer is up to date.';
         label.textContent = found ? 'Update found' : 'DLP Analyzer is up to date';
+        showUpdateStatus(message);
       } catch (_) {
         label.textContent = 'Unable to check for updates';
+        showUpdateStatus('Unable to check for updates. Please try again.', 'error');
       } finally {
         checkUpdate.disabled = false;
         window.setTimeout(() => { label.textContent = 'Check for updates'; }, 2500);

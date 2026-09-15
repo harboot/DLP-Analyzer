@@ -72,6 +72,20 @@
         </header>
         <div class="list">
           <table id="tbl" aria-label="Risk scoring rules">
+            <colgroup>
+              <col class="name-column" />
+              <col class="weight-column" />
+              <col class="matches-column" />
+              <col class="actions-column" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="name" scope="col"><span>Detector</span><button class="risk-filter-icon" type="button" data-column="name" aria-label="Filter or sort by detector" title="Filter or sort by detector"></button></th>
+                <th class="weight" scope="col"><span>Weight</span><button class="risk-filter-icon" type="button" data-column="weight" aria-label="Filter or sort by weight" title="Filter or sort by weight"></button></th>
+                <th class="matches" scope="col"><span>Matches</span><button class="risk-filter-icon" type="button" data-column="matches" aria-label="Filter or sort by matches" title="Filter or sort by matches"></button></th>
+                <th class="actions" scope="col">Actions</th>
+              </tr>
+            </thead>
             <tbody id="tbody"></tbody>
           </table>
         </div>
@@ -294,6 +308,8 @@ save(items);
 
 let currentFileId = null;
 let filter = '';
+const columnFilters = {};
+let columnSort = null;
 const BUILT_IN_COLLAPSED_KEY = 'riskScoringBuiltInCollapsed';
 let builtInCollapsed = localStorage.getItem(BUILT_IN_COLLAPSED_KEY) === 'true';
 const elTbody = $('#tbody');
@@ -376,11 +392,36 @@ function fileById(id) {
 
 /* Applies text search to filenames and file contents. */
 function applyFilter(list) {
-  if (!filter) return list;
-  const q = filter.toLowerCase();
-  return list.filter(
-    (x) => x.name.toLowerCase().includes(q) || (x.code || x.description || '').toLowerCase().includes(q)
-  );
+  let filtered = list;
+  if (filter) {
+    const q = filter.toLowerCase();
+    filtered = filtered.filter(
+      (x) => x.name.toLowerCase().includes(q) || (x.code || x.description || '').toLowerCase().includes(q)
+    );
+  }
+  return filtered.filter((rule) => Object.entries(columnFilters).every(([column, value]) =>
+    getRuleColumnValue(rule, column).toLowerCase().includes(value.toLowerCase())
+  ));
+}
+
+/* Returns the display value used to filter and sort a rule-table column. */
+function getRuleColumnValue(rule, column) {
+  if (column === 'name') return rule.name || '';
+  if (column === 'weight') return String(RiskScoring.normalizeWeight(rule.weight));
+  if (column === 'matches') return matchesCache.has(rule.id) ? String(matchesCache.get(rule.id).count) : '—';
+  return '';
+}
+
+/* Orders rules using the selected column while keeping stable ties. */
+function sortRules(list) {
+  if (!columnSort) return list;
+  const direction = columnSort.direction === 'asc' ? 1 : -1;
+  return list.map((rule, index) => ({ rule, index })).sort((a, b) => {
+    const av = getRuleColumnValue(a.rule, columnSort.column);
+    const bv = getRuleColumnValue(b.rule, columnSort.column);
+    const comparison = av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+    return comparison ? comparison * direction : a.index - b.index;
+  }).map(({ rule }) => rule);
 }
 
 /* Gets the cell in a given file row for a specified class. */
@@ -493,26 +534,30 @@ async function computeMatches(rawRows, normalizedRows, predicate, { chunk = 800,
 function createRuleRow(fl) {
   if (typeof fl.enabled !== 'boolean') fl.enabled = false;
   fl.weight = RiskScoring.normalizeWeight(fl.weight);
+  const matchRecord = matchesCache.get(fl.id);
+  const matches = matchRecord
+    ? `<a href="#" class="badge clickable" data-role="open-matches" data-id="${fl.id}" title="Click to view results">${matchRecord.count}</a>`
+    : '<span class="badge" title="Run to compute matches">—</span>';
   const tr = document.createElement('tr');
   tr.className = 'file';
   tr.setAttribute('data-id', fl.id);
   tr.innerHTML = `
     <td class="name" title="${escapeHtml(fl.name)}"><div class="rule-name-content"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"><span class="rule-name-label">${escapeHtml(fl.name)}</span>${fl.builtIn ? '<span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</div></td>
     <td class="weight" title="Risk weight">${fl.weight}</td>
-    <td class="matches" data-role="matches"><span class="badge" title="Run to compute matches">—</span></td>
+    <td class="matches" data-role="matches">${matches}</td>
     <td class="actions">${fl.builtIn ? '' : `<button class="icon-btn" title="Delete rule" data-act="del" data-id="${fl.id}">🗑️</button>`}</td>`;
   return tr;
 }
 
 /* Renders the rule list, including a collapsible group for built-in detectors. */
 function render() {
-  const fileList = applyFilter(files()).sort((a, b) => {
+  let fileList = applyFilter(files()).sort((a, b) => {
     if (!!a.builtIn !== !!b.builtIn) return a.builtIn ? -1 : 1;
     if (a.builtIn && b.builtIn) return items.indexOf(a) - items.indexOf(b);
     return a.name.localeCompare(b.name);
   });
-  const builtIns = fileList.filter(file => file.builtIn);
-  const customRules = fileList.filter(file => !file.builtIn);
+  const builtIns = sortRules(fileList.filter(file => file.builtIn));
+  const customRules = sortRules(fileList.filter(file => !file.builtIn));
   const rows = [];
   if (builtIns.length) {
     const groupRow = document.createElement('tr');
@@ -524,6 +569,7 @@ function render() {
   rows.push(...customRules.map(createRuleRow));
   elTbody.replaceChildren(...rows);
   elCount.textContent = fileList.length;
+  updateRuleFilterIcons();
   elTbody.querySelector('.rule-group-toggle')?.addEventListener('click', () => {
     builtInCollapsed = !builtInCollapsed;
     localStorage.setItem(BUILT_IN_COLLAPSED_KEY, String(builtInCollapsed));
@@ -547,12 +593,70 @@ function render() {
   });
   $$('#tbody tr.file').forEach((tr) => {
     tr.addEventListener('click', (e) => {
-      if (e.target.closest('[data-act]')) return;
+      if (e.target.closest('[data-act], [data-role="open-matches"]')) return;
       const id = tr.getAttribute('data-id');
       if (id) openEditor(id);
     });
   });
+  bindOpenMatches();
 }
+
+const riskFilterSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2l-7 8v5l-4 1v-6L3 6z"/></svg>';
+
+/* Reflects active filters and sorting in the table-header controls. */
+function updateRuleFilterIcons() {
+  $$('.risk-filter-icon').forEach((button) => {
+    const column = button.dataset.column;
+    const active = !!columnFilters[column] || columnSort?.column === column;
+    button.innerHTML = riskFilterSvg;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+/* Opens the same filter and ascending/descending sort controls used by Alert Analyzer. */
+function openRuleFilter(button) {
+  document.querySelector('.risk-filter-pop')?.remove();
+  const column = button.dataset.column;
+  const popover = document.createElement('div');
+  popover.className = 'risk-filter-pop';
+  popover.innerHTML = `
+    <div class="risk-sort-actions">
+      <button class="btn" type="button" data-sort="asc" aria-label="Sort ascending" title="Ascending">↑</button>
+      <button class="btn" type="button" data-sort="desc" aria-label="Sort descending" title="Descending">↓</button>
+    </div>
+    <input class="textinput" type="text" aria-label="Filter ${column}" placeholder="contains... (leave blank to clear)" value="${escapeHtml(columnFilters[column] || '')}" />
+    <div class="muted-sm">Enter to apply filter • Esc to close</div>`;
+  button.closest('th').appendChild(popover);
+  popover.querySelectorAll('[data-sort]').forEach((sortButton) => {
+    if (columnSort?.column === column && columnSort.direction === sortButton.dataset.sort) sortButton.classList.add('is-selected');
+    sortButton.addEventListener('click', () => {
+      columnSort = { column, direction: sortButton.dataset.sort };
+      popover.remove();
+      render();
+    });
+  });
+  const input = popover.querySelector('input');
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      const value = input.value.trim();
+      if (value) columnFilters[column] = value;
+      else delete columnFilters[column];
+      popover.remove();
+      render();
+    } else if (event.key === 'Escape') popover.remove();
+  });
+}
+
+$$('.risk-filter-icon').forEach((button) => button.addEventListener('click', (event) => {
+  event.stopPropagation();
+  openRuleFilter(button);
+}));
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.risk-filter-pop') && !event.target.closest('.risk-filter-icon')) document.querySelector('.risk-filter-pop')?.remove();
+});
 
 /* Creates a new empty file and opens it in the editor. */
 function newFile() {

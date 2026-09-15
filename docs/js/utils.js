@@ -252,6 +252,24 @@ const ICON_COL = '__Copy';
     return m;
   }
 
+  // Returns the normalized individual filenames attached to an alert row.
+  function fileTokensForRow(row) {
+    if (Array.isArray(row.fileTokens)) return row.fileTokens;
+    return normalizeFileList(row['File Name'])
+      .split(/[;\n]/)
+      .map(token => token.trim())
+      .filter(Boolean);
+  }
+
+  // Counts every token independently instead of treating a delimited cell as one value.
+  function freqMapTokens(arr, tokenGetter) {
+    const counts = new Map();
+    for (const row of arr) {
+      for (const token of tokenGetter(row)) counts.set(token, (counts.get(token) || 0) + 1);
+    }
+    return counts;
+  }
+
   // Ensures all required columns exist in a data row
   function ensureCols(row) {
     const o = { ...row };

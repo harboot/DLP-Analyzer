@@ -240,6 +240,7 @@ function renderOverview(rows){
     const m=freqMap(rows,key);
     return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]);
   };
+  const fileNames = Array.from(freqMapTokens(rows, fileTokensForRow).entries()).sort((a,b)=>b[1]-a[1]);
   const domains = aggregateDomains(rows);
 
   const grids = document.createElement('div');
@@ -249,7 +250,7 @@ function renderOverview(rows){
   grids.appendChild(makeClickableTable('Top Sources', ['Source','Count'], by('Source'), 'Source'));
   grids.appendChild(makeClickableTable('Top Destinations', ['Destination','Count'], by('Destination'), 'Destination'));
   grids.appendChild(makeClickableTable('Destination Domains', ['Domain','Count'], domains, 'Domain'));
-  grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], by('File Name'), 'File Name'));
+  grids.appendChild(makeClickableTable('Top File Names', ['File Name','Count'], fileNames, 'File Name'));
   wrap.appendChild(grids);
 
   const volume = getVolumeSeries(rows);
@@ -812,6 +813,8 @@ function applyDrillFilter(universe, filter){
       const parts = semi.map(x=> x.split(',')).flat().map(s=> s.trim()).filter(Boolean);
       return parts.some(x=> getBaseDomain(x) === filter.value);
     });
+  } else if (filter.col === 'File Name') {
+    rows = rows.filter(row => fileTokensForRow(row).includes(filter.value));
   } else {
     rows = rows.filter(r=> txt(r[filter.col]).trim() === filter.value);
   }
