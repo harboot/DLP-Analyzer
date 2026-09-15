@@ -60,28 +60,28 @@ assert.equal(
 const workerMessages = [];
 const workerContext = vm.createContext({
   console,
+  setTimeout,
+  DOMException,
+  Uint32Array,
   self: {postMessage: message => workerMessages.push(message)}
 });
 vm.runInContext(read('docs/worker/AlertAnalyzer.worker.js'), workerContext);
-workerContext.self.onmessage({
+workerContext.self.onmessage({data: {
+  type: 'initialize', requestId: 1, datasetVersion: 'attachments',
+  rows: [{
+    source: 'user@example.com', destinations: [], fileTokens,
+    sourceLower: 'user@example.com', destinationDomains: [],
+    channelLower: 'email', incidentHour: 12, text: {Details: ''}
+  }]
+}}).then(() => workerContext.self.onmessage({
   data: {
-    type: 'analyze',
-    rows: [{
-      fileTokens,
-      sourceLower: 'user@example.com',
-      destinationDomains: [],
-      channelLower: 'email',
-      incidentHour: 12,
-      Details: ''
-    }],
+    type: 'analyze', analysisType: 'rules', requestId: 2, datasetVersion: 'attachments',
     rules: [{key: 'noext', operator: 'file-without-extension'}]
   }
+})).then(() => {
+  const complete = workerMessages.at(-1);
+  assert.equal(complete.type, 'complete');
+  assert.equal(complete.requestId, 2);
+  assert.deepEqual(Array.from(complete.result.noext), [], 'the worker evaluator should agree with the main-thread fallback');
+  console.log('Attachment filename parsing tests passed.');
 });
-
-assert.deepEqual(
-  JSON.parse(JSON.stringify(workerMessages.at(-1))),
-  {type: 'complete', result: {noext: []}},
-  'the worker evaluator should agree with the main-thread fallback'
-);
-
-console.log('Attachment filename parsing tests passed.');

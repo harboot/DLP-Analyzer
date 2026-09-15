@@ -70,7 +70,7 @@ function stemTail(value) {
 }
 
 // Evaluates declarative rule definitions supplied by the UI.
-function analyze(rows, rules) {
+async function analyze(rows, rules, context) {
   const domainCounts = new Map(), sequences = new Map();
   for (const row of rows) {
     for (const domain of row.destinationDomains) {
@@ -86,23 +86,25 @@ function analyze(rows, rules) {
     }
   }
   const result = Object.fromEntries(rules.map(rule => [rule.key, []]));
-  rows.forEach((row, index) => {
+  for (let index = 0; index < rows.length; index++) {
+    if (context.cancelled()) throw new DOMException('Analysis cancelled.', 'AbortError');
+    const row = rows[index];
     for (const rule of rules) {
       let matched = false;
       switch (rule.operator) {
         case 'self-like': {
-          const email = extractFirstEmail(row.Source);
-          matched = Boolean(email && splitDestParts(row.Destination).some(destination => isEmailLike(destination) && selfLike(email, destination)));
+          const email = extractFirstEmail(row.source);
+          matched = Boolean(email && row.destinations.some(destination => isEmailLike(destination) && selfLike(email, destination)));
           break;
         }
         case 'destination-domain-in': matched = row.destinationDomains.some(domain => rule.values.includes(domain)); break;
-        case 'short-email-subject': matched = row.channelLower.includes('email') && txt(row.Details).trim().length < rule.minLength; break;
+        case 'short-email-subject': matched = row.channelLower.includes('email') && txt(row.text.Details).trim().length < rule.minLength; break;
         case 'hour-range': matched = row.incidentHour != null && row.incidentHour >= rule.start && row.incidentHour < rule.end; break;
         case 'file-without-extension': matched = row.fileTokens.some(file => !hasExtension(file)); break;
         case 'sequential-files': matched = row.fileTokens.some(file => { const part = stemTail(file); return part && (sequences.get(`${row.sourceLower}|${part.stem}`)?.size || 0) >= rule.minimumDistinct; }); break;
         case 'text-regex': {
           const regex = new RegExp(rule.pattern, rule.flags || '');
-          matched = rule.fields.some(field => regex.test(txt(row[field])));
+          matched = rule.fields.some(field => regex.test(txt(row.text[field])));
           break;
         }
         case 'destination-regex': {
@@ -114,12 +116,16 @@ function analyze(rows, rules) {
       }
       if (matched) result[rule.key].push(index);
     }
-    if ((index + 1) % 5000 === 0) self.postMessage({type: 'progress', processed: index + 1, total: rows.length});
-  });
-  return result;
+    if ((index + 1) % 1000 === 0) {
+      context.progress(index + 1, rows.length);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+  context.progress(rows.length, rows.length);
+  return Object.fromEntries(Object.entries(result).map(([key, indices]) => [key, Uint32Array.from(indices)]));
 }
 
-function custom(rows, code) {
+async function custom(rows, code, context) {
   if (/(^|[^\w$])(window|document|eval|arguments|Function|fetch|XMLHttpRequest|WebSocket|EventSource|postMessage|localStorage|sessionStorage|indexedDB|location|navigator|history|top|parent|opener)([^\w$]|$)/.test(code)) throw new Error('Forbidden token found');
   const SAFE = {Math,Number,String,Boolean,RegExp,JSON,Date,Array,Object,isFinite,isNaN,parseInt,parseFloat,encodeURI,decodeURI,encodeURIComponent,decodeURIComponent};
   let fn;
@@ -130,18 +136,55 @@ function custom(rows, code) {
     fn = new Function('row','rows','i','SAFE','"use strict"; ' + code);
   }
   const matched = [];
-  rows.forEach((row, index) => {
+  for (let index = 0; index < rows.length; index++) {
+    if (context.cancelled()) throw new DOMException('Analysis cancelled.', 'AbortError');
+    const row = rows[index];
     try { if (fn(row, rows, index, SAFE)) matched.push(index); } catch (_) {}
-    if ((index + 1) % 5000 === 0) self.postMessage({type:'progress', processed:index + 1, total:rows.length});
-  });
-  return matched;
+    if ((index + 1) % 1000 === 0) {
+      context.progress(index + 1, rows.length);
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+  context.progress(rows.length, rows.length);
+  return Uint32Array.from(matched);
 }
 
-self.onmessage = ({data}) => {
+let dataset = [];
+let datasetVersion = null;
+const cancelledRequests = new Set();
+
+self.onmessage = async ({data}) => {
+  const {requestId} = data;
+  if (data.type === 'cancel') {
+    if (data.datasetVersion === datasetVersion) cancelledRequests.add(requestId);
+    return;
+  }
   try {
-    const result = data.type === 'custom' ? custom(data.rows, data.code) : analyze(data.rows, data.rules || []);
-    self.postMessage({type:'complete', result});
+    if (data.type === 'initialize') {
+      dataset = data.rows || [];
+      datasetVersion = data.datasetVersion;
+      cancelledRequests.clear();
+      self.postMessage({type: 'ready', requestId, datasetVersion});
+      return;
+    }
+    if (data.type !== 'analyze') return;
+    if (data.datasetVersion !== datasetVersion) throw new Error('Dataset version is no longer active.');
+    const context = {
+      cancelled: () => cancelledRequests.has(requestId) || data.datasetVersion !== datasetVersion,
+      progress: (processed, total) => self.postMessage({type: 'progress', requestId, datasetVersion: data.datasetVersion, processed, total})
+    };
+    const result = data.analysisType === 'custom'
+      ? await custom(dataset, data.code, context)
+      : await analyze(dataset, data.rules || [], context);
+    if (context.cancelled()) throw new DOMException('Analysis cancelled.', 'AbortError');
+    const transfer = data.analysisType === 'custom'
+      ? [result.buffer]
+      : Object.values(result).map(indices => indices.buffer);
+    self.postMessage({type:'complete', requestId, datasetVersion: data.datasetVersion, result}, transfer);
   } catch (error) {
-    self.postMessage({type:'error', message:error.message || String(error)});
+    const type = error?.name === 'AbortError' ? 'cancelled' : 'error';
+    self.postMessage({type, requestId, datasetVersion: data.datasetVersion, message:error.message || String(error)});
+  } finally {
+    cancelledRequests.delete(requestId);
   }
 };

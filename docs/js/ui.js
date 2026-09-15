@@ -170,28 +170,23 @@ function renderOverview(rows){
 
     const datasetHash = computeDatasetHash(rows);
     const cached = loadRuleCache(datasetHash);
-    const idIndex = indexRowsById(rows);
-
-    function setAnchorMatches(a, ids){
-      a.__matches = ids.map(id => {
-        const ix = idIndex.get(id);
-        return typeof ix === 'number' ? rows[ix] : null;
-      }).filter(Boolean);
-      a.textContent = a.__matches.length;
+    const rawIndexByRow = new Map(state.raw.map((row, index) => [row, index]));
+    function setAnchorMatches(a, indices){
+      a.__matchIndices = Uint32Array.from(indices);
+      a.textContent = a.__matchIndices.length;
       a.classList.remove('muted-num');
     }
 
-    if (cached && cached.version === 2) {
+    if (cached && cached.version === 3) {
       for (const def of ruleDefs) {
         const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
         if (!a) continue;
-        const ids = cached.idsByRule?.[def.key] || [];
-        setAnchorMatches(a, ids);
+        setAnchorMatches(a, cached.indicesByRule?.[def.key] || []);
       }
       return;
     }
 
-    const idsByRule = {};
+    const storedIndicesByRule = {};
     let indicesByRule;
     try {
       indicesByRule = await runAnalyzerWorker('rules', rows, {rules: ruleDefs}, processed => {
@@ -211,24 +206,23 @@ function renderOverview(rows){
       const a = cards.querySelector(`a.metric[data-rule="${def.key}"]`);
       if (!a) continue;
 
-      const matches = indicesByRule
-        ? (indicesByRule[def.key] || []).map(index => rows[index])
+      const localIndices = indicesByRule
+        ? (indicesByRule[def.key] || [])
         : fallbackMatches[def.key];
-      const ids = matches.map(getRowId);
-
-      idsByRule[def.key] = ids;
-      a.__matches = matches;
+      const indices = Uint32Array.from(localIndices, index => rawIndexByRow.get(rows[index]));
+      storedIndicesByRule[def.key] = Array.from(indices);
+      a.__matchIndices = indices;
       const span = a.querySelector('.temp-count');
-      if (span) span.textContent = matches.length;
+      if (span) span.textContent = indices.length;
       a.classList.remove('muted-num');
       const sp = a.querySelector('.spin');
       if (sp) sp.remove();
     }
 
     const payload = {
-      version: 2,
-      counts: Object.fromEntries(Object.keys(idsByRule).map(k => [k, idsByRule[k].length])),
-      idsByRule
+      version: 3,
+      counts: Object.fromEntries(Object.keys(storedIndicesByRule).map(k => [k, storedIndicesByRule[k].length])),
+      indicesByRule: storedIndicesByRule
     };
     saveRuleCache(datasetHash, payload);
   })();
