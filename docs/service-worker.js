@@ -1,7 +1,8 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v35';
+const CACHE_VERSION = 'dlp-analyzer-v36';
+const CACHE_CONCURRENCY = 6;
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
   './base.css',
@@ -83,14 +84,26 @@ self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_VERSION);
     let completed = 0;
-    for (const file of APPLICATION_FILES) {
-      const request = new Request(file, { cache: 'reload' });
-      const response = await fetch(request);
-      if (!response.ok) throw new Error(`Unable to cache ${file}: HTTP ${response.status}`);
-      await cache.put(request, response);
-      completed++;
-      await notifyClients({ type: 'OFFLINE_CACHE_PROGRESS', completed, total: APPLICATION_FILES.length, file, version: CACHE_VERSION });
+    let nextIndex = 0;
+    let progressNotifications = Promise.resolve();
+
+    async function cacheNextFile() {
+      while (nextIndex < APPLICATION_FILES.length) {
+        const file = APPLICATION_FILES[nextIndex++];
+        const request = new Request(file, { cache: 'reload' });
+        const response = await fetch(request);
+        if (!response.ok) throw new Error(`Unable to cache ${file}: HTTP ${response.status}`);
+        await cache.put(request, response);
+        const completedCount = ++completed;
+        progressNotifications = progressNotifications.then(() => notifyClients({
+          type: 'OFFLINE_CACHE_PROGRESS', completed: completedCount, total: APPLICATION_FILES.length, file, version: CACHE_VERSION
+        }));
+        await progressNotifications;
+      }
     }
+
+    const workerCount = Math.min(CACHE_CONCURRENCY, APPLICATION_FILES.length);
+    await Promise.all(Array.from({ length: workerCount }, () => cacheNextFile()));
     await notifyClients({ type: 'OFFLINE_CACHE_COMPLETE', version: CACHE_VERSION });
     await self.skipWaiting();
   })());

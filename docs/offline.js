@@ -38,8 +38,8 @@
     progress.value = completed;
     const percent = total ? Math.round((completed / total) * 100) : 0;
     detail.textContent = file
-      ? `${percent}% — Saved ${completed} of ${total} files: ${file}`
-      : `${percent}% — Saved ${completed} of ${total} files.`;
+      ? `${percent}% — Saved: ${file}`
+      : `${percent}%`;
   }
 
   function finishPreparation(version) {
