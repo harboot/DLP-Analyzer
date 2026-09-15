@@ -36,27 +36,39 @@ assert.deepEqual(Array.from(result, (alert) => alert.score), [13, 8, 6]);
 assert.deepEqual(Array.from(result[0].matchedRules, (rule) => rule.name), ['External destination', 'Large transfer']);
 
 const builtIns = context.RiskScoring.builtInRules();
-assert.equal(builtIns.length, 10);
+assert.equal(builtIns.length, 12);
 assert.equal(builtIns.every(rule => rule.type === 'file' && rule.builtIn), true);
 assert.deepEqual(Array.from(builtIns, rule => rule.name), [
-  'Email Sent to Self', 'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest',
+  'Email Sent to Self', 'Email Sent to Self (by character)', 'Email Broadcast Multiple Destination Domain',
+  'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest',
   'Destination is Competitor',
   'Destination Domain appears Once in Dataset', 'Destination Email using Subdomain',
   'Attachment Looks Like Ransomware Notes or Encryption'
 ]);
 const rule = key => builtIns.find(item => item.key === key);
-assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 3, 5, 4, 7, 5, 7, 5, 5, 8]);
+assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8]);
 const exported = exportRuleConfigs([...builtIns, { id: 'disabled-custom', name: 'Disabled custom', type: 'file', code: 'return true;', enabled: false, weight: 2 }]);
-assert.equal(exported.length, 11);
+assert.equal(exported.length, 13);
 assert.equal(exported.every(item => item.type === 'file'), true);
-assert.equal(exported.filter(item => item.builtIn).length, 10);
+assert.equal(exported.filter(item => item.builtIn).length, 12);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settings.subjectLength, 15);
 assert.equal(exported.find(item => item.id === 'disabled-custom').enabled, false);
 assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
-assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 3, 5, 4, 7, 5, 7, 5, 5, 8]);
+assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8]);
 assert.equal(migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('selfByCharacter'), { Channel: 'Email', Source: 'alexander@example.com', Destination: 'alexandra@outside.test' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('selfByCharacter'), { Channel: 'Email', Source: 'alice@example.com', Destination: 'bob@outside.test' }), false);
+rule('selfByCharacter').settings.minimumCharacters = 8;
+assert.equal(context.RiskScoring.matchesBuiltIn(rule('selfByCharacter'), { Source: 'alexander@example.com', Destination: 'alexandra@outside.test' }), false);
+const broadcast = rule('emailBroadcastDomains');
+assert.equal(context.RiskScoring.matchesBuiltIn(broadcast, { Size: '1E+3', Destination: 'a@one.test;b@two.test;c@three.test;d@four.test;e@five.test' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(broadcast, { Size: '12', Destination: 'a@gmail.com;b@gmail.com;c@yahoo.com;d@outlook.com;e@googlemail.com' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(broadcast, { Size: '12', Destination: 'a@gmail.com;b@gmail.com;c@gmail.com;d@gmail.com;e@gmail.com' }), true);
+assert.equal(context.RiskScoring.matchesBuiltIn(broadcast, { Size: '', Destination: 'a@one.test;b@two.test;c@three.test;d@four.test;e@five.test' }), false);
+broadcast.settings.minimumDomains = 3;
+assert.equal(context.RiskScoring.matchesBuiltIn(broadcast, { Size: '12', Destination: 'a@one.test;b@two.test;c@three.test' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('shortSubject'), { Channel: 'Network email', Details: 'Hello' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('noExtension'), { FileName: 'report; archive.zip' }), true);
 assert.equal(context.RiskScoring.matchesBuiltIn(rule('sensitiveKeywords'), { Details: 'Confidential payroll export' }), true);
