@@ -638,9 +638,11 @@ function openFilterPopover(anchor, tab, col){
   const currentFilter = st.filters[col] || '';
   const currentSort = (st.sort && st.sort.col === col) ? st.sort.type : null;
   pop.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(2,auto); gap:6px; margin-bottom:8px;">
+    <div class="filter-sort-actions">
       <button class="btn btn-sort" title="Ascending" aria-label="Sort ascending" data-type="asc" ${currentSort==='asc'?'style="outline:1px solid var(--accent)"':''}>↑</button>
       <button class="btn btn-sort" title="Descending" aria-label="Sort descending" data-type="desc" ${currentSort==='desc'?'style="outline:1px solid var(--accent)"':''}>↓</button>
+      <button class="btn btn-sort" title="Most frequent first" aria-label="Sort most frequent first" data-type="most" ${currentSort==='most'?'style="outline:1px solid var(--accent)"':''}>Most</button>
+      <button class="btn btn-sort" title="Least frequent first" aria-label="Sort least frequent first" data-type="least" ${currentSort==='least'?'style="outline:1px solid var(--accent)"':''}>Least</button>
     </div>
     <div><input type="text" placeholder="contains... (leave blank to clear)"
       value="${escapeHtml(currentFilter)}" style="width:100%" /></div>
@@ -703,7 +705,24 @@ function applyFiltersAndSort(rows, filters, sort){
   }
   if (sort && sort.col){
     const col = sort.col;
-    if (sort.type === 'asc' || sort.type === 'desc'){
+    if (sort.type === 'most' || sort.type === 'least'){
+      const valueFor = row => txt(row[col === 'Time' ? 'Incident Time' : col]).trim().toLowerCase();
+      const frequencies = new Map();
+      for (const row of out) {
+        const value = valueFor(row);
+        frequencies.set(value, (frequencies.get(value) || 0) + 1);
+      }
+      out.sort((a, b) => {
+        const av = valueFor(a);
+        const bv = valueFor(b);
+        const countDifference = (frequencies.get(bv) || 0) - (frequencies.get(av) || 0);
+        if (countDifference !== 0) return sort.type === 'most' ? countDifference : -countDifference;
+        const valueDifference = av.localeCompare(bv, undefined, {numeric:true,sensitivity:'base'});
+        if (valueDifference !== 0) return valueDifference;
+        const at=parseIncidentTime(a['Incident Time']); const bt=parseIncidentTime(b['Incident Time']);
+        return (bt?bt.getTime():-Infinity) - (at?at.getTime():-Infinity);
+      });
+    } else if (sort.type === 'asc' || sort.type === 'desc'){
       if (col === 'Time'){
         out.sort((a,b)=>{
           const at=parseIncidentTime(a['Incident Time']);
