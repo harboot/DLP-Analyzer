@@ -46,14 +46,15 @@ test('installed clients only check for updates when requested', () => {
   assert.match(offlineSource, /await registration\.update\(\)/);
 });
 
-test('alert ingestion supports CSV and XLSX through the cached worker', () => {
+test('alert ingestion accepts only CSV through the cached worker', () => {
   const page = fs.readFileSync(path.join(root, 'AlertAnalyzer.html'), 'utf8');
   const client = fs.readFileSync(path.join(root, 'js/csv-utils.js'), 'utf8');
-  assert.match(page, /accept="\.csv,\.xlsx,text\/csv,application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"/);
+  assert.match(page, /accept="\.csv,text\/csv"/);
+  assert.doesNotMatch(page, /xlsx/i);
   assert.match(client, /new Worker\('worker\/DataIngest\.worker\.js'\)/);
-  assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), true);
+  assert.equal(fs.existsSync(path.join(root, 'lib', 'xlsx.full.min.js')), false);
   assert.match(workerSource, /'\.\/worker\/DataIngest\.worker\.js'/);
-  assert.match(workerSource, /'\.\/lib\/xlsx\.full\.min\.js'/);
+  assert.doesNotMatch(workerSource, /xlsx\.full/);
 });
 
 test('Document Viewer retains XLSX detection and text extraction without the XLSX library', () => {
@@ -72,10 +73,10 @@ test('Document Viewer separates text stored in adjacent Office XML elements', ()
   assert.match(source, /!\/\^\\s\/\.test\(next\.textContent\)/);
 });
 
-test('CSV ingestion is incremental and XLSX warns before whole-workbook parsing', () => {
+test('CSV ingestion is incremental and rejects unsupported formats', () => {
   const source = fs.readFileSync(path.join(root, 'worker/DataIngest.worker.js'), 'utf8');
   assert.match(source, /TextDecoderStream/);
   assert.match(source, /file\.slice\(o,o\+CHUNK_SIZE\)/);
-  assert.match(source, /XLSX processing requires the entire workbook in memory\./);
-  assert.match(source, /XLSX\.read\(await file\.arrayBuffer\(\)/);
+  assert.match(source, /Only CSV files are supported\./);
+  assert.doesNotMatch(source, /XLSX\.read/);
 });

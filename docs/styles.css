@@ -127,6 +127,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 
 	  .section{border:1px solid var(--line);border-radius:var(--radius-card);overflow:hidden}
 	  .section>header{display:flex;justify-content:space-between;align-items:center;background:var(--color-surface-raised);padding:var(--space-3) var(--space-3);border-bottom:1px solid var(--line)}
+	  .section>header strong{color:var(--text)}
 	  .muted{color:var(--muted)}
 	  .tiny{font-size:12px}
 	  .section .tablewrap{overflow:auto;max-height:42vh}
@@ -138,6 +139,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  th,td{padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word;min-width:50px}
 	  td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 	  td[title],a[title]{cursor:help}
+	  .section table .count-col{width:64px;min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
 	  tbody tr:hover{background:var(--color-surface-inset)}
 	  .right{display:flex;gap:var(--space-2);align-items:center}
 
@@ -266,6 +268,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  text-overflow: ellipsis; /* only the name column uses an ellipsis */
 	}
 	.risk-result-cols thead th{overflow:visible}
+	.risk-result-cols th:nth-child(2),.risk-result-cols td:nth-child(2){width:64px;min-width:64px;text-align:right}
 	.risk-result-cols thead th>span{vertical-align:middle}
 	.risk-result-cols .risk-filter-icon{all:unset;display:inline-flex;margin-left:var(--space-1);padding:2px;vertical-align:middle;cursor:pointer;opacity:.55;border-radius:var(--radius-control)}
 	.risk-result-cols .risk-filter-icon:hover,.risk-result-cols .risk-filter-icon.is-active{opacity:1;color:var(--accent)}

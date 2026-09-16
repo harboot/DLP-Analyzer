@@ -239,7 +239,7 @@ function renderOverview(rows){
 
   const grids = document.createElement('div');
   grids.className = 'grid cols-3';
-  grids.appendChild(makeClickableTable('Alerts by Policy', ['Policy','Count'], by('Policies'), 'Policies'));
+  grids.appendChild(makeClickableTable('Alerts by Policy', ['Policy','Count'], by('Policies'), 'Policies', { showAll: true }));
   grids.appendChild(makeClickableTable('Alerts by Status', ['Status','Count'], by('Status'), 'Status'));
   grids.appendChild(makeClickableTable('Top Sources', ['Source','Count'], by('Source'), 'Source'));
   grids.appendChild(makeClickableTable('Top Destinations', ['Destination','Count'], by('Destination'), 'Destination'));
@@ -277,6 +277,7 @@ function makeSimpleTableEl(headers, rows){
       const td=document.createElement('td');
       if(headers[idx]==='Count') td.className='count-col';
       td.textContent=String(v);
+      td.title=String(v);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -286,25 +287,28 @@ function makeSimpleTableEl(headers, rows){
 }
 
 // Builds a table section whose contents open drill-down filters when clicked.
-function makeClickableTable(title, headers, rows, col){
+function makeClickableTable(title, headers, rows, col, options = {}){
   const sec = document.createElement('div'); sec.className = 'section';
   sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted"></span></header>`;
   const body = document.createElement('div'); body.className = 'tablewrap';
   const pager = document.createElement('div'); pager.className = 'pager overview-pager'; pager.setAttribute('aria-label', `${title} pagination`);
   let page = 1;
   const renderPage = () => {
-    const pages = Math.max(1, Math.ceil(rows.length / 10));
+    const pageSize = options.showAll ? Math.max(1, rows.length) : 10;
+    const pages = Math.max(1, Math.ceil(rows.length / pageSize));
     page = Math.min(page, pages);
-    const start = (page - 1) * 10;
-    body.replaceChildren(makeSimpleTableEl(headers, rows.slice(start, start + 10)));
+    const start = (page - 1) * pageSize;
+    body.replaceChildren(makeSimpleTableEl(headers, rows.slice(start, start + pageSize)));
     body.querySelectorAll('tbody tr').forEach((tr, index) => {
       const name = rows[start + index][0];
       const cell = tr.cells[0];
       const link = document.createElement('a'); link.href = '#'; link.className = 'link'; link.textContent = name;
+      link.title = name;
       link.addEventListener('click', event => { event.preventDefault(); openFilterTab(col, name); });
       cell.replaceChildren(link);
     });
-    pager.innerHTML = `<span>${rows.length ? `Showing ${start + 1}–${Math.min(start + 10, rows.length)} of ${rows.length}` : 'No rows'}</span>`;
+    if (options.showAll) return;
+    pager.innerHTML = `<span>${rows.length ? `Showing ${start + 1}–${Math.min(start + pageSize, rows.length)} of ${rows.length}` : 'No rows'}</span>`;
     const addButton = (label, nextPage, disabled) => {
       const button = document.createElement('button'); button.className = 'btn'; button.type = 'button'; button.textContent = label; button.disabled = disabled;
       button.addEventListener('click', () => { page = nextPage; renderPage(); }); pager.appendChild(button);
@@ -312,7 +316,7 @@ function makeClickableTable(title, headers, rows, col){
     addButton('◀', Math.max(1, page - 1), page === 1);
     addButton('▶', Math.min(pages, page + 1), page === pages);
   };
-  sec.appendChild(body); sec.appendChild(pager); renderPage();
+  sec.appendChild(body); if (!options.showAll) sec.appendChild(pager); renderPage();
   return sec;
 }
 

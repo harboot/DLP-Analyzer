@@ -32,7 +32,7 @@
   <div class="wrap">
     <header class="page-header split-header">
       <div class="page-intro"><h1>Risk Scoring</h1>
-      <p class="page-description">Combine weighted Boolean rules to rank DLP alerts by risk.</p></div>
+      <p class="page-description">Combine scored Boolean rules to rank DLP alerts by risk.</p></div>
     </header>
 
     <div class="panel">
@@ -80,7 +80,7 @@
             <thead>
               <tr>
                 <th class="name" scope="col">Detector</th>
-                <th class="weight" scope="col">Weight</th>
+                <th class="weight" scope="col">Score</th>
                 <th class="matches" scope="col">Matches</th>
                 <th class="actions" scope="col">Actions</th>
               </tr>
@@ -101,9 +101,9 @@
               <div class="muted-sm">Rule name</div>
               <input id="inpName" class="textinput" placeholder="e.g. Large external transfer" />
             </label>
-            <label class="weight-field" title="Added to an alert's risk score when this rule returns true.">
-              <div class="muted-sm">Weight</div>
-              <input id="inpWeight" class="textinput" type="number" min="0" step="1" value="1" aria-label="Weight" />
+            <label class="weight-field" title="Added to an alert's combined risk score when this rule returns true.">
+              <div class="muted-sm">Score</div>
+              <input id="inpWeight" class="textinput" type="number" min="0" step="1" value="1" aria-label="Score" />
             </label>
           </div>
 
@@ -371,7 +371,7 @@ chatbotRunButton.addEventListener('click', async () => {
     elWeight.value = generated.recommendedWeight;
     elCode.value = generated.javascript;
     elMeta.textContent = 'Unsaved AI-generated rule';
-    chatbotStatus.textContent = 'Rule name, description, recommended weight, and JavaScript generated. Review and save the rule.';
+    chatbotStatus.textContent = 'Rule name, description, recommended score, and JavaScript generated. Review and save the rule.';
     elCode.focus();
   } catch (error) {
     chatbotStatus.textContent = `Generator error: ${error?.message || String(error)}`;
@@ -522,7 +522,7 @@ function createRuleRow(fl) {
   tr.setAttribute('data-id', fl.id);
   tr.innerHTML = `
     <td class="name" title="${escapeHtml(fl.name)}"><div class="rule-name-content"><input type="checkbox" class="rule-enabled" data-act="toggle" data-id="${fl.id}" ${fl.enabled ? 'checked' : ''} aria-label="Enable ${escapeHtml(fl.name)}"><span class="rule-name-label">${escapeHtml(fl.name)}</span>${fl.builtIn ? '<span class="badge built-in-badge" title="Predefined rule">Built-in</span>' : ''}</div></td>
-    <td class="weight" title="Risk weight">${fl.weight}</td>
+    <td class="weight" title="Risk score">${fl.weight}</td>
     <td class="matches" data-role="matches">${matches}</td>
     <td class="actions">${fl.builtIn ? '' : `<button class="icon-btn" title="Delete rule" data-act="del" data-id="${fl.id}">🗑️</button>`}</td>`;
   return tr;
@@ -680,7 +680,7 @@ function saveCurrent() {
   }
   const weight = Number(elWeight.value);
   if (!Number.isFinite(weight) || weight < 0) {
-    alert('Risk weight must be zero or greater.');
+    alert('Risk score must be zero or greater.');
     elWeight.focus();
     return;
   }

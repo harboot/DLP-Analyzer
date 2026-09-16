@@ -106,7 +106,7 @@ function parseGeneratedRule(content) {
   const javascript = typeof generated?.javascript === 'string' ? generated.javascript.trim() : '';
   const recommendedWeight = Number(generated?.recommendedWeight);
   if (!ruleName || !description || !javascript || !Number.isInteger(recommendedWeight) || recommendedWeight < 0) {
-    throw new Error('The generated rule is missing a name, description, recommended weight, or JavaScript code.');
+    throw new Error('The generated rule is missing a name, description, recommended score, or JavaScript code.');
   }
   return { ruleName, description, recommendedWeight, javascript };
 }
