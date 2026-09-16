@@ -195,7 +195,7 @@ function bindCardsClickOnce(cards, metricData, ruleDefs, rows){
         a.textContent = a.__matchIndices.length;
       }
       const matches = Array.from(a.__matchIndices, index => state.raw[index]).filter(Boolean);
-      openAdHocTab(`${def.label} (${matches.length})`, matches);
+      openAdHocTab(def.label, matches);
     }
   });
 }
