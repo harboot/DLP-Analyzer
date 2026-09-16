@@ -36,7 +36,7 @@ test('risk scoring rules have labeled columns while ranked alerts provide filter
   const riskScoringSource = fs.readFileSync(path.join(docs, 'CardManager.html'), 'utf8');
   const stylesSource = fs.readFileSync(path.join(docs, 'styles.css'), 'utf8');
 
-  assert.match(riskScoringSource, /<thead>[\s\S]*Detector[\s\S]*Weight[\s\S]*Matches[\s\S]*Actions[\s\S]*<\/thead>/);
+  assert.match(riskScoringSource, /<thead>[\s\S]*Detector[\s\S]*Score[\s\S]*Matches[\s\S]*Actions[\s\S]*<\/thead>/);
   assert.match(riskScoringSource, /<col class="name-column"/);
   assert.match(stylesSource, /#tbl col\.name-column\{width:68%\}/);
   assert.match(stylesSource, /\.layout[\s\S]*?align-items: start/);

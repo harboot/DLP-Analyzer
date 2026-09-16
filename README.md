@@ -4,7 +4,7 @@
 
 A collection of browser-based tools for analyzing **Data Loss Prevention (DLP)** data. DLP Analyzer is designed to work with CSV exports from **Forcepoint DLP / Forcepoint Security Manager**, especially incident (alert) exports and policy/rule exports. It is a companion analysis utility, not an official Forcepoint product.
 
-Processing happens in the browser: uploaded file contents are not sent to an application server. CSV uploads are decoded incrementally by `docs/worker/DataIngest.worker.js`. XLSX uploads are parsed there with SheetJS, but still require the entire workbook in memory; the application warns when a workbook exceeds the 50 MB safe limit.
+Processing happens in the browser: uploaded file contents are not sent to an application server. CSV uploads are decoded incrementally by `docs/worker/DataIngest.worker.js`.
 
 ## Forcepoint DLP compatibility
 
@@ -13,7 +13,7 @@ DLP Analyzer expects the column names present in Forcepoint DLP exports. In part
 - **Alert Analyzer** works with incident exports containing fields such as `ID`, `Incident Time`, `Source`, `Policies`, `Destination`, `File Name`, `Details`, `Channel`, `Action`, and `Severity`.
 - **DLP Policy Tuning Advisor** groups incident exports by policy and uses deterministic statistics to surface duplicate bursts, recurring triggers, concentrated workflows, generic attachments, and other review opportunities. It never labels an alert as a false positive.
 - **Rule Identifier** combines an alert export (including `Violation Triggers` and `Policies`) with a policy/rule export (including `Rule Name`, `Relation`, and `Classifiers`) to add the matching rule name to each alert.
-- **Risk Scoring** creates, stores, imports, and exports weighted Boolean predicates, then ranks alerts by the combined weight of every matching rule.
+- **Risk Scoring** creates, stores, imports, and exports scored Boolean predicates, then ranks alerts by the combined score of every matching rule.
 
 Export labels can vary between Forcepoint versions and configured report templates. If a required column was renamed or omitted, export it again with the expected field names before processing it. All analysis is local and does not modify data in Forcepoint.
 
@@ -50,7 +50,7 @@ When served over HTTPS, including on GitHub Pages, the application prepares all 
     │   ├── csv.js               # Alert ingestion and tab construction
     │   ├── csv-utils.js         # Shared ingestion-worker client
     │   ├── dlp-utils.js         # Shared DOM and output-safety helpers
-    │   ├── risk-scoring.js      # Weighted alert-score aggregation
+    │   ├── risk-scoring.js      # Alert-score aggregation
     │   ├── rules.js             # Alert Analyzer rule execution
     │   ├── storage.js           # Expiring secrets and rule-result cache
     │   ├── ui.js                # Alert Analyzer rendering and interaction
@@ -80,7 +80,7 @@ page-specific parsing and rendering logic should remain in each tool's script.
 
 - **Alert Analyzer** imports DLP alert CSV files and presents every alert individually alongside summaries, JSON rule-pack findings, filters, charts, and exports. Rule packs live in `docs/rules/` and can be extended without changing the analyzer HTML. [Open the Alert Analyzer guide](https://harboot.github.io/DLP-Analyzer/guides/AlertAnalyzerGuide.html).
 - **DLP Policy Tuning Advisor** analyzes alert CSV exports entirely in the browser and ranks policy-level tuning opportunities with explainable, deterministic rules. Findings include the contributing alerts for analyst review. [Open the Policy Tuning Advisor guide](https://harboot.github.io/DLP-Analyzer/guides/PolicyTuningAdvisorGuide.html).
-- **Risk Scoring** generates JavaScript Boolean predicates with optional OpenAI assistance, assigns each rule a weight, stores reusable rule collections, and ranks alerts by the sum of all matching enabled rules. [Open the Risk Scoring guide](https://harboot.github.io/DLP-Analyzer/guides/RiskScoringGuide.html).
+- **Risk Scoring** generates JavaScript Boolean predicates with optional OpenAI assistance, assigns each rule a score, stores reusable rule collections, and ranks alerts by the combined score of all matching enabled rules. [Open the Risk Scoring guide](https://harboot.github.io/DLP-Analyzer/guides/RiskScoringGuide.html).
 - **Rule Identifier** matches alert classifier data to DLP policy rules and exports the enriched alerts. [Open the Rule Identifier guide](https://harboot.github.io/DLP-Analyzer/guides/RuleIdentifierGuide.html).
 - **Policy Viewer** imports policy data and provides searchable, filterable policy and rule details. [Open the Policy Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/PolicyViewerGuide.html).
 - **Document Viewer** opens supported local documents, including XLSX workbooks, for quick browser-based inspection. [Open the Document Viewer guide](https://harboot.github.io/DLP-Analyzer/guides/DocViewerGuide.html).

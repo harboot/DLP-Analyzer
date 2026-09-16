@@ -60,6 +60,12 @@ test('multiple files stream batches without combining intermediate arrays', asyn
   assert.equal(messages.at(-1).rowCount, 3);
 });
 
+test('unsupported alert file formats are rejected', async () => {
+  const messages = await run([{ name: 'alerts.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 0 }]);
+  assert.equal(messages.at(-1).type, 'error');
+  assert.equal(messages.at(-1).message, 'Only CSV files are supported.');
+});
+
 test('alert records are normalized once in the ingestion worker', async () => {
   const messages = await run([csvFile('alerts.csv', [' Incident Time ,Source,Destination,File Name,Action,Channel\n26 Aug. 2025, User@Example.com ,a@sub.example.com; b@example.com,"report.pdf; logo.png",Block,Email'])], { normalizeAlerts: true });
   const row = rows(messages)[0];
