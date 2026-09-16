@@ -134,6 +134,8 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  .section .tablewrap{overflow:auto;max-height:42vh}
 	  .sectionx{display:flex;flex-direction:column;height:calc(100vh - 150px)}
 	  .sectionx .tablewrap{flex:1 1 auto;overflow:auto}
+	  .sectionx .source-filter-summaries{flex:0 0 auto;margin-bottom:var(--space-3)}
+	  .source-filter-summaries .tablewrap{max-height:none;overflow:visible}
 
 	  table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
 	  thead th{position:sticky;top:0;background:var(--color-surface-raised);border-bottom:1px solid var(--line);z-index:1}

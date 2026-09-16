@@ -1,7 +1,7 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v53';
+const CACHE_VERSION = 'dlp-analyzer-v54';
 const CACHE_CONCURRENCY = 6;
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',

@@ -8,7 +8,7 @@ function renderTabs(){
     b.setAttribute('role','tab');
     b.setAttribute('aria-selected', String(state.activeTab===t.key));
     const labelSpan = document.createElement('span');
-    labelSpan.textContent = t.label;
+    labelSpan.textContent = t.closable ? `${t.label} (${t.rows.length})` : t.label;
     b.appendChild(labelSpan);
 
     if(t.closable){
@@ -133,11 +133,11 @@ function renderOverview(rows){
   const metricData = {
     labels: {
       total:     'All Alerts',
-      sources:   `Rows with Source (${rowsWithSource.length})`,
-      emaildest: `Email Destinations (${rowsEmailDest.length})`,
-      webdest:   `Web Destinations (${rowsWebDest.length})`,
-      channels:  `Rows with Channel (${rowsWithChan.length})`,
-      blocks:    `Action: Block/Quarantine (${rowsBlocks.length})`
+      sources:   'Rows with Source',
+      emaildest: 'Email Destinations',
+      webdest:   'Web Destinations',
+      channels:  'Rows with Channel',
+      blocks:    'Action: Block/Quarantine'
     },
     data: {
       total: rows,
@@ -304,7 +304,7 @@ function makeClickableTable(title, headers, rows, col, options = {}){
       const cell = tr.cells[0];
       const link = document.createElement('a'); link.href = '#'; link.className = 'link'; link.textContent = name;
       link.title = name;
-      link.addEventListener('click', event => { event.preventDefault(); openFilterTab(col, name); });
+      link.addEventListener('click', event => { event.preventDefault(); openFilterTab(col, name, options.fromTab); });
       cell.replaceChildren(link);
     });
     if (options.showAll) return;
@@ -417,6 +417,18 @@ function renderTableSection(tab){
       summary.appendChild(button);
     }
     sec.appendChild(summary);
+  }
+
+  if (tab.filter?.col === 'Source') {
+    const filteredRows = applyFiltersAndSort(tab.rows, getTabState(tab.key).filters, null);
+    const topFive = entries => Array.from(entries).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const contextualTab = {rows: filteredRows};
+    const summaries = document.createElement('div');
+    summaries.className = 'grid cols-3 source-filter-summaries';
+    summaries.appendChild(makeClickableTable('Top 5 Destinations', ['Destination', 'Count'], topFive(freqMap(filteredRows, 'Destination').entries()), 'Destination', {showAll: true, fromTab: contextualTab}));
+    summaries.appendChild(makeClickableTable('Top 5 File Names', ['File Name', 'Count'], topFive(freqMapTokens(filteredRows, fileTokensForRow).entries()), 'File Name', {showAll: true, fromTab: contextualTab}));
+    summaries.appendChild(makeClickableTable('Top 5 Details', ['Details', 'Count'], topFive(freqMap(filteredRows, 'Details').entries()), 'Details', {showAll: true, fromTab: contextualTab}));
+    sec.appendChild(summaries);
   }
 
   const body = document.createElement('div'); body.className = 'tablewrap';
