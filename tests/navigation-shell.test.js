@@ -39,8 +39,8 @@ test('risk scoring rules have labeled columns while ranked alerts provide filter
   assert.match(riskScoringSource, /<thead>[\s\S]*Detector[\s\S]*Weight[\s\S]*Matches[\s\S]*Actions[\s\S]*<\/thead>/);
   assert.match(riskScoringSource, /<col class="name-column"/);
   assert.match(stylesSource, /#tbl col\.name-column\{width:68%\}/);
-  assert.match(stylesSource, /\.layout[\s\S]*?align-items: stretch/);
-  assert.match(stylesSource, /\.list\{flex:1;min-height:0;overflow:auto\}/);
+  assert.match(stylesSource, /\.layout[\s\S]*?align-items: start/);
+  assert.match(stylesSource, /\.list\{flex:1;min-height:0;max-height:min\(52vh,480px\);overflow:auto\}/);
   assert.doesNotMatch(riskScoringSource, /data-column="(?:name|weight|matches)"/);
   assert.match(riskScoringSource, /function openResultFilter\(button, filters, currentSort, apply\)/);
   assert.match(riskScoringSource, /data-result-column="\$\{column\}"/);
