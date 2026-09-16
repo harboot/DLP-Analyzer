@@ -32,3 +32,27 @@ test('matcher groups rule counts by policy and retains unmatched policy totals',
     'Unconfigured Policy': { rules: {}, unmatched: 1 }
   });
 });
+
+test('matcher counts semicolon-separated policy names independently', () => {
+  const messages = [];
+  const context = { self: { postMessage: message => messages.push(message) } };
+  vm.runInNewContext(workerSource, context);
+
+  context.self.onmessage({ data: {
+    header: ['Policies', 'Violation Triggers'],
+    policies: [],
+    alerts: [
+      { Policies: 'Credit Cards; Password Protected File', 'Violation Triggers': 'no classifier match' }
+    ]
+  } });
+
+  const result = messages.at(-1);
+  assert.equal(result.type, 'complete');
+  assert.deepEqual(JSON.parse(JSON.stringify(result.counts)), {
+    'Credit Cards': { rules: {}, unmatched: 1 },
+    'Password Protected File': { rules: {}, unmatched: 1 }
+  });
+  assert.equal(result.identified, 0);
+  assert.equal(result.rows[0].Policies, 'Credit Cards; Password Protected File');
+  assert.equal(result.rows[0]['Rule Name'], '');
+});
