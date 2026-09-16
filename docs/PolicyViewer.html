@@ -37,10 +37,10 @@
     <div class="row">
       <div class="row-left">
         <!-- Counters -->
-        <span class="counter c-block" id="cntBlocked" title="Rules with action containing 'block'">Blocked (0)</span>
-        <span class="counter c-block" id="cntBlockedAll" title="Rules with a blocking main or exception action">Blocked All (0)</span>
-        <span class="counter c-disab" id="cntDisabled" title="Rules disabled (rule.enabled == false)">Disabled (0)</span>
-        <span class="counter c-exc" id="cntException" title="Rules that have exceptions">Exception (0)</span>
+        <button class="counter c-block" id="cntBlocked" type="button" aria-pressed="false" title="Show rules with a blocking main action">Blocked (0)</button>
+        <button class="counter c-block" id="cntBlockedAll" type="button" aria-pressed="false" title="Show rules with a blocking main or exception action">Blocked All (0)</button>
+        <button class="counter c-disab" id="cntDisabled" type="button" aria-pressed="false" title="Show disabled rules">Disabled (0)</button>
+        <button class="counter c-exc" id="cntException" type="button" aria-pressed="false" title="Show rules with exceptions">Exception (0)</button>
       </div>
       <div class="row-right">
         <button class="btn" id="exportCsv" title="Export filtered rows with the same fields as Copied information">Export CSV (filtered)</button>
@@ -49,7 +49,12 @@
     </div>
   </div>
 
-  <section class="section stack-space">
+  <details class="log-details" id="logPanel">
+    <summary>Load log</summary>
+    <pre id="logOut"></pre>
+  </details>
+
+  <section class="section stack-space rules-section">
     <header>
       <div>Rules</div>
       <div class="muted tiny" id="countInfo" title="Policy and rule counters">0 policies · 0 rules (0 shown)</div>
@@ -77,10 +82,6 @@
     </div>
   </section>
 
-  <details class="log-details" id="logPanel">
-    <summary>Load log</summary>
-    <pre id="logOut"></pre>
-  </details>
 </div>
 
 <script>
@@ -105,6 +106,7 @@
   let flatRows = []; // normalized rows (per rule)
   let filters = { policy:'', rule:'', relation:'', classifiers:'', severity:'', action:'', source:'', channel:'', exception:'' };
   let showDisabled = true; // user toggle
+  let statusFilter = '';
 
   /* ===================== Utils ===================== */
   const log = (msg) => { logOut.textContent += (typeof msg==='string'? msg : JSON.stringify(msg,null,2)) + "\n"; }
@@ -208,7 +210,7 @@
     const toRead = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.json'));
     if(!toRead.length){ log('No .json files detected.'); return; }
     flatRows = [];
-    policyFileName.textContent = toRead.map(file => file.name).join(', ');
+    policyFileName.textContent = `${toRead.length} policy file${toRead.length === 1 ? '' : 's'}`;
 
     let readCount = 0;
     for(const file of toRead){
@@ -264,7 +266,14 @@
   /* ===================== Filters (AND for classifiers tokens) ===================== */
   function passesFilters(row){
     // hide disabled if toggle is off
-    if(!showDisabled && (!row.policyEnabled || !row.ruleEnabled)) return false;
+    if(!showDisabled && statusFilter !== 'disabled' && (!row.policyEnabled || !row.ruleEnabled)) return false;
+
+    const hasBlockAction = action => String(action || '').toLowerCase().includes('block');
+    const exceptionBlocks = safeArr(row.exceptions).some(exception => hasBlockAction(pickSeverityAndAction(exception?.severity_action || {}).action));
+    if(statusFilter === 'blocked' && !hasBlockAction(row.action)) return false;
+    if(statusFilter === 'blocked-all' && !hasBlockAction(row.action) && !exceptionBlocks) return false;
+    if(statusFilter === 'disabled' && row.ruleEnabled) return false;
+    if(statusFilter === 'exception' && !safeArr(row.exceptions).length) return false;
 
     if(filters.policy && !ciIncludes(row.policyName, filters.policy)) return false;
     if(filters.rule && !ciIncludes(row.ruleName, filters.rule)) return false;
@@ -295,6 +304,20 @@
 
     return true;
   }
+
+  const statusCounters = [
+    [cntBlocked, 'blocked'], [cntBlockedAll, 'blocked-all'],
+    [cntDisabled, 'disabled'], [cntException, 'exception']
+  ];
+  statusCounters.forEach(([counter, value]) => counter.addEventListener('click', () => {
+    statusFilter = statusFilter === value ? '' : value;
+    statusCounters.forEach(([button, filter]) => {
+      const active = statusFilter === filter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    render();
+  }));
 
   /* ===================== Counters ===================== */
   function updateCounters(){

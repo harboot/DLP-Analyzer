@@ -43,14 +43,13 @@
     <div class="panel matcher-results-panel">
       <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
 
-      <!-- KPI cards: 6 items, big numbers -->
+      <!-- KPI cards: processing and identification totals -->
       <div class="kpis">
         <div class="kpi"><div class="num" id="kpi-total-alerts">0</div><div class="label">Total Alerts</div></div>
-        <div class="kpi"><div class="num" id="kpi-total-rules">0</div><div class="label">Total Rules</div></div>
         <div class="kpi"><div class="num" id="kpi-processed">0</div><div class="label">Processed</div></div>
-        <div class="kpi"><div class="num" id="kpi-pending">0</div><div class="label">No Classifier</div></div>
-        <div class="kpi"><div class="num" id="kpi-identified">0</div><div class="label">Identified</div></div>
-        <div class="kpi"><div class="num" id="kpi-unidentified">0</div><div class="label">Unidentified</div></div>
+        <div class="kpi"><div class="num" id="kpi-total-rules">0</div><div class="label">Total Rules</div></div>
+        <div class="kpi"><div class="num" id="kpi-identified">0</div><div class="label">Rule Identified</div></div>
+        <div class="kpi"><div class="num" id="kpi-unidentified">0</div><div class="label">Policy Identified</div></div>
       </div>
 
       <div class="progress"><div class="bar" id="bar"></div></div>
@@ -92,7 +91,6 @@ function refreshKPIs(){
   $('#kpi-total-alerts').textContent = stat.total;
   $('#kpi-total-rules').textContent  = totalRules;
   $('#kpi-processed').textContent    = stat.processed;
-  $('#kpi-pending').textContent      = stat.noClassifiers;
   $('#kpi-identified').textContent   = stat.identified;
   $('#kpi-unidentified').textContent = stat.unidentified;
 }
@@ -222,7 +220,7 @@ fileAll.addEventListener('change', async e => {
 filePolicies.addEventListener('change', async e => {
   const files = [...e.target.files];
   policiesRows = [];
-  policyFileName.textContent = files.map(file => file.name).join(', ');
+  policyFileName.textContent = `${files.length} JSON file${files.length === 1 ? '' : 's'}`;
   await handlePolicyJsonFiles(files);
   filePolicies.value = '';
 });
@@ -237,7 +235,7 @@ function isCSVFile(f){
 function isAlertFile(f){ return isCSVFile(f); }
 
 async function handlePolicyJsonFiles(files){
-  policyFileName.textContent = files.map(file => file.name).join(', ');
+  policyFileName.textContent = `${files.length} JSON file${files.length === 1 ? '' : 's'}`;
   const warnings = [];
   for (const file of files) {
     try {
@@ -343,7 +341,6 @@ async function handleFiles(files){
 		alertsRows.push(...objs);
 		logLine(`[Alerts] ${f.name} OK (${objs.length} rows)`);
 	  } else if (kind === 'policies') {
-		policyFileName.textContent = [policyFileName.textContent, f.name].filter(Boolean).join(', ');
 		policiesRows.push(...objs);
 		logLine(`[Policies] ${f.name} OK (${objs.length} rows)`);
 	  }
