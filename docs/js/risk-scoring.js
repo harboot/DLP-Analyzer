@@ -12,10 +12,12 @@
     return (Array.isArray(rules) ? rules : []).map(rule => ({
       id: rule.id,
       name: rule.name,
+      description: rule.description || '',
       code: rule.code || '',
       builtIn: !!rule.builtIn,
       key: rule.key,
       settings: { ...(rule.settings || {}) },
+      settingFields: (rule.settingFields || []).map(field => ({ ...field })),
       type: 'file',
       enabled: !!rule.enabled,
       weight: normalizeWeight(rule.weight)

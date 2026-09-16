@@ -96,20 +96,20 @@
           <div class="right"><span id="currentPath" class="muted-sm"></span></div>
         </header>
         <div class="editor">
-          <label>
-            <div class="muted-sm">Rule name</div>
-            <input id="inpName" class="textinput" placeholder="e.g. Large external transfer" />
-          </label>
-
-          <label>
-            <div class="muted-sm">Risk weight</div>
-            <input id="inpWeight" class="textinput" type="number" min="0" step="1" value="1" aria-describedby="weightHelp" />
-            <div id="weightHelp" class="muted-sm">Added to an alert's risk score when this rule returns true.</div>
-          </label>
+          <div class="rule-primary-fields">
+            <label>
+              <div class="muted-sm">Rule name</div>
+              <input id="inpName" class="textinput" placeholder="e.g. Large external transfer" />
+            </label>
+            <label class="weight-field" title="Added to an alert's risk score when this rule returns true.">
+              <div class="muted-sm">Weight</div>
+              <input id="inpWeight" class="textinput" type="number" min="0" step="1" value="1" aria-label="Weight" />
+            </label>
+          </div>
 
           <label>
             <div class="muted-sm">Rule description</div>
-            <textarea id="inpDescription" class="textinput rule-description" rows="3" aria-label="Rule description" placeholder="Explain what this rule detects."></textarea>
+            <textarea id="inpDescription" class="textinput rule-description" rows="2" aria-label="Rule description" placeholder="Explain what this rule detects."></textarea>
           </label>
 
           <div id="builtInDetails" hidden>
@@ -118,7 +118,7 @@
 
           <label id="codeEditorField">
             <div class="muted-sm">JavaScript code</div>
-            <textarea id="inpCode" class="cjs-textarea" spellcheck="false" placeholder="// Boolean predicate per row.
+            <textarea id="inpCode" class="cjs-textarea" rows="5" spellcheck="false" placeholder="// Boolean predicate per row.
 // Example:
 // return (row.Status||'') === 'New';
 "></textarea>
@@ -143,7 +143,6 @@
     <div id="aiSettingsDialog" class="settings-dialog" hidden>
       <div class="settings-box risk-settings-box" role="dialog" aria-modal="true" aria-labelledby="riskSettingsTitle">
         <div class="settings-heading"><strong id="riskSettingsTitle">Settings</strong><button id="aiSettingsClose" class="icon-btn" type="button" aria-label="Close settings">×</button></div>
-        <p class="settings-intro">Configure alert exclusions and optional AI-assisted rule creation.</p>
         <section class="settings-group" aria-labelledby="alertProcessingTitle">
           <div class="settings-group-heading"><strong id="alertProcessingTitle">Alert processing</strong><span class="muted-sm">Applied when alerts are loaded</span></div>
           <label class="risk-ignore-setting"><input id="useIgnoredValues" type="checkbox" /> <span><strong>Use ignored values</strong><small>Exclude alerts using the source and destination patterns saved in Alert Analyzer.</small></span></label>
@@ -758,6 +757,7 @@ function importJSON(file) {
         const m = items.find((x) => x.type === 'file' && x.name === it.name);
         if (m) {
           m.code = it.code || '';
+          m.description = it.description || '';
           m.enabled = !!it.enabled;
           m.weight = RiskScoring.normalizeWeight(it.weight);
           if (m.builtIn && it.settings) m.settings = { ...m.settings, ...it.settings };
@@ -767,6 +767,7 @@ function importJSON(file) {
             id: it.id || uid(),
             type: 'file',
             name: it.name,
+            description: it.description || '',
             code: it.code || '',
             enabled: !!it.enabled,
             weight: RiskScoring.normalizeWeight(it.weight)

@@ -290,7 +290,7 @@ function makeClickableTable(title, headers, rows, col){
   const sec = document.createElement('div'); sec.className = 'section';
   sec.innerHTML = `<header><strong>${escapeHtml(title)}</strong><span class="tiny muted"></span></header>`;
   const body = document.createElement('div'); body.className = 'tablewrap';
-  const pager = document.createElement('div'); pager.className = 'pager overview-pager';
+  const pager = document.createElement('div'); pager.className = 'pager overview-pager'; pager.setAttribute('aria-label', `${title} pagination`);
   let page = 1;
   const renderPage = () => {
     const pages = Math.max(1, Math.ceil(rows.length / 10));
