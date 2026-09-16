@@ -64,6 +64,14 @@ test('Document Viewer retains XLSX detection and text extraction without the XLS
   assert.equal(source.includes('xl\\/worksheets\\/sheet'), true);
 });
 
+test('Document Viewer separates text stored in adjacent Office XML elements', () => {
+  const source = fs.readFileSync(path.join(root, 'js/doc-viewer.js'), 'utf8');
+  assert.match(source, /querySelectorAll\('w\\\\:t, a\\\\:t, t'\)/);
+  assert.match(source, /node\.after\(doc\.createTextNode\(' '\)\)/);
+  assert.match(source, /!\/\\s\$\/\.test\(node\.textContent\)/);
+  assert.match(source, /!\/\^\\s\/\.test\(next\.textContent\)/);
+});
+
 test('CSV ingestion is incremental and XLSX warns before whole-workbook parsing', () => {
   const source = fs.readFileSync(path.join(root, 'worker/DataIngest.worker.js'), 'utf8');
   assert.match(source, /TextDecoderStream/);

@@ -71,6 +71,11 @@
     if (doc.querySelector('parsererror')) return xml;
     doc.querySelectorAll('w\\:tab, tab').forEach(node => node.replaceWith('\t'));
     doc.querySelectorAll('w\\:br, br, a\\:br').forEach(node => node.replaceWith('\n'));
+    const textElements = [...doc.querySelectorAll('w\\:t, a\\:t, t')].filter(node => node.textContent);
+    textElements.slice(0, -1).forEach((node, index) => {
+      const next = textElements[index + 1];
+      if (!/\s$/.test(node.textContent) && !/^\s/.test(next.textContent)) node.after(doc.createTextNode(' '));
+    });
     return doc.documentElement.textContent.replace(/\s*\n\s*/g, '\n').replace(/[ \t]+/g, ' ').trim();
   }
   async function extractOfficeText(zip, names, type) {
