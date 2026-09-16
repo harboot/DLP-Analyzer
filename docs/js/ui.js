@@ -49,7 +49,7 @@ function renderTabs(){
 
 // Returns or initializes per-tab state (filters, pagination, and sorting).
 function getTabState(key){
-  if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:10, sort:null});
+  if(!state.tabState.has(key)) state.tabState.set(key, {filters:{}, page:1, pageSize:50, sort:null});
   return state.tabState.get(key);
 }
 
@@ -389,7 +389,7 @@ function makeLineChart(pairs, granularity = 'day'){
   return svg;
 }
 
-// Renders a tab table section with pagination, export, and page-size controls.
+// Renders a tab table section with fixed 50-row pagination and export.
 function renderTableSection(tab){
   const sec = document.createElement('div'); sec.className = 'sectionx';
 
@@ -425,16 +425,10 @@ function renderTableSection(tab){
   const actions = document.createElement('div'); actions.className = 'table-actions';
   const pager = document.createElement('div'); pager.className = 'pager'; pager.id = `pager-${safeKey(tab.key)}`;
   const right = document.createElement('div'); right.className = 'right';
-  right.innerHTML = `
-    <button class="btn" data-act="export">Export CSV</button>
-    <label style="margin-left:8px">Rows/page
-      <select data-role="pagesize"><option selected>10</option><option>25</option><option>50</option><option>100</option></select>
-    </label>`;
+  right.innerHTML = '<button class="btn" data-act="export">Export CSV</button>';
   actions.appendChild(pager); actions.appendChild(right); sec.appendChild(actions);
 
   right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
-  right.querySelector('[data-role="pagesize"]').addEventListener('change', (e)=>{ const st=getTabState(tab.key); st.pageSize=parseInt(e.target.value,10)||10; st.page=1; rerenderTabTable(tab, sec); });
-
   updatePager(tab, sec, tableEl);
   return sec;
 }
