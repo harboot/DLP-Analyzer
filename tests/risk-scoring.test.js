@@ -16,6 +16,7 @@ for (const detectorFile of [
 const { exportRuleConfigs, normalizeWeight, scoreAlerts } = context.RiskScoring;
 
 const riskScoringPage = fs.readFileSync('docs/CardManager.html', 'utf8');
+const riskScoringStyles = fs.readFileSync('docs/styles.css', 'utf8');
 assert.match(riskScoringPage, /Built-in detectors/);
 assert.match(riskScoringPage, /Custom detectors/);
 assert.match(riskScoringPage, /aria-expanded="\$\{!builtInCollapsed\}"/);
@@ -23,6 +24,8 @@ assert.doesNotMatch(riskScoringPage, /data-column="(?:name|weight|matches)"/);
 assert.match(riskScoringPage, /data-result-column="\$\{column\}"/);
 assert.match(riskScoringPage, /<textarea id="chatbot-input"[^>]+rows="6"/);
 assert.match(riskScoringPage, /Clear filters/);
+assert.match(riskScoringStyles, /\.list\{flex:1;min-height:0;max-height:min\(52vh,480px\);overflow:auto\}/);
+assert.match(riskScoringStyles, /height:clamp\(160px,20vh,220px\)/);
 assert.match(fs.readFileSync('docs/js/detectors/ransomware-attachment.js', 'utf8'), /Encrypted extension regular expression/);
 assert.doesNotMatch(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), /builtin-|matchesBuiltIn|RiskDetectors/);
 
