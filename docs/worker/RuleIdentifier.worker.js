@@ -2,6 +2,11 @@
 
 const norm = value => String(value || '').toLowerCase();
 
+function splitPolicyNames(value) {
+  const names = String(value ?? '').split(';').map(name => name.trim()).filter(Boolean);
+  return names.length ? names : ['Unknown Policy'];
+}
+
 function evalRelationExpr(expr, hits) {
   const tokens = expr.trim().split(/\s+/).filter(Boolean);
   if (!tokens.length) return false;
@@ -119,15 +124,17 @@ self.onmessage = ({ data }) => {
     if (matched.length) {
       identified++;
       for (const item of matched) {
-        const policyName = String(item.policyName || alerts[index].Policies || 'Unknown Policy').trim();
         const ruleName = String(item.ruleName || '').trim();
-        if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
-        if (ruleName) counts[policyName].rules[ruleName] = (counts[policyName].rules[ruleName] || 0) + 1;
+        for (const policyName of splitPolicyNames(item.policyName || alerts[index].Policies)) {
+          if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
+          if (ruleName) counts[policyName].rules[ruleName] = (counts[policyName].rules[ruleName] || 0) + 1;
+        }
       }
     } else {
-      const policyName = String(alerts[index].Policies ?? alerts[index]['Policies '] ?? 'Unknown Policy').trim() || 'Unknown Policy';
-      if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
-      counts[policyName].unmatched++;
+      for (const policyName of splitPolicyNames(alerts[index].Policies ?? alerts[index]['Policies '])) {
+        if (!counts[policyName]) counts[policyName] = { rules: Object.create(null), unmatched: 0 };
+        counts[policyName].unmatched++;
+      }
     }
     if ((index + 1) % 5000 === 0) self.postMessage({ type: 'progress', processed: index + 1 });
   }
