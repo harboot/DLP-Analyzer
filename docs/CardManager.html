@@ -1142,7 +1142,7 @@ function openRiskTable(enabledFiles) {
       <header><strong>Alerts ranked by combined risk</strong><span class="muted-sm">${displayed.length === scored.length ? `${scored.length} scored alerts` : `${displayed.length} of ${scored.length} scored alerts`}</span></header>
       <div class="table-scroll"><table class="risk-result-cols"><thead><tr><th class="copy-column" aria-label="Copy row"></th>${resultColumns.map(resultHeader).join('')}</tr></thead>
       <tbody>${bodyHTML || '<tr><td colspan="10" class="muted-sm">No alerts matched the enabled rules.</td></tr>'}</tbody></table></div>
-      <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${displayed.length ? start + 1 : 0}–${Math.min(start + pageSize, displayed.length)} of ${displayed.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right">${Object.keys(resultFilters).length ? '<button class="btn" data-act="clear-result-filters">Clear filters</button>' : ''}<button class="btn" data-act="export-alerts">Export CSV</button><label>Rows/page <select data-role="page-size"><option value="25"${pageSize === 25 ? ' selected' : ''}>25</option><option value="50"${pageSize === 50 ? ' selected' : ''}>50</option><option value="100"${pageSize === 100 ? ' selected' : ''}>100</option></select></label></div></div>
+      <div class="table-actions"><div class="pager" data-role="pager"><span class="muted-sm">Showing ${displayed.length ? start + 1 : 0}–${Math.min(start + pageSize, displayed.length)} of ${displayed.length}</span><button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button><button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button><button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button><button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button></div><div class="right">${Object.keys(resultFilters).length ? '<button class="btn" data-act="clear-result-filters">Clear filters</button>' : ''}<button class="btn" data-act="export-alerts">Export CSV</button></div></div>
     </section>`;
 
     wrap.querySelector('table').addEventListener('click', (event) => {
@@ -1164,11 +1164,6 @@ function openRiskTable(enabledFiles) {
         renderPage();
       });
     }));
-    wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
-      pageSize = Number(event.target.value) || 50;
-      page = 1;
-      renderPage();
-    });
     wrap.querySelector('[data-role="pager"]').addEventListener('click', (event) => {
       const action = event.target.closest('[data-page]')?.dataset.page;
       if (action === 'first') page = 1;
@@ -1224,20 +1219,9 @@ function openResultTable(fileId) {
     })
     .join('');
 
-    wrap.innerHTML = `<output id="onNames" class="muted-sm">Showing matches for ${escapeHtml(f.name)}.</output>
-    <section class="section">
+    wrap.innerHTML = `<section class="section">
       <header>
         <strong>Results • ${escapeHtml(f.name)}</strong>
-        <div class="right">
-          <button class="btn" data-act="export-alerts">Export CSV</button>
-          <label class="muted-sm">Rows/page
-            <select class="textinput" data-role="page-size">
-              <option value="50"${pageSize === 50 ? ' selected' : ''}>50</option>
-              <option value="100"${pageSize === 100 ? ' selected' : ''}>100</option>
-            </select>
-          </label>
-          <span class="muted-sm">${rows.length} matched rows</span>
-        </div>
       </header>
       <div class="table-scroll">
         <table class="rule-result-cols">
@@ -1245,12 +1229,15 @@ function openResultTable(fileId) {
           <tbody>${bodyHTML || `<tr><td colspan="${cols.length}" class="muted-sm">No rows matched.</td></tr>`}</tbody>
         </table>
       </div>
-      <div class="pager" data-role="pager">
-        <span class="muted-sm">${rows.length ? start + 1 : 0}–${Math.min(start + pageSize, rows.length)} of ${rows.length} • Page ${page} of ${pages}</span>
-        <button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button>
-        <button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button>
-        <button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button>
-        <button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button>
+      <div class="table-actions">
+        <div class="pager" data-role="pager">
+          <span class="muted-sm">${rows.length ? start + 1 : 0}–${Math.min(start + pageSize, rows.length)} of ${rows.length} • Page ${page} of ${pages}</span>
+          <button class="btn" data-page="first"${page === 1 ? ' disabled' : ''}>⏮</button>
+          <button class="btn" data-page="prev"${page === 1 ? ' disabled' : ''}>◀</button>
+          <button class="btn" data-page="next"${page === pages ? ' disabled' : ''}>▶</button>
+          <button class="btn" data-page="last"${page === pages ? ' disabled' : ''}>⏭</button>
+        </div>
+        <div class="right"><button class="btn" data-act="export-alerts">Export CSV</button></div>
       </div>
     </section>`;
 
@@ -1274,11 +1261,6 @@ function openResultTable(fileId) {
     }
     wrap.querySelector('[data-act="export-alerts"]').addEventListener('click', () => downloadAlertCsv(rows, `${f.name.replace(/\.[^.]+$/, '')}-matches.csv`));
 
-    wrap.querySelector('[data-role="page-size"]').addEventListener('change', (event) => {
-      pageSize = Number(event.target.value) || 50;
-      page = 1;
-      renderPage();
-    });
     wrap.querySelector('[data-role="pager"]').addEventListener('click', (event) => {
       const action = event.target.closest('[data-page]')?.dataset.page;
       if (!action) return;
