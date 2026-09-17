@@ -20,5 +20,7 @@ test('source quick filters render three top-five summaries from filtered rows', 
   assert.match(uiSource, /mostHit: \{label: 'Domain'/);
   assert.match(uiSource, /mostHit: \{label: 'Filename'/);
   assert.match(uiSource, /mostHit: \{label: 'Detail'/);
+  assert.match(uiSource, /heading\.textContent = `Most Hits \$\{label\}:`/);
+  assert.doesNotMatch(uiSource, /heading\.textContent = 'Most Hits'/);
   assert.doesNotMatch(uiSource, /mostHits\.className = 'most-hits'/);
 });

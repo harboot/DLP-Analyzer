@@ -172,13 +172,15 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  @media (max-width:800px){.grid.cols-3{grid-template-columns:1fr}}
 
 	  .table-actions{display:flex;justify-content:space-between;align-items:center;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
-	  .most-hit-summary{display:grid;gap:var(--space-1);margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-inset)}
-	  .most-hit-summary>strong{margin-bottom:var(--space-1);color:var(--accent)}
-	  .most-hits-row{font-size:13px;color:var(--color-text-soft)}
-	  .most-hits-row b{display:inline-block;min-width:74px;color:var(--text)}
+	  .most-hit-summary{margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-inset);font-size:13px;color:var(--color-text-soft)}
+	  .most-hit-summary>strong{color:var(--accent)}
 	  .pager{display:flex;gap:var(--space-2);align-items:center}
 	  .pager .btn{padding:var(--space-2) var(--space-3)}
 	  .overview-pager{margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
+
+	  /* Alert pages use document scrolling so every row in the 50-item page remains visible. */
+	  body.page-alert-analyzer .sectionx{height:auto}
+	  body.page-alert-analyzer .sectionx>.tablewrap{flex:none;overflow:visible}
 
 	  a.link{color:var(--accent);text-decoration:none}
 	  a.link:hover{outline:none;text-decoration:underline}
