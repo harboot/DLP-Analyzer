@@ -47,6 +47,21 @@ test('streaming parser preserves quoted newlines, escaped quotes, BOM, and split
   assert.equal(complete.rowCount, 2);
 });
 
+test('parser automatically detects semicolon-delimited files', async () => {
+  const messages = await run([csvFile('alerts.csv', ['Name;Details\r', '\nAlice;"first; second"\r\nBob;done'])]);
+  assert.deepEqual(JSON.parse(JSON.stringify(rows(messages))), [
+    { Name: 'Alice', Details: 'first; second' },
+    { Name: 'Bob', Details: 'done' }
+  ]);
+});
+
+test('parser keeps comma as the default when delimiter detection is tied', async () => {
+  const messages = await run([csvFile('alerts.csv', ['Name,Details;Notes\nAlice,done;today'])]);
+  assert.deepEqual(JSON.parse(JSON.stringify(rows(messages))), [
+    { Name: 'Alice', 'Details;Notes': 'done;today' }
+  ]);
+});
+
 test('empty and duplicate headers receive stable names', async () => {
   const messages = await run([csvFile('headers.csv', [',Name,Name\n1,A,B'])]);
   assert.deepEqual(Array.from(messages.find(message => message.type === 'headers').headers), ['Column 1', 'Name', 'Name (2)']);
