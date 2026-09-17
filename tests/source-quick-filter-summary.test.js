@@ -17,4 +17,8 @@ test('source quick filters render three top-five summaries from filtered rows', 
   assert.match(uiSource, /'Top 5 Details'/);
   assert.match(uiSource, /freqMapTokens\(filteredRows, fileTokensForRow\)/);
   assert.match(uiSource, /slice\(0, 5\)/);
+  assert.match(uiSource, /mostHit: \{label: 'Domain'/);
+  assert.match(uiSource, /mostHit: \{label: 'Filename'/);
+  assert.match(uiSource, /mostHit: \{label: 'Detail'/);
+  assert.doesNotMatch(uiSource, /mostHits\.className = 'most-hits'/);
 });
