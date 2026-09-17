@@ -179,8 +179,8 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  .overview-pager{margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
 
 	  /* Alert pages use document scrolling so every row in the 50-item page remains visible. */
-	  body.page-alert-analyzer .sectionx{height:auto}
-	  body.page-alert-analyzer .sectionx>.tablewrap{flex:none;overflow:visible}
+	  .sectionx{height:auto}
+	  .sectionx>.tablewrap{flex:none;max-height:none;overflow:visible}
 
 	  a.link{color:var(--accent);text-decoration:none}
 	  a.link:hover{outline:none;text-decoration:underline}

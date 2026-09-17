@@ -16,8 +16,8 @@ test('alert and risk result tables use fixed 50-row pagination', () => {
 });
 
 test('alert table lets the document scroll through all 50 rows', () => {
-  assert.match(stylesSource, /body\.page-alert-analyzer \.sectionx\{height:auto\}/);
-  assert.match(stylesSource, /body\.page-alert-analyzer \.sectionx>\.tablewrap\{flex:none;overflow:visible\}/);
+  assert.match(stylesSource, /\.sectionx\{height:auto\}/);
+  assert.match(stylesSource, /\.sectionx>\.tablewrap\{flex:none;max-height:none;overflow:visible\}/);
 });
 
 test('CSV actions share the bottom-right table action layout', () => {
