@@ -316,8 +316,25 @@ function makeClickableTable(title, headers, rows, col, options = {}){
     addButton('◀', Math.max(1, page - 1), page === 1);
     addButton('▶', Math.min(pages, page + 1), page === pages);
   };
-  sec.appendChild(body); if (!options.showAll) sec.appendChild(pager); renderPage();
+  sec.appendChild(body);
+  if (options.mostHit) sec.appendChild(makeMostHitSummary(options.mostHit.label, options.mostHit.value));
+  if (!options.showAll) sec.appendChild(pager); renderPage();
   return sec;
+}
+
+// Builds the compact most-hit footer shown beneath its related summary table.
+function makeMostHitSummary(label, value) {
+  const summary = document.createElement('div');
+  summary.className = 'most-hit-summary';
+  const heading = document.createElement('strong');
+  heading.textContent = 'Most Hits';
+  const row = document.createElement('div');
+  row.className = 'most-hits-row';
+  const name = document.createElement('b');
+  name.textContent = `${label}:`;
+  row.append(name, document.createTextNode(` ${value || '—'}`));
+  summary.append(heading, row);
+  return summary;
 }
 
 // Aggregates row counts by unique destination domain (based on base domain).
@@ -421,23 +438,19 @@ function renderTableSection(tab){
 
   if (tab.filter?.col === 'Source') {
     const filteredRows = applyFiltersAndSort(tab.rows, getTabState(tab.key).filters, null);
+    const hits = computeMostHits(filteredRows);
     const topFive = entries => Array.from(entries).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const contextualTab = {rows: filteredRows};
     const summaries = document.createElement('div');
     summaries.className = 'grid cols-3 source-filter-summaries';
-    summaries.appendChild(makeClickableTable('Top 5 Destinations', ['Destination', 'Count'], topFive(freqMap(filteredRows, 'Destination').entries()), 'Destination', {showAll: true, fromTab: contextualTab}));
-    summaries.appendChild(makeClickableTable('Top 5 File Names', ['File Name', 'Count'], topFive(freqMapTokens(filteredRows, fileTokensForRow).entries()), 'File Name', {showAll: true, fromTab: contextualTab}));
-    summaries.appendChild(makeClickableTable('Top 5 Details', ['Details', 'Count'], topFive(freqMap(filteredRows, 'Details').entries()), 'Details', {showAll: true, fromTab: contextualTab}));
+    summaries.appendChild(makeClickableTable('Top 5 Destinations', ['Destination', 'Count'], topFive(freqMap(filteredRows, 'Destination').entries()), 'Destination', {showAll: true, fromTab: contextualTab, mostHit: {label: 'Domain', value: hits.domain && `${hits.domain.value} (${hits.domain.count})`}}));
+    summaries.appendChild(makeClickableTable('Top 5 File Names', ['File Name', 'Count'], topFive(freqMapTokens(filteredRows, fileTokensForRow).entries()), 'File Name', {showAll: true, fromTab: contextualTab, mostHit: {label: 'Filename', value: hits.filename && `${hits.filename.value}${hits.filename.extension ? ` (${hits.filename.extension})` : ''} (${hits.filename.count})`}}));
+    summaries.appendChild(makeClickableTable('Top 5 Details', ['Details', 'Count'], topFive(freqMap(filteredRows, 'Details').entries()), 'Details', {showAll: true, fromTab: contextualTab, mostHit: {label: 'Detail', value: hits.detail && `${hits.detail.value} (${hits.detail.count})`}}));
     sec.appendChild(summaries);
   }
 
   const body = document.createElement('div'); body.className = 'tablewrap';
   const tableEl = renderDataTable(tab); body.appendChild(tableEl); sec.appendChild(body);
-
-  const mostHits = document.createElement('div');
-  mostHits.className = 'most-hits';
-  sec.appendChild(mostHits);
-  renderMostHits(mostHits, tableEl.__meta.rows);
 
   const actions = document.createElement('div'); actions.className = 'table-actions';
   const pager = document.createElement('div'); pager.className = 'pager'; pager.id = `pager-${safeKey(tab.key)}`;
@@ -448,27 +461,6 @@ function renderTableSection(tab){
   right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
   updatePager(tab, sec, tableEl);
   return sec;
-}
-
-function renderMostHits(container, rows) {
-  const hits = computeMostHits(rows);
-  container.innerHTML = '';
-  const heading = document.createElement('strong');
-  heading.textContent = 'Most Hits';
-  container.appendChild(heading);
-  const values = [
-    ['Domain', hits.domain && `${hits.domain.value} (${hits.domain.count})`],
-    ['Filename', hits.filename && `${hits.filename.value}${hits.filename.extension ? ` (${hits.filename.extension})` : ''} (${hits.filename.count})`],
-    ['Detail', hits.detail && `${hits.detail.value} (${hits.detail.count})`]
-  ];
-  for (const [label, value] of values) {
-    const row = document.createElement('div');
-    row.className = 'most-hits-row';
-    const name = document.createElement('b');
-    name.textContent = `${label}:`;
-    row.append(name, document.createTextNode(` ${value || '—'}`));
-    container.appendChild(row);
-  }
 }
 
 // Copies the source summary like an alert row: HTML for spreadsheet-aware
@@ -806,7 +798,6 @@ function updatePager(tab, sectionEl, tableEl){
 function rerenderTabTable(tab, sectionEl){
   const body = sectionEl.querySelector('.tablewrap'); body.innerHTML = '';
   const tbl = renderDataTable(tab); body.appendChild(tbl);
-  renderMostHits(sectionEl.querySelector('.most-hits'), tbl.__meta.rows);
   updatePager(tab, sectionEl, tbl);
 }
 
