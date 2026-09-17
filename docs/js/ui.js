@@ -1,5 +1,17 @@
 /* Alert Analyzer: ui */
 
+let copyStatusTimer = null;
+
+function showCopyStatus(message, state = 'success'){
+  const status = $('#copyStatus');
+  if(!status) return;
+  window.clearTimeout(copyStatusTimer);
+  status.textContent = message;
+  status.dataset.state = state;
+  status.hidden = false;
+  copyStatusTimer = window.setTimeout(() => { status.hidden = true; }, 5000);
+}
+
 function renderTabs(){
   const tabsEl = $('#tabs'); tabsEl.innerHTML = '';
   for(const t of state.tabs){
@@ -598,14 +610,6 @@ function renderDataTable(tab){
         }
         a.title = full;
         a.dataset.value = full;
-        a.addEventListener('click',(e)=>{
-          e.preventDefault();
-          if (full) {
-            navigator.clipboard.writeText(full).then(()=>{
-              console.log(`${col} "${full}" copied`);
-            });
-          }
-        });
         td.appendChild(a);
       } else {
         const full  = cells[col];
@@ -917,6 +921,10 @@ document.addEventListener('click', e=>{
     if(id){
       navigator.clipboard.writeText(id).then(()=>{
         console.log(`Incident ID ${id} copied`);
+        showCopyStatus('Copied to clipboard');
+      }).catch(error => {
+        console.error('Failed to copy incident ID:', error);
+        showCopyStatus('Failed to copy to clipboard', 'error');
       });
     }
   }
@@ -931,6 +939,10 @@ document.addEventListener('click', e=>{
     if(val){
       navigator.clipboard.writeText(val).then(()=>{
         console.log(`Cell "${val}" copied`);
+        showCopyStatus('Copied to clipboard');
+      }).catch(error => {
+        console.error('Failed to copy cell:', error);
+        showCopyStatus('Failed to copy to clipboard', 'error');
       });
     }
   }
