@@ -270,6 +270,86 @@ const ICON_COL = '__Copy';
     return counts;
   }
 
+  const DETAIL_STOP_WORDS = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'by', 'for', 'from', 'has', 'have',
+    'in', 'into', 'is', 'it', 'of', 'on', 'or', 'the', 'this', 'to', 'was', 'were', 'with',
+    'alert', 'alerts', 'data', 'detail', 'details', 'dlp', 'email', 'file', 'files', 'incident',
+    'message', 'network', 'sent', 'subject', 'test', 'user'
+  ]);
+
+  function incrementAlertCounts(counts, values) {
+    for (const value of new Set(values)) counts.set(value, (counts.get(value) || 0) + 1);
+  }
+
+  function mostFrequent(counts) {
+    return Array.from(counts.entries()).sort((a, b) =>
+      b[1] - a[1] || a[0].localeCompare(b[0], undefined, {sensitivity: 'base'})
+    )[0] || null;
+  }
+
+  // Finds the most common domain, filename pattern, and meaningful Details phrase.
+  // Every candidate is counted at most once per alert, regardless of repetitions in a cell.
+  function computeMostHits(rows) {
+    const domainCounts = new Map();
+    const filenameCounts = new Map();
+    const filenameLabels = new Map();
+    const extensionCounts = new Map();
+    const detailCounts = new Map();
+
+    for (const row of rows) {
+      const domains = Array.isArray(row.destinationDomains) && row.destinationDomains.length
+        ? row.destinationDomains.map(domain => String(domain).toLowerCase())
+        : splitDestParts(row.Destination).flatMap(value => {
+          const matches = String(value).match(/(?:[a-z][a-z0-9+.-]*:\/\/)?(?:[^\s/@]+@)?(?:[a-z0-9-]+\.)+[a-z]{2,}/gi) || [];
+          return matches.map(match => {
+            try { return getBaseDomain(match.includes('://') ? new URL(match).hostname : match); }
+            catch (_) { return getBaseDomain(match.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0]); }
+          });
+        });
+      incrementAlertCounts(domainCounts, domains.filter(Boolean));
+
+      const rowKeywords = [];
+      const rowExtensions = [];
+      for (const filename of fileTokensForRow(row)) {
+        const clean = stripSizeSuffix(filename);
+        const extensionMatch = clean.match(/\.([a-z0-9]{1,8})$/i);
+        if (extensionMatch) rowExtensions.push(extensionMatch[1].toUpperCase());
+        const base = extensionMatch ? clean.slice(0, -extensionMatch[0].length) : clean;
+        for (const token of base.split(/[^\p{L}\p{N}]+/u).filter(Boolean)) {
+          if (/^\d+$/u.test(token)) continue;
+          const key = token.toLocaleLowerCase();
+          rowKeywords.push(key);
+          if (!filenameLabels.has(key) || (token === token.toUpperCase() && token !== token.toLowerCase())) filenameLabels.set(key, token);
+        }
+      }
+      incrementAlertCounts(filenameCounts, rowKeywords);
+      incrementAlertCounts(extensionCounts, rowExtensions);
+
+      const words = txt(row.Details).toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+      const phrases = [];
+      for (let start = 0; start < words.length; start++) {
+        for (let length = 1; length <= 3 && start + length <= words.length; length++) {
+          const phraseWords = words.slice(start, start + length);
+          if (phraseWords.some(word => DETAIL_STOP_WORDS.has(word) || /^\d+$/.test(word))) continue;
+          phrases.push(phraseWords.join(' '));
+        }
+      }
+      incrementAlertCounts(detailCounts, phrases);
+    }
+
+    const domain = mostFrequent(domainCounts);
+    const filename = mostFrequent(filenameCounts);
+    const extension = mostFrequent(extensionCounts);
+    const detail = Array.from(detailCounts.entries()).sort((a, b) =>
+      b[1] - a[1] || b[0].split(' ').length - a[0].split(' ').length || a[0].localeCompare(b[0])
+    )[0] || null;
+    return {
+      domain: domain && {value: domain[0], count: domain[1]},
+      filename: filename && {value: filenameLabels.get(filename[0]) || filename[0], extension: extension?.[0] || '', count: filename[1]},
+      detail: detail && {value: detail[0], count: detail[1]}
+    };
+  }
+
   // Ensures all required columns exist in a data row
   function ensureCols(row) {
     const o = { ...row };

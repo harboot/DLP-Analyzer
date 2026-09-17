@@ -434,6 +434,11 @@ function renderTableSection(tab){
   const body = document.createElement('div'); body.className = 'tablewrap';
   const tableEl = renderDataTable(tab); body.appendChild(tableEl); sec.appendChild(body);
 
+  const mostHits = document.createElement('div');
+  mostHits.className = 'most-hits';
+  sec.appendChild(mostHits);
+  renderMostHits(mostHits, tableEl.__meta.rows);
+
   const actions = document.createElement('div'); actions.className = 'table-actions';
   const pager = document.createElement('div'); pager.className = 'pager'; pager.id = `pager-${safeKey(tab.key)}`;
   const right = document.createElement('div'); right.className = 'right';
@@ -443,6 +448,27 @@ function renderTableSection(tab){
   right.querySelector('[data-act="export"]').addEventListener('click', ()=> exportCurrentView(tab, tableEl));
   updatePager(tab, sec, tableEl);
   return sec;
+}
+
+function renderMostHits(container, rows) {
+  const hits = computeMostHits(rows);
+  container.innerHTML = '';
+  const heading = document.createElement('strong');
+  heading.textContent = 'Most Hits';
+  container.appendChild(heading);
+  const values = [
+    ['Domain', hits.domain && `${hits.domain.value} (${hits.domain.count})`],
+    ['Filename', hits.filename && `${hits.filename.value}${hits.filename.extension ? ` (${hits.filename.extension})` : ''} (${hits.filename.count})`],
+    ['Detail', hits.detail && `${hits.detail.value} (${hits.detail.count})`]
+  ];
+  for (const [label, value] of values) {
+    const row = document.createElement('div');
+    row.className = 'most-hits-row';
+    const name = document.createElement('b');
+    name.textContent = `${label}:`;
+    row.append(name, document.createTextNode(` ${value || '—'}`));
+    container.appendChild(row);
+  }
 }
 
 // Copies the source summary like an alert row: HTML for spreadsheet-aware
@@ -780,6 +806,7 @@ function updatePager(tab, sectionEl, tableEl){
 function rerenderTabTable(tab, sectionEl){
   const body = sectionEl.querySelector('.tablewrap'); body.innerHTML = '';
   const tbl = renderDataTable(tab); body.appendChild(tbl);
+  renderMostHits(sectionEl.querySelector('.most-hits'), tbl.__meta.rows);
   updatePager(tab, sectionEl, tbl);
 }
 
