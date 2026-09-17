@@ -5,10 +5,18 @@ const vm = require('node:vm');
 const test = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'dlp-utils.js'), 'utf8');
+const uiSource = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'ui.js'), 'utf8');
+const alertPage = fs.readFileSync(path.join(__dirname, '..', 'docs', 'AlertAnalyzer.html'), 'utf8');
 const context = { window: {}, document: {} };
 vm.runInNewContext(source, context);
 
 const { channelIconEntity, getAlertRowCells } = context.window.DLPUtils;
+
+test('alert cell copy uses the existing status notification component', () => {
+  assert.match(alertPage, /id="copyStatus" class="update-status" role="status" aria-live="polite" hidden/);
+  assert.match(uiSource, /showCopyStatus\('Copied to clipboard'\)/);
+  assert.match(uiSource, /showCopyStatus\('Failed to copy to clipboard', 'error'\)/);
+});
 
 test('channel icons cover the supported channel families', () => {
   assert.equal(channelIconEntity('Network email'), '&#9993;');
