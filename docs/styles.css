@@ -172,6 +172,10 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  @media (max-width:800px){.grid.cols-3{grid-template-columns:1fr}}
 
 	  .table-actions{display:flex;justify-content:space-between;align-items:center;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
+	  .most-hits{display:grid;gap:var(--space-1);padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-inset)}
+	  .most-hits>strong{margin-bottom:var(--space-1);color:var(--accent)}
+	  .most-hits-row{font-size:13px;color:var(--color-text-soft)}
+	  .most-hits-row b{display:inline-block;min-width:74px;color:var(--text)}
 	  .pager{display:flex;gap:var(--space-2);align-items:center}
 	  .pager .btn{padding:var(--space-2) var(--space-3)}
 	  .overview-pager{margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
