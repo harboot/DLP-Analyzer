@@ -9,7 +9,7 @@ function showCopyStatus(message, state = 'success'){
   status.textContent = message;
   status.dataset.state = state;
   status.hidden = false;
-  copyStatusTimer = window.setTimeout(() => { status.hidden = true; }, 5000);
+  copyStatusTimer = window.setTimeout(() => { status.hidden = true; }, 1000);
 }
 
 function renderTabs(){

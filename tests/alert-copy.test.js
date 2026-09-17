@@ -16,6 +16,7 @@ test('alert cell copy uses the existing status notification component', () => {
   assert.match(alertPage, /id="copyStatus" class="update-status" role="status" aria-live="polite" hidden/);
   assert.match(uiSource, /showCopyStatus\('Copied to clipboard'\)/);
   assert.match(uiSource, /showCopyStatus\('Failed to copy to clipboard', 'error'\)/);
+  assert.match(uiSource, /window\.setTimeout\(\(\) => \{ status\.hidden = true; \}, 1000\)/);
 });
 
 test('channel icons cover the supported channel families', () => {
