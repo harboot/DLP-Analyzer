@@ -327,13 +327,8 @@ function makeMostHitSummary(label, value) {
   const summary = document.createElement('div');
   summary.className = 'most-hit-summary';
   const heading = document.createElement('strong');
-  heading.textContent = 'Most Hits';
-  const row = document.createElement('div');
-  row.className = 'most-hits-row';
-  const name = document.createElement('b');
-  name.textContent = `${label}:`;
-  row.append(name, document.createTextNode(` ${value || '—'}`));
-  summary.append(heading, row);
+  heading.textContent = `Most Hits ${label}:`;
+  summary.append(heading, document.createTextNode(` ${value || '—'}`));
   return summary;
 }
 
