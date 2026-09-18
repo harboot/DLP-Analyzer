@@ -157,6 +157,11 @@
     return channels.map(ch=>ch.channel_type).filter(Boolean);
   }
 
+  function formatClassifiers(classifiers, relation, separator = '; '){
+    const names = safeArr(classifiers).filter(Boolean).join(separator);
+    return `${names}${relation ? ` [relation: ${relation}]` : ''}`;
+  }
+
   // Normalize dataset into per-rule rows
   function normalizeDataset(json, fileName){
     const policy = json.policy || {};
@@ -385,7 +390,7 @@
       const tdCls = document.createElement('td');
       const clsText = row.classifiers.join(', ');
       tdCls.textContent = clsText;
-      tdCls.title = `${row.classifiers.join('; ') || '(no classifiers)'}${row.relation ? ` [relation: ${row.relation}]` : ''}`;
+      tdCls.title = formatClassifiers(row.classifiers, row.relation) || '(no classifiers)';
       tr.appendChild(tdCls);
 
       // (5) Severity
@@ -549,7 +554,7 @@
 
       const td4 = document.createElement('td');
       td4.textContent = exCls || '-';
-      td4.title = `${exCls.split(', ').join('; ') || '(no classifiers)'}${rel ? ` [relation: ${rel}]` : ''}`;
+      td4.title = formatClassifiers(exCls ? exCls.split(', ') : [], rel) || '(no classifiers)';
 
       const td5 = document.createElement('td');
       td5.textContent = srcTxt || '-';
@@ -689,7 +694,7 @@
     return [
       ['Policy Name', (row.policyName ?? '') + (row.policyEnabled ? '' : ' (disabled)')],
       ['Rule Name', (row.ruleName ?? '') + (row.ruleEnabled ? '' : ' (disabled)')],
-      ['Classifiers', (row.classifiers ?? []).join('; ')],
+      ['Classifiers', formatClassifiers(row.classifiers, row.relation)],
       ['Severity', severity],
       ['Action', row.action ?? ''],
       ['Source', row.source ?? ''],
@@ -704,7 +709,7 @@
     return [
       ['Exception Name', `${exception?.exception_rule_name || '(unnamed)'}${enabled ? '' : ' (disabled)'}`],
       ['Override', values.oTxt],
-      ['Classifiers', values.exCls.split(', ').join('; ')],
+      ['Classifiers', formatClassifiers(values.exCls ? values.exCls.split(', ') : [], values.rel)],
       ['Source Resources', values.srcTxt],
       ['Destination Resources', values.destTxt],
       ['Channel', values.chTxt],

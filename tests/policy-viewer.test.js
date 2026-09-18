@@ -43,11 +43,17 @@ test('policy and exception tables expose destination resources without relation 
 });
 
 test('relations appear in classifier tooltips and exception rows have copy actions', () => {
-  assert.match(page, /\[relation: \$\{row\.relation\}\]/);
-  assert.match(page, /\[relation: \$\{rel\}\]/);
+  assert.match(page, /tdCls\.title = formatClassifiers\(row\.classifiers, row\.relation\)/);
+  assert.match(page, /td4\.title = formatClassifiers\(exCls \? exCls\.split\(', '\) : \[\], rel\)/);
   assert.match(page, /aria-label="Copy exception"/);
   assert.match(page, /copyCellsAsRichText\(getExceptionRowCells/);
   assert.doesNotMatch(page, /title\.innerHTML = `<b>Exceptions/);
+});
+
+test('copied policy and exception classifiers include their condition relation', () => {
+  assert.match(page, /\['Classifiers', formatClassifiers\(row\.classifiers, row\.relation\)\]/);
+  assert.match(page, /\['Classifiers', formatClassifiers\(values\.exCls \? values\.exCls\.split\(', '\) : \[\], values\.rel\)\]/);
+  assert.match(page, /return `\$\{names\}\$\{relation \? ` \[relation: \$\{relation\}\]` : ''\}`/);
 });
 
 test('policy level remains hidden data used by the ascending default sort', () => {
