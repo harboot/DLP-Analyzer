@@ -1,7 +1,7 @@
 'use strict';
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v61';
+const CACHE_VERSION = 'dlp-analyzer-v62';
 const CACHE_CONCURRENCY = 6;
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
@@ -40,6 +40,7 @@ const APPLICATION_FILES = [
   './js/detectors/destination-domain-once.js',
   './js/detectors/destination-email-subdomain.js',
   './js/detectors/ransomware-attachment.js',
+  './js/detectors/email-subject-filename-obfuscation.js',
   './js/doc-viewer.js',
   './js/policy-tuning-ui.js',
   './js/policy-tuning.js',
