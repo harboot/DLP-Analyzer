@@ -66,11 +66,11 @@
             <th class="copy-column" title="Copy row as rich text (HTML table)" aria-label="Copy row"></th>
             <th><div class="th-wrap" title="Policy Name header">Policy Name <span class="filter-ico" data-col="policy" title="Filter Policy Name">🔍</span></div></th>
             <th><div class="th-wrap" title="Rule Name header">Rule Name <span class="filter-ico" data-col="rule" title="Filter Rule Name">🔍</span></div></th>
-            <th><div class="th-wrap" title="Relation header">Relation <span class="filter-ico" data-col="relation" title="Filter Relation">🔍</span></div></th>
             <th><div class="th-wrap" title="Classifiers header">Classifiers <span class="filter-ico" data-col="classifiers" title="Filter Classifiers (use ; as AND)">🔍</span></div></th>
             <th><div class="th-wrap" title="Severity (H/M/L)">Severity <span class="filter-ico" data-col="severity" title="Filter Severity">🔍</span></div></th>
             <th><div class="th-wrap" title="Action Plan header">Action <span class="filter-ico" data-col="action" title="Filter Action Plan">🔍</span></div></th>
             <th><div class="th-wrap" title="Source header">Source <span class="filter-ico" data-col="source" title="Filter Source">🔍</span></div></th>
+            <th><div class="th-wrap" title="Destination header">Destination <span class="filter-ico" data-col="destination" title="Filter Destination">🔍</span></div></th>
             <th><div class="th-wrap" title="Channel header">Channel <span class="filter-ico" data-col="channel" title="Filter Channel">🔍</span></div></th>
             <th><div class="th-wrap" title="Exception header">Exception <span class="filter-ico" data-col="exception" title="Filter Exception">🔍</span></div></th>
           </tr>
@@ -104,7 +104,7 @@
 
   /* ===================== State ===================== */
   let flatRows = []; // normalized rows (per rule)
-  let filters = { policy:'', rule:'', relation:'', classifiers:'', severity:'', action:'', source:'', channel:'', exception:'' };
+  let filters = { policy:'', rule:'', classifiers:'', severity:'', action:'', source:'', destination:'', channel:'', exception:'' };
   let showDisabled = true; // user toggle
   let statusFilter = '';
 
@@ -140,18 +140,15 @@
     return {severity: best?.severity_type || '', action: best?.action_plan || ''};
   }
 
-  function summarizeSource(ruleSource){
-    if(!ruleSource) return '';
-    const bits = [];
-    if(ruleSource.endpoint_channel_machine_type) bits.push(ruleSource.endpoint_channel_machine_type);
-    if(ruleSource.endpoint_connection_type) bits.push(ruleSource.endpoint_connection_type);
-    const inc = safeArr(ruleSource.resources).filter(r => String(r.include).toLowerCase() === 'true');
-    if(inc.length){
-      const names = inc.map(r=>r.resource_name).filter(Boolean);
-      if(names.length<=3) bits.push(...names);
-      else bits.push(...names.slice(0,3), `+${names.length-3} more`);
-    }
-    return uniq(bits).join(', ');
+  function summarizeResources(resourceContainer){
+    const resources = safeArr(resourceContainer?.resources);
+    const included = resources
+      .filter(resource => String(resource.include).toLowerCase() === 'true')
+      .map(resource => resource.resource_name)
+      .filter(Boolean)
+      .map(name => `+${name}`);
+    if(resources.some(resource => String(resource.include).toLowerCase() === 'false')) included.push('Has Exclude');
+    return uniq(included).join(', ');
   }
 
   function listActiveChannels(ruleDestination){
@@ -187,7 +184,8 @@
       const {severity, action} = pickSeverityAndAction(sevEntry || {});
 
       const sdEntry = sdMap.get(ruleName) || {};
-      const srcTxt = summarizeSource(sdEntry.rule_source);
+      const srcTxt = summarizeResources(sdEntry.rule_source);
+      const destTxt = summarizeResources(sdEntry.rule_destination);
       const chan = listActiveChannels(sdEntry.rule_destination);
 
       // Exceptions (array if present)
@@ -197,7 +195,7 @@
       rows.push({
         fileName, policyName, policyEnabled, policyLevel,
         ruleName, ruleEnabled, relation, classifiers,
-        severity, action, source: srcTxt, channel: chan,
+        severity, action, source: srcTxt, destination: destTxt, channel: chan,
         exceptions: excArr
       });
     }
@@ -277,10 +275,10 @@
 
     if(filters.policy && !ciIncludes(row.policyName, filters.policy)) return false;
     if(filters.rule && !ciIncludes(row.ruleName, filters.rule)) return false;
-    if(filters.relation && !ciIncludes(row.relation, filters.relation)) return false;
     if(filters.severity && !ciIncludes(row.severity, filters.severity)) return false;
     if(filters.action && !ciIncludes(row.action, filters.action)) return false;
     if(filters.source && !ciIncludes(row.source, filters.source)) return false;
+    if(filters.destination && !ciIncludes(row.destination, filters.destination)) return false;
     if(filters.channel && !ciIncludes(row.channel.join(', '), filters.channel)) return false;
 
     // Exception filter: "show" means rows that have exceptions; otherwise substring search by exception name(s)
@@ -383,41 +381,41 @@
       if(!row.ruleEnabled) tdRule.classList.add('disabled-text');
       tr.appendChild(tdRule);
 
-      // (4) Relation (no "CUSTOMIZED: ")
-      const tdRel = document.createElement('td');
-      tdRel.textContent = row.relation;
-      tdRel.title = row.relation || '(empty)';
-      tr.appendChild(tdRel);
-
-      // (5) Classifiers (comma list)
+      // (4) Classifiers (relation/custom expression is available in the tooltip)
       const tdCls = document.createElement('td');
       const clsText = row.classifiers.join(', ');
       tdCls.textContent = clsText;
-      tdCls.title = clsText || '(no classifiers)';
+      tdCls.title = `${row.classifiers.join('; ') || '(no classifiers)'}${row.relation ? ` [relation: ${row.relation}]` : ''}`;
       tr.appendChild(tdCls);
 
-      // (6) S (h/m/l)
+      // (5) Severity
       const tdSev = document.createElement('td');
       const sevLower = (row.severity || '').toLowerCase();
       const sChar = sevLower === 'high' ? 'HIGH' : sevLower === 'medium' ? 'MEDIUM' : sevLower === 'low' ? 'LOW' : '';
       tdSev.textContent = sChar;
       tdSev.title = row.severity || '(no severity)';
-      if(sChar==='h') tdSev.classList.add('danger');
-      else if(sChar==='m') tdSev.classList.add('warn');
-      else if(sChar==='l') tdSev.classList.add('ok');
+      if(sChar==='HIGH') tdSev.classList.add('danger');
+      else if(sChar==='MEDIUM') tdSev.classList.add('warn');
+      else if(sChar==='LOW') tdSev.classList.add('ok');
       tr.appendChild(tdSev);
 
-      // (7) Action
+      // (6) Action
       const tdAct = document.createElement('td');
       tdAct.textContent = row.action || '';
       tdAct.title = row.action || '(no action)';
       tr.appendChild(tdAct);
 
-      // (8) Source
+      // (7) Source
       const tdSrc = document.createElement('td');
       tdSrc.textContent = row.source;
       tdSrc.title = row.source || '(no source summary)';
       tr.appendChild(tdSrc);
+
+      // (8) Destination resources
+      const tdDest = document.createElement('td');
+      tdDest.textContent = row.destination;
+      tdDest.title = row.destination || '(no destination resources)';
+      tr.appendChild(tdDest);
 
       // (9) Channel (active only)
       const tdCh = document.createElement('td');
@@ -470,24 +468,19 @@
     expTd.colSpan = 10; // matches total columns
     expTd.className = 'exp-cell';
 
-    const title = document.createElement('div');
-    title.innerHTML = `<b>Exceptions (${row.exceptions.length})</b>`;
-    title.title = `Exceptions (${row.exceptions.length})`;
-    expTd.appendChild(title);
-
-    // Build detail table (O=override; show Classifiers list; Relation is plain/expression)
+    // Build detail table (O=override; relation/custom expression is in the Classifiers tooltip)
     const tbl = document.createElement('table');
     tbl.className = 'exc-cols';
-    tbl.style.marginTop = '8px';
 
     const thead = document.createElement('thead');
     thead.innerHTML = `
       <tr>
+        <th class="copy-column" title="Copy exception as rich text (HTML table)" aria-label="Copy exception"></th>
         <th title="Exception name (gray if disabled)">Exception Name</th>
         <th title="Override Scope">Override</th>
-        <th title="Relation (plain or custom expression)">Relation</th>
         <th title="Classifiers included in this exception">Classifiers</th>
-        <th title="Source resources included (first 3)">Source (include)</th>
+        <th title="Source resources">Source Resources</th>
+        <th title="Destination resources">Destination Resources</th>
         <th title="Enabled channels for this exception">Channel (enabled)</th>
         <th title="Severity (H/M/L)">Severity</th>
         <th title="Action Plan">Action</th>
@@ -515,9 +508,8 @@
       // Classifiers full list
       const exCls = safeArr(ex?.classifiers).map(c=> c?.classifier_name).filter(Boolean).join(', ');
 
-      // Source includes
-      const incSrc = safeArr(ex?.rule_source?.resources).filter(r=> String(r.include).toLowerCase()==='true').map(r=> r.resource_name).filter(Boolean);
-      const srcTxt = incSrc.length<=3 ? incSrc.join(', ') : [...incSrc.slice(0,3), `+${incSrc.length-3} more`].join(', ');
+      const srcTxt = summarizeResources(ex?.rule_source);
+      const destTxt = summarizeResources(ex?.rule_destination);
 
       // Channels enabled
       const ch = safeArr(ex?.rule_destination?.channels).filter(c => String(c.enabled).toLowerCase()==='true').map(c=>c.channel_type).filter(Boolean);
@@ -530,9 +522,21 @@
         const details = safeArr(exSev.classifier_details);
         const chosen  = details.find(d => String(d.selected).toLowerCase()==='true') || details[0];
         const sevWord = (chosen?.severity_type || '').toLowerCase();
-        exS = sevWord==='high' ? 'HIGH' : sevWord==='medium' ? 'MEDIUM' : sevWord==='LOW' ? 'l' : '';
+        exS = sevWord==='high' ? 'HIGH' : sevWord==='medium' ? 'MEDIUM' : sevWord==='low' ? 'LOW' : '';
         exAction = chosen?.action_plan || '';
       }
+
+      const oTxt = `${conditionEnabled?' [Condition] ':''}${sourceEnabled?' [Source] ':''}${destEnabled?' [Destination] ':''}` || '-';
+
+      const tdCopy = document.createElement('td');
+      tdCopy.className = 'copy-column';
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'icon-copy';
+      copyBtn.title = 'Copy this exception as rich text';
+      copyBtn.setAttribute('aria-label', 'Copy exception');
+      copyBtn.innerHTML = DLPUtils.copyIconSvg();
+      copyBtn.addEventListener('click', () => copyCellsAsRichText(getExceptionRowCells(ex, { rel, exCls, srcTxt, destTxt, chTxt, exS, exAction, oTxt })));
+      tdCopy.appendChild(copyBtn);
 
       const td1 = document.createElement('td');
       td1.textContent = exName;
@@ -540,21 +544,20 @@
       if(!exEnabled) td1.classList.add('disabled-text');
 
       const td2 = document.createElement('td');
-      const oTxt = `${conditionEnabled?' [Condition] ':''}${sourceEnabled?' [Source] ':''}${destEnabled?' [Destination] ':''}` || '-';
       td2.textContent = oTxt;
       td2.title = oTxt==='-' ? 'No override' : oTxt;
 
-      const td3 = document.createElement('td');
-      td3.textContent = rel || '-';
-      td3.title = rel || '-';
-
       const td4 = document.createElement('td');
       td4.textContent = exCls || '-';
-      td4.title = exCls || '-';
+      td4.title = `${exCls.split(', ').join('; ') || '(no classifiers)'}${rel ? ` [relation: ${rel}]` : ''}`;
 
       const td5 = document.createElement('td');
       td5.textContent = srcTxt || '-';
       td5.title = srcTxt || '-';
+
+      const tdDest = document.createElement('td');
+      tdDest.textContent = destTxt || '-';
+      tdDest.title = destTxt || '-';
 
       const td6 = document.createElement('td');
       td6.textContent = chTxt || '-';
@@ -563,13 +566,14 @@
       const td7 = document.createElement('td');
       td7.textContent = exS;
       td7.title = exS ? ({h:'HIGH', m:'MEDIUM', l:'LOW'}[exS] || exS) : '(no severity)';
-      if(exS==='h') td7.classList.add('danger'); else if(exS==='m') td7.classList.add('warn'); else if(exS==='l') td7.classList.add('ok');
+      if(exS==='HIGH') td7.classList.add('danger'); else if(exS==='MEDIUM') td7.classList.add('warn'); else if(exS==='LOW') td7.classList.add('ok');
 
       const td8 = document.createElement('td');
       td8.textContent = exAction || '-';
       td8.title = exAction || '-';
 
-      tr.append(td1,td2,td3,td4,td5,td6,td7,td8);
+      tr.className = 'exception-detail-row';
+      tr.append(tdCopy,td1,td2,td4,td5,tdDest,td6,td7,td8);
       tb.appendChild(tr);
     }
 
@@ -685,13 +689,27 @@
     return [
       ['Policy Name', (row.policyName ?? '') + (row.policyEnabled ? '' : ' (disabled)')],
       ['Rule Name', (row.ruleName ?? '') + (row.ruleEnabled ? '' : ' (disabled)')],
-      ['Relation', row.relation ?? ''],
       ['Classifiers', (row.classifiers ?? []).join('; ')],
       ['Severity', severity],
       ['Action', row.action ?? ''],
       ['Source', row.source ?? ''],
+      ['Destination', row.destination ?? ''],
       ['Channel', (row.channel ?? []).join('; ')],
       ['Exception', exception]
+    ];
+  }
+
+  function getExceptionRowCells(exception, values){
+    const enabled = String(exception?.enabled ?? 'true').toLowerCase() !== 'false';
+    return [
+      ['Exception Name', `${exception?.exception_rule_name || '(unnamed)'}${enabled ? '' : ' (disabled)'}`],
+      ['Override', values.oTxt],
+      ['Classifiers', values.exCls.split(', ').join('; ')],
+      ['Source Resources', values.srcTxt],
+      ['Destination Resources', values.destTxt],
+      ['Channel', values.chTxt],
+      ['Severity', values.exS],
+      ['Action', values.exAction]
     ];
   }
 
@@ -731,8 +749,7 @@ function exportCsv(){
 
   /* ===================== Copy row as rich text (HTML) ===================== */
 /* ===================== Copy row as rich text (HTML) ===================== */
-async function copyRowAsRichText(row){
-  const cells = getPolicyRowCells(row);
+async function copyCellsAsRichText(cells){
   const headers = cells.map(([header]) => header);
   const values = cells.map(([, value]) => value);
 
@@ -769,6 +786,10 @@ async function copyRowAsRichText(row){
     console.error(err);
     alert('Failed to copy. Your browser may restrict clipboard access.');
   }
+}
+
+function copyRowAsRichText(row){
+  return copyCellsAsRichText(getPolicyRowCells(row));
 }
 
 const escapeHtml = DLPUtils.escapeHtml;
