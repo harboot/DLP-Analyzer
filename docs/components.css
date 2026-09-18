@@ -118,13 +118,16 @@ body.tool-page .icon-copy:hover { background: var(--color-surface-active); }
   width: min(820px, calc(100vw - 40px));
   max-height: min(680px, calc(100vh - 40px));
   overflow: auto;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-accent);
   border-radius:var(--radius-card);
   background: var(--panel);
   color: var(--text);
-  box-shadow: 0 18px 48px var(--shadow-color);
+  box-shadow:
+    0 0 0 3px var(--color-accent-soft),
+    0 0 28px var(--color-accent-medium),
+    0 24px 64px var(--shadow-color);
 }
-.copy-preview-header { position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-3);background:var(--color-surface-raised);border-bottom:1px solid var(--line); }
+.copy-preview-header { position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-3);background:var(--color-surface-active);border-bottom:1px solid var(--color-accent-medium);color:var(--color-text-info); }
 .copy-preview-close { all:unset;display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:var(--radius-control);font-size:22px;line-height:1;cursor:pointer; }
 .copy-preview-close:hover { background:var(--color-surface-hover); }
 .copy-preview table { width:100%;table-layout:auto;border-collapse:collapse; }
