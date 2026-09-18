@@ -934,27 +934,28 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   td[title],th[title],a[title]{cursor:help}
 
   /* Column widths using % so you can adjust later */
-  /* Main rules table: 10 columns */
+  /* Main rules table: 10 columns (Policy Level remains data-only for sorting) */
   table.rules-cols th:nth-child(1), table.rules-cols td:nth-child(1) { width: 3% }   /* Copy icon */
   table.rules-cols th:nth-child(2), table.rules-cols td:nth-child(2) { width: 10% }  /* Policy Name */
   table.rules-cols th:nth-child(3), table.rules-cols td:nth-child(3) { width: 17% }  /* Rule Name */
-  table.rules-cols th:nth-child(4), table.rules-cols td:nth-child(4) { width: 10% }  /* Relation */
-  table.rules-cols th:nth-child(5), table.rules-cols td:nth-child(5) { width: 10% }  /* Classifiers */
-  table.rules-cols th:nth-child(6), table.rules-cols td:nth-child(6) { width: 10% }  /* S */
-  table.rules-cols th:nth-child(7), table.rules-cols td:nth-child(7) { width: 10% }  /* Action */
-  table.rules-cols th:nth-child(8), table.rules-cols td:nth-child(8) { width: 10% }  /* Source */
+  table.rules-cols th:nth-child(4), table.rules-cols td:nth-child(4) { width: 12% }  /* Classifiers */
+  table.rules-cols th:nth-child(5), table.rules-cols td:nth-child(5) { width: 8% }   /* Severity */
+  table.rules-cols th:nth-child(6), table.rules-cols td:nth-child(6) { width: 10% }  /* Action */
+  table.rules-cols th:nth-child(7), table.rules-cols td:nth-child(7) { width: 10% }  /* Source */
+  table.rules-cols th:nth-child(8), table.rules-cols td:nth-child(8) { width: 10% }  /* Destination */
   table.rules-cols th:nth-child(9), table.rules-cols td:nth-child(9) { width: 10% }  /* Channel */
   table.rules-cols th:nth-child(10),table.rules-cols td:nth-child(10){ width: 10% }  /* Exception */
 
-  /* Exception detail table (8 columns) */
-  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 30% } /* Exception Name */
-  table.exc-cols th:nth-child(2), table.exc-cols td:nth-child(2) { width: 10% } /* O */
-  table.exc-cols th:nth-child(3), table.exc-cols td:nth-child(3) { width: 10% } /* Relation */
-  table.exc-cols th:nth-child(4), table.exc-cols td:nth-child(4) { width: 10% } /* Classifiers */
-  table.exc-cols th:nth-child(5), table.exc-cols td:nth-child(5) { width: 10% } /* Source (include) */
-  table.exc-cols th:nth-child(6), table.exc-cols td:nth-child(6) { width: 10% } /* Channel (enabled) */
-  table.exc-cols th:nth-child(7), table.exc-cols td:nth-child(7) { width: 10% } /* S */
-  table.exc-cols th:nth-child(8), table.exc-cols td:nth-child(8) { width: 10% } /* Action */
+  /* Exception detail table (9 columns) */
+  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 3% }  /* Copy */
+  table.exc-cols th:nth-child(2), table.exc-cols td:nth-child(2) { width: 20% } /* Exception Name */
+  table.exc-cols th:nth-child(3), table.exc-cols td:nth-child(3) { width: 10% } /* Override */
+  table.exc-cols th:nth-child(4), table.exc-cols td:nth-child(4) { width: 14% } /* Classifiers */
+  table.exc-cols th:nth-child(5), table.exc-cols td:nth-child(5) { width: 11% } /* Source */
+  table.exc-cols th:nth-child(6), table.exc-cols td:nth-child(6) { width: 11% } /* Destination */
+  table.exc-cols th:nth-child(7), table.exc-cols td:nth-child(7) { width: 11% } /* Channel */
+  table.exc-cols th:nth-child(8), table.exc-cols td:nth-child(8) { width: 9% }  /* Severity */
+  table.exc-cols th:nth-child(9), table.exc-cols td:nth-child(9) { width: 11% } /* Action */
 
   /* Pills & accents */
   .soft{color:var(--color-text-soft)}
@@ -1001,6 +1002,9 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   .exp-cell{padding:var(--space-3) var(--space-3) var(--space-3);border-bottom:1px solid var(--color-border)}
   .exp-cell table{table-layout:fixed}
   .exp-cell th,.exp-cell td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exc-cols .exception-detail-row{background:var(--color-surface-subtle)}
+  .exc-cols .exception-detail-row:nth-child(even){background:var(--color-surface-raised)}
+  .exc-cols .exception-detail-row:hover{background:var(--color-surface-active)}
 
   /* Small link-style button */
   .btn-link{all:unset;cursor:pointer;color:var(--accent);padding:2px 0}
