@@ -85,7 +85,30 @@ test('copy previews contain the same untruncated source and channel summaries as
   assert.match(page, /\['Source', row\.source \?\? ''\]/);
   assert.match(page, /\['Source', values\.srcTxt\]/);
   assert.match(page, /tdCh\.title = chText \|\| '\(no active channels\)'/);
-  assert.doesNotMatch(page, /resource_name/);
+});
+
+test('JSON viewer provides readable sections, named items, and raw controls', () => {
+  assert.match(page, /summary\.textContent = 'Destination'/);
+  assert.match(page, /`Classifiers \(\$\{list\.length\}\)`/);
+  assert.match(page, /`Exceptions \(\$\{list\.length\}\)`/);
+  assert.match(page, /item\.classifier_name \|\| item\.exception_rule_name \|\| item\.resource_name/);
+  assert.match(page, /control\('Expand All'/);
+  assert.match(page, /control\('Collapse All'/);
+  assert.match(page, /control\('Raw JSON'/);
+  assert.match(page, /JSON\.stringify\(data, null, 2\)/);
+});
+
+test('JSON viewer filters and groups destination channels by complete configuration', () => {
+  assert.match(page, /filter\(channel => String\(channel\?\.enabled\)\.toLowerCase\(\) === 'true'\)/);
+  assert.match(page, /key !== 'enabled' && key !== 'channel_type'/);
+  assert.match(page, /const signature = stableJson\(config\)/);
+  assert.match(page, /group\.names\.join\(', '\)/);
+});
+
+test('JSON viewer presents resource names, types, and include modes', () => {
+  assert.match(page, /resource\?\.resource_name \|\| `Resource \$\{index \+ 1\}`/);
+  assert.match(page, /marker\.textContent = String\(child\).*\? '\+Include' : '-Exclude'/);
+  assert.match(page, /key === 'resources'\s*\? appendResources/);
 });
 
 test('main and exception actions include collapsible JSON viewers', () => {

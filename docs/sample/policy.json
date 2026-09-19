@@ -2,18 +2,268 @@
   "policy": {
     "policy_name": "Sample Data Protection Policy",
     "enabled": "true",
-    "policy_level": { "level": 1 },
+    "policy_level": {
+      "level": 1
+    },
     "rules": [
-      { "rule_name": "Customer PII Rule", "enabled": "true", "condition_relation_type": "ALL", "classifiers": [{ "classifier_name": "Customer Number" }, { "classifier_name": "Email Address" }], "exception_rules": { "exception_rules": [] } },
-      { "rule_name": "Financial Records Rule", "enabled": "true", "condition_relation_type": "ANY", "classifiers": [{ "classifier_name": "Financial Statement" }], "exception_rules": { "exception_rules": [] } }
+      {
+        "rule_name": "Customer PII Rule",
+        "enabled": "true",
+        "condition_relation_type": "ALL",
+        "classifiers": [
+          {
+            "classifier_name": "Customer Number",
+            "classifier_type": "REGEX"
+          },
+          {
+            "classifier_name": "Email Address",
+            "classifier_type": "BUILT_IN"
+          },
+          {
+            "classifier_name": "National ID",
+            "classifier_type": "DICTIONARY"
+          }
+        ],
+        "exception_rules": {
+          "exception_rules": [
+            {
+              "exception_rule_name": "Trusted Finance Upload",
+              "enabled": "true",
+              "condition_enabled": "true",
+              "source_enabled": "false",
+              "destination_enabled": "true",
+              "condition_relation_type": "ANY",
+              "classifiers": [
+                {
+                  "classifier_name": "Approved Finance Document"
+                }
+              ],
+              "rule_destination": {
+                "channels": [
+                  {
+                    "enabled": "true",
+                    "channel_type": "HTTPS",
+                    "resources": [
+                      {
+                        "resource_name": "finance.example.com",
+                        "type": "DOMAIN",
+                        "include": "true"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "severity_action": {
+                "classifier_details": [
+                  {
+                    "selected": "true",
+                    "severity_type": "LOW",
+                    "action_plan": "Audit"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "rule_name": "Financial Records Rule",
+        "enabled": "true",
+        "condition_relation_type": "ANY",
+        "classifiers": [
+          {
+            "classifier_name": "Financial Statement"
+          }
+        ],
+        "exception_rules": {
+          "exception_rules": []
+        }
+      }
     ]
   },
-  "severity_action": { "rules": [
-    { "rule_name": "Customer PII Rule", "classifier_details": [{ "selected": "true", "severity_type": "HIGH", "action_plan": "Block" }] },
-    { "rule_name": "Financial Records Rule", "classifier_details": [{ "selected": "true", "severity_type": "MEDIUM", "action_plan": "Audit" }] }
-  ] },
-  "source_destination": { "rules": [
-    { "rule_name": "Customer PII Rule", "rule_source": { "resources": [] }, "rule_destination": { "channels": [{ "enabled": "true", "channel_type": "Network Email" }] } },
-    { "rule_name": "Financial Records Rule", "rule_source": { "resources": [] }, "rule_destination": { "channels": [{ "enabled": "true", "channel_type": "Web" }] } }
-  ] }
+  "severity_action": {
+    "rules": [
+      {
+        "rule_name": "Customer PII Rule",
+        "classifier_details": [
+          {
+            "selected": "true",
+            "severity_type": "HIGH",
+            "action_plan": "Block"
+          },
+          {
+            "selected": "false",
+            "severity_type": "MEDIUM",
+            "action_plan": "Audit"
+          }
+        ]
+      },
+      {
+        "rule_name": "Financial Records Rule",
+        "classifier_details": [
+          {
+            "selected": "true",
+            "severity_type": "MEDIUM",
+            "action_plan": "Audit"
+          }
+        ]
+      }
+    ]
+  },
+  "source_destination": {
+    "rules": [
+      {
+        "rule_name": "Customer PII Rule",
+        "rule_source": {
+          "endpoint_channel_machine_type": "ALL_MACHINES",
+          "resources": [
+            {
+              "resource_name": "Corporate Laptops",
+              "type": "BUSINESS_UNIT",
+              "include": "true"
+            },
+            {
+              "resource_name": "Test Devices",
+              "type": "BUSINESS_UNIT",
+              "include": "false"
+            }
+          ]
+        },
+        "rule_destination": {
+          "channels": [
+            {
+              "enabled": "true",
+              "channel_type": "HTTP",
+              "resources": [
+                {
+                  "resource_name": "*.darwinbox.com",
+                  "type": "DOMAIN",
+                  "include": "true"
+                },
+                {
+                  "resource_name": "Excluded Resources",
+                  "type": "BUSINESS_UNIT",
+                  "include": "false"
+                }
+              ],
+              "user_operations": [
+                "UPLOAD"
+              ]
+            },
+            {
+              "enabled": "true",
+              "channel_type": "HTTPS",
+              "resources": [
+                {
+                  "resource_name": "*.darwinbox.com",
+                  "type": "DOMAIN",
+                  "include": "true"
+                },
+                {
+                  "resource_name": "Excluded Resources",
+                  "type": "BUSINESS_UNIT",
+                  "include": "false"
+                }
+              ],
+              "user_operations": [
+                "UPLOAD"
+              ]
+            },
+            {
+              "enabled": "true",
+              "channel_type": "GENERIC_TEXT",
+              "resources": [
+                {
+                  "resource_name": "*.darwinbox.com",
+                  "type": "DOMAIN",
+                  "include": "true"
+                },
+                {
+                  "resource_name": "Excluded Resources",
+                  "type": "BUSINESS_UNIT",
+                  "include": "false"
+                }
+              ],
+              "user_operations": [
+                "UPLOAD"
+              ]
+            },
+            {
+              "enabled": "true",
+              "channel_type": "ENDPOINT_HTTP",
+              "resources": [
+                {
+                  "resource_name": "*.darwinbox.com",
+                  "type": "DOMAIN",
+                  "include": "true"
+                },
+                {
+                  "resource_name": "Excluded Resources",
+                  "type": "BUSINESS_UNIT",
+                  "include": "false"
+                }
+              ],
+              "user_operations": [
+                "UPLOAD"
+              ]
+            },
+            {
+              "enabled": "true",
+              "channel_type": "ENDPOINT_HTTPS",
+              "resources": [
+                {
+                  "resource_name": "*.darwinbox.com",
+                  "type": "DOMAIN",
+                  "include": "true"
+                },
+                {
+                  "resource_name": "Excluded Resources",
+                  "type": "BUSINESS_UNIT",
+                  "include": "false"
+                }
+              ],
+              "user_operations": [
+                "UPLOAD"
+              ]
+            },
+            {
+              "enabled": "false",
+              "channel_type": "FTP",
+              "resources": []
+            }
+          ]
+        }
+      },
+      {
+        "rule_name": "Financial Records Rule",
+        "rule_source": {
+          "resources": [
+            {
+              "resource_name": "Finance Department",
+              "type": "BUSINESS_UNIT",
+              "include": "true"
+            }
+          ]
+        },
+        "rule_destination": {
+          "channels": [
+            {
+              "enabled": "true",
+              "channel_type": "EMAIL",
+              "user_operations": [
+                "SEND"
+              ]
+            },
+            {
+              "enabled": "true",
+              "channel_type": "REMOVABLE_MEDIA",
+              "user_operations": [
+                "COPY"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
 }
