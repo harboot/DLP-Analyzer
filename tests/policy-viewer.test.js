@@ -5,6 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const page = fs.readFileSync(path.join(__dirname, '..', 'docs', 'PolicyViewer.html'), 'utf8');
+const styles = fs.readFileSync(path.join(__dirname, '..', 'docs', 'styles.css'), 'utf8');
 
 function extractFunction(name) {
   const start = page.indexOf(`  function ${name}(`);
@@ -75,10 +76,20 @@ test('destination is removed while channel remains filterable and exportable', (
   assert.doesNotMatch(page, /data-col="destination"/);
   assert.doesNotMatch(page, /<th[^>]*>Destination(?: Resources)?<\/th>/);
   assert.doesNotMatch(page, /\['Destination(?: Resources)?'/);
-  assert.match(page, /Destination \(Channel\) <span class="filter-ico" data-col="channel"[^>]*title="Filter Destination \(Channel\)"/);
-  assert.match(page, /<th title="Enabled destination channels for this exception">Destination \(Channel\)<\/th>/);
+  assert.match(page, /Destination \(Channel\) <span class="filter-ico" data-col="channel">/);
+  assert.match(page, /<th>Destination \(Channel\)<\/th>/);
+  assert.doesNotMatch(page, /title="Filter Destination \(Channel\)"/);
   assert.match(page, /\['Channel', row\.channel \?\? ''\]/);
   assert.match(page, /\['Channel', values\.chTxt\]/);
+});
+
+test('expanded exceptions remain in page flow with horizontal-only table overflow', () => {
+  assert.match(styles, /\.rules-section\{overflow:visible\}/);
+  assert.match(styles, /\.rules-section \.tablewrap\{overflow-x:auto;overflow-y:visible\}/);
+  assert.match(styles, /\.exp-cell\{overflow:visible;/);
+  assert.doesNotMatch(styles, /\.rules-section[^{}]*\{[^{}]*(?:height|max-height):\s*(?!auto|none)/);
+  assert.match(page, /hostRow\.after\(expTr\)/);
+  assert.match(page, /next\.remove\(\)/);
 });
 
 test('copy previews contain the same untruncated source and channel summaries as cells', () => {

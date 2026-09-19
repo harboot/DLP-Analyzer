@@ -923,7 +923,11 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   /* Sections / Table shell */
   .section{border:1px solid var(--line);border-radius:var(--radius-card);overflow:hidden}
   .section>header{display:flex;justify-content:space-between;align-items:center;background:var(--color-surface-raised);padding:var(--space-3) var(--space-3);border-bottom:1px solid var(--line)}
-  .rules-section .tablewrap{overflow:visible;max-height:none}
+  /* Keep expanded exception rows in normal document flow. The wrapper owns only
+     horizontal overflow; without a constrained height its computed vertical
+     overflow remains page-scrolled instead of becoming a second scrollbar. */
+  .rules-section{overflow:visible}
+  .rules-section .tablewrap{overflow-x:auto;overflow-y:visible}
 
   /* Table base */
   table{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
@@ -1001,7 +1005,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 
   /* Exception detail row */
   .exp-row{background:var(--color-surface-inset)}
-  .exp-cell{padding:var(--space-3) var(--space-3) var(--space-3);border-bottom:1px solid var(--color-border)}
+  .exp-cell{overflow:visible;padding:var(--space-3) var(--space-3) var(--space-3);border-bottom:1px solid var(--color-border)}
   .exp-cell table{table-layout:fixed}
   .exp-cell th,.exp-cell td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exc-cols .exception-detail-row{background:var(--color-surface-subtle)}

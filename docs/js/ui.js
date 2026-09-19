@@ -129,11 +129,11 @@ function renderOverview(rows){
   cards.className = 'grid cards';
 
   cards.innerHTML = `
-    <div class="card" title="${cardTooltips.total}"><h3>Total Alerts</h3><b><a href="#" class="link metric" data-metric="total">${rows.length}</a></b></div>
-    <div class="card" title="${cardTooltips.sources}"><h3>Unique Sources</h3><b><a href="#" class="link metric" data-metric="sources">${unique('Source')}</a></b></div>
-    <div class="card" title="${cardTooltips.emaildest}"><h3>Email Destinations</h3><b><a href="#" class="link metric" data-metric="emaildest">${emailDomains.size}</a></b></div>
-    <div class="card" title="${cardTooltips.webdest}"><h3>Web Destinations</h3><b><a href="#" class="link metric" data-metric="webdest">${webDomains.size}</a></b></div>
-    <div class="card" title="${cardTooltips.channels}"><h3>Channels</h3><b><a href="#" class="link metric" data-metric="channels">${channels.size}</a></b></div>
+    <div class="card"><h3>Total Alerts</h3><b><a href="#" class="link metric" data-metric="total">${rows.length}</a></b></div>
+    <div class="card"><h3>Unique Sources</h3><b><a href="#" class="link metric" data-metric="sources">${unique('Source')}</a></b></div>
+    <div class="card"><h3>Email Destinations</h3><b><a href="#" class="link metric" data-metric="emaildest">${emailDomains.size}</a></b></div>
+    <div class="card"><h3>Web Destinations</h3><b><a href="#" class="link metric" data-metric="webdest">${webDomains.size}</a></b></div>
+    <div class="card"><h3>Channels</h3><b><a href="#" class="link metric" data-metric="channels">${channels.size}</a></b></div>
   `;
 
   const rowsWithSource = rows.filter(r => txt(r['Source']).trim());
@@ -289,7 +289,7 @@ function makeSimpleTableEl(headers, rows){
       const td=document.createElement('td');
       if(headers[idx]==='Count') td.className='count-col';
       td.textContent=String(v);
-      td.title=String(v);
+      if(headers[idx] !== 'Count') td.title=String(v);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -547,7 +547,7 @@ function renderDataTable(tab){
       const ico = document.createElement('span');
       ico.className = 'filter-icon';
       ico.innerHTML = svgFilter();
-      ico.title = 'Filter contains text';
+      ico.setAttribute('aria-label', `Filter ${HEADER_LABELS[col]}`);
       ico.addEventListener('click', (e)=> openFilterPopover(e.currentTarget, tab, col));
       th.appendChild(ico);
     }
@@ -647,7 +647,7 @@ function updateFilterIcons(tab, root){
     ico.textContent = val ? ACTIVE_ICON : INACTIVE_ICON;
     ico.classList.toggle('is-active', !!val);
     ico.setAttribute('aria-pressed', val ? 'true' : 'false');
-    ico.title = val ? `Active filter: ${val}` : 'Filter';
+    ico.setAttribute('aria-label', val ? `Filter ${col}, active value: ${val}` : `Filter ${col}`);
   });
 }
 

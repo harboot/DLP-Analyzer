@@ -42,10 +42,10 @@
         <div class="row-left"></div>
         <div class="row-right">
           <span id="csvName" class="muted-sm"></span>
-          <button class="btn" id="btnUpload" title="Upload DLP alert files">Upload DLP Alerts (CSV)</button>
-          <button class="btn" id="btnLoadSample" title="Load sample alert data">Load sample</button>
-          <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener" title="Open the Risk Scoring guide">📖 Guide</a>
-          <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open settings" title="Settings">⚙</button>
+          <button class="btn" id="btnUpload">Upload DLP Alerts (CSV)</button>
+          <button class="btn" id="btnLoadSample">Load sample</button>
+          <a class="btn link" href="guides/RiskScoringGuide.html" target="_blank" rel="noopener">📖 Guide</a>
+          <button id="settingsBtn" class="icon-btn settings-trigger" type="button" aria-label="Open settings">⚙</button>
           <input id="csvInput" type="file" multiple accept=".csv,text/csv" />
         </div>
       </div>
@@ -55,9 +55,9 @@
         <div class="row-left"></div>
         <div class="row-right">
           <input id="search" class="textinput risk-rule-search" type="search" aria-label="Search risk scoring rules" placeholder="Search by name or content..." />
-          <button class="btn" id="btnNewFile" title="New rule">➕ New Rule</button>
-          <button class="btn" id="btnExport" title="Export JSON">⬇️ Export JSON</button>
-          <label class="drop" for="fileImport" title="Import JSON">📥 Import JSON</label>
+          <button class="btn" id="btnNewFile">➕ New Rule</button>
+          <button class="btn" id="btnExport">⬇️ Export JSON</button>
+          <label class="drop" for="fileImport">📥 Import JSON</label>
           <input id="fileImport" type="file" accept="application/json" />
           <button class="btn" id="btnRunAll" title="Score alerts with all enabled rules">✅ RUN ALL</button>
         </div>
@@ -129,8 +129,8 @@
           <div class="right spread">
             <div class="status" id="meta">&nbsp;</div>
             <div class="right">
-              <button class="btn" id="btnDefault" title="Restore predefined rule defaults" hidden>↺ DEFAULT</button>
-              <button class="btn" id="btnRunThis" title="Run this rule on loaded CSV">▶️ RUN</button>
+              <button class="btn" id="btnDefault" hidden>↺ DEFAULT</button>
+              <button class="btn" id="btnRunThis">▶️ RUN</button>
               <button class="icon-btn" id="btnSave" title="Save">💾</button>
             </div>
           </div>
@@ -1110,7 +1110,7 @@ function openRiskTable(enabledFiles) {
     })
     .map(item => item.alert);
 
-  const resultHeader = ([column, label]) => `<th><span>${label}</span><button class="risk-filter-icon${resultFilters[column] || resultSort.column === column ? ' is-active' : ''}" type="button" data-result-column="${column}" aria-label="Filter or sort by ${label}" aria-pressed="${String(!!resultFilters[column] || resultSort.column === column)}" title="Filter or sort by ${label}">${riskFilterSvg}</button></th>`;
+  const resultHeader = ([column, label]) => `<th><span>${label}</span><button class="risk-filter-icon${resultFilters[column] || resultSort.column === column ? ' is-active' : ''}" type="button" data-result-column="${column}" aria-label="Filter or sort by ${label}" aria-pressed="${String(!!resultFilters[column] || resultSort.column === column)}">${riskFilterSvg}</button></th>`;
 
   const renderPage = () => {
     const displayed = visibleAlerts();
