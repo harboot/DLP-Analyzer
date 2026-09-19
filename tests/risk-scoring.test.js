@@ -73,13 +73,13 @@ assert.deepEqual(Array.from(result, (alert) => alert.score), [13, 8, 6]);
 assert.deepEqual(Array.from(result[0].matchedRules, (rule) => rule.name), ['External destination', 'Large transfer']);
 
 const builtIns = context.RiskDetectors.builtInRules();
-assert.equal(builtIns.length, 15);
+assert.equal(builtIns.length, 17);
 assert.equal(builtIns.find(item => item.key === 'shortSubject').settingFields[0].key, 'subjectLength');
 assert.equal(builtIns.every(rule => rule.type === 'file' && rule.builtIn), true);
 assert.deepEqual(Array.from(builtIns, rule => rule.name), [
   'Email Sent to Self', 'Email Sent to Self (by character)', 'Email Broadcast Multiple Destination Domain',
-  'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'Sensitive Keywords', 'Weird TLD Dest',
-  'Destination is Competitor',
+  'Short Subject', 'Out-of-Hours', 'Attachment No Ext', 'No Attachment', 'Sensitive Keywords', 'Weird TLD Dest',
+  'Destination is Competitor', 'Destination Lookalike Domain',
   'Destination Domain appears Once in Dataset', 'Destination Email using Subdomain',
   'Attachment Looks Like Ransomware Notes or Encryption',
   'Email Subject or Filename Obfuscation',
@@ -87,18 +87,18 @@ assert.deepEqual(Array.from(builtIns, rule => rule.name), [
   'Multiple Attachment specific Destination'
 ]);
 const rule = key => builtIns.find(item => item.key === key);
-assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6, 7]);
+assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 6, 6, 3, 5, 4, 4, 7, 5, 7, 7, 5, 5, 8, 7, 6, 7]);
 const exported = exportRuleConfigs([...builtIns, { id: 'disabled-custom', name: 'Disabled custom', type: 'file', code: 'return true;', enabled: false, weight: 2 }]);
-assert.equal(exported.length, 16);
+assert.equal(exported.length, 18);
 assert.equal(exported.every(item => item.type === 'file'), true);
-assert.equal(exported.filter(item => item.builtIn).length, 15);
+assert.equal(exported.filter(item => item.builtIn).length, 17);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settings.subjectLength, 15);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').description, rule('shortSubject').description);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settingFields[0].key, 'subjectLength');
 assert.equal(exported.find(item => item.id === 'disabled-custom').enabled, false);
 assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = context.RiskDetectors.migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
-assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6, 7]);
+assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 6, 6, 3, 5, 4, 4, 7, 5, 7, 7, 5, 5, 8, 7, 6, 7]);
 assert.equal(context.RiskDetectors.migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('selfByCharacter'), { Channel: 'Email', Source: 'alexander@example.com', Destination: 'alexandra@outside.test' }), true);
@@ -114,6 +114,9 @@ broadcast.settings.minimumDomains = 3;
 assert.equal(context.RiskDetectors.matchesBuiltIn(broadcast, { Size: '12', Destination: 'a@one.test;b@two.test;c@three.test' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('shortSubject'), { Channel: 'Network email', Details: 'Hello' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('noExtension'), { FileName: 'report; archive.zip' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(rule('noAttachment'), { FileName: '   ' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(rule('noAttachment'), { FileName: 'N/A; none' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(rule('noAttachment'), { FileName: 'report.pdf; N/A' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('sensitiveKeywords'), { Details: 'Confidential payroll export' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.xyz' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('weirdTld'), { Destination: 'person@example.party' }), true);
@@ -121,6 +124,24 @@ assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationCompetitor'),
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationCompetitor'), { Destination: '<alice@mail.metrobank.com>' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationCompetitor'), { Destination: 'HTTPS://portal.securitybank.com.ph:443/login' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationCompetitor'), { Destination: 'person@notmetrobank.com' }), false);
+const lookalike = configured => ({
+  ...context.RiskDetectors.builtInRules().find(item => item.key === 'destinationLookalikeDomain'),
+  settings: {
+    protectedDomains: 'bpi.com.ph\nbpi.com.hk', targetBrand: 'bpi', maximumDistance: 1,
+    detectDigitLookalikes: true, detectBrandAffix: true, domainExceptions: 'ipi.ph', ...configured
+  }
+});
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@bpi.com.ph' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@mail.bpi.com.ph' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@bpi.com.hk' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@bpl.com.ph' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@bp1.com.ph' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@bpii.com' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@secure-bpi.com' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'https://bpi-login.net/path' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'bpi-security.net' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'ipi.ph' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(lookalike(), { Destination: 'user@example.com' }), false);
 const domainRows = [
   { Destination: 'one@unique.example; two@common.example' },
   { Destination: 'three@common.example' },
