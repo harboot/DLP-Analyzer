@@ -12,10 +12,15 @@
   registry.register({
     id: 'builtin-destination-competitor', key: 'destinationCompetitor', name: 'Destination is Competitor',
     description: 'Matches destination addresses and URLs whose domain is a configured competitor domain or one of its subdomains.', weight: 7,
-    settings: { domains: DEFAULT_DOMAINS }, settingFields: [{ key: 'domains', label: 'Competitor domain list', type: 'textarea' }],
+    settings: { domains: DEFAULT_DOMAINS, domainExceptions: '', matchSubdomains: true }, settingFields: [
+      { key: 'domains', label: 'Competitor domain list', type: 'textarea' },
+      { key: 'domainExceptions', label: 'Domain exception list', type: 'textarea' },
+      { key: 'matchSubdomains', label: 'Match subdomains', type: 'checkbox' }
+    ],
     match(row, settings) {
       const targets = String(settings.domains || '').split(/[\s,;]+/).map(value => value.trim().replace(/^\.+|\.+$/g, '').toLowerCase()).filter(Boolean);
-      return domains(row.Destination).some(domain => targets.some(target => domain === target || domain.endsWith(`.${target}`)));
+      const exceptions = String(settings.domainExceptions ?? '').split(/[\s,;]+/).map(value => value.trim().replace(/^\.+|\.+$/g, '').toLowerCase()).filter(Boolean);
+      return domains(row.Destination).some(domain => !exceptions.some(exception => domain === exception || domain.endsWith(`.${exception}`)) && targets.some(target => domain === target || (settings.matchSubdomains !== false && domain.endsWith(`.${target}`))));
     }
   });
 })(RiskDetectors);
