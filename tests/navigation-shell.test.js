@@ -14,6 +14,9 @@ test('the shell displays its version instead of repeating the active page name',
   assert.ok(cacheVersion, 'the service worker should declare a numeric cache version');
   assert.equal(displayedVersion, cacheVersion);
   assert.doesNotMatch(indexSource, /id="currentTool"/);
+  assert.doesNotMatch(indexSource, /<iframe[^>]*\stitle=/, 'page frames must not show current-page title tooltips');
+  assert.doesNotMatch(indexSource, /newFrame\.title\s*=/, 'dynamically created page frames must not have title tooltips');
+  assert.match(indexSource, /newFrame\.setAttribute\('aria-label'/, 'page frames should retain an accessible name');
 });
 
 test('every navigation item has a decorative icon before its label', () => {

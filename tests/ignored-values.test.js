@@ -57,6 +57,24 @@ test('filename ignore list applies exact and wildcard patterns without case sens
   assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test', 'File Name': 'public.pdf' }), false);
 });
 
+test('each ignored-value category can be disabled independently', () => {
+  setIgnoredValues({
+    sources: ['src-rep*'], destinations: ['*.example.com'], filenames: ['private.pdf'],
+    sourcesEnabled: false, destinationsEnabled: true, filenamesEnabled: false
+  });
+
+  assert.equal(isIgnoredAlert({ Source: 'SRC-REP-01', Destination: 'external.test', 'File Name': 'public.pdf' }), false);
+  assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'mail.example.com', 'File Name': 'public.pdf' }), true);
+  assert.equal(isIgnoredAlert({ Source: 'employee', Destination: 'external.test', 'File Name': 'private.pdf' }), false);
+});
+
+test('ignored-value settings expose a checkbox before every category label', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'docs', 'AlertAnalyzer.html'), 'utf8');
+  for (const [id, label] of [['ignoredSourcesEnabled', 'Source'], ['ignoredDestinationsEnabled', 'Destination'], ['ignoredFilenamesEnabled', 'File Name']]) {
+    assert.match(page, new RegExp(`<input id="${id}" type="checkbox" \\/> <span>${label}<\\/span>`));
+  }
+});
+
 test('volume series uses hours for datasets shorter than two days', () => {
   const { getVolumeSeries } = vm.runInContext('({ getVolumeSeries })', context);
   const result = getVolumeSeries([
