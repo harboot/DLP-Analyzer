@@ -171,7 +171,19 @@
     return `${names}${relation ? ` [relation: ${relation}]` : ''}`;
   }
 
-  function appendJsonTree(parent, value, label, depth = 0){
+  function humanizeJsonKey(key){
+    return String(key).replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+  }
+
+  function namedArrayItem(item, index){
+    if(item && typeof item === 'object'){
+      return item.classifier_name || item.exception_rule_name || item.resource_name || item.rule_name || item.name || `Item ${index + 1}`;
+    }
+    return `Item ${index + 1}`;
+  }
+
+  function appendJsonTree(parent, value, label, options = {}){
+    const { open = false, resource = false } = options;
     const isContainer = value !== null && typeof value === 'object';
     if(!isContainer){
       const line = document.createElement('div');
@@ -179,7 +191,7 @@
       if(label !== undefined){
         const key = document.createElement('span');
         key.className = 'json-tree-key';
-        key.textContent = `${label}: `;
+        key.textContent = `${humanizeJsonKey(label)}: `;
         line.appendChild(key);
       }
       const scalar = document.createElement('span');
@@ -190,19 +202,143 @@
       return;
     }
 
-    const entries = Array.isArray(value) ? value.map((item, index) => [index, item]) : Object.entries(value);
+    const entries = Array.isArray(value) ? value.map((item, index) => [namedArrayItem(item, index), item]) : Object.entries(value);
     const details = document.createElement('details');
     details.className = 'json-tree-branch';
-    details.open = depth < 2;
+    details.open = open;
     const summary = document.createElement('summary');
-    const typeLabel = Array.isArray(value) ? `Array(${entries.length})` : `Object(${entries.length})`;
-    summary.textContent = `${label === undefined ? '' : `${label}: `}${typeLabel}`;
+    summary.textContent = label === undefined ? (Array.isArray(value) ? `Items (${entries.length})` : 'Details') : humanizeJsonKey(label);
     details.appendChild(summary);
     const children = document.createElement('div');
     children.className = 'json-tree-children';
-    entries.forEach(([key, child]) => appendJsonTree(children, child, key, depth + 1));
+    entries.forEach(([key, child]) => {
+      if(resource && key === 'include'){
+        const marker = document.createElement('div');
+        marker.className = `json-resource-mode ${String(child).toLowerCase() === 'true' ? 'include' : 'exclude'}`;
+        marker.textContent = String(child).toLowerCase() === 'true' ? '+Include' : '-Exclude';
+        children.appendChild(marker);
+      } else {
+        appendJsonTree(children, child, key, { resource: resource && child && typeof child === 'object' });
+      }
+    });
     details.appendChild(children);
     parent.appendChild(details);
+  }
+
+  function appendResources(parent, resources){
+    const list = safeArr(resources);
+    const details = document.createElement('details');
+    details.className = 'json-tree-branch json-resources';
+    const summary = document.createElement('summary');
+    summary.textContent = `Resources (${list.length})`;
+    details.appendChild(summary);
+    const children = document.createElement('div');
+    children.className = 'json-tree-children';
+    list.forEach((resource, index) => appendJsonTree(children, resource, resource?.resource_name || `Resource ${index + 1}`, { resource: true }));
+    details.appendChild(children);
+    parent.appendChild(details);
+  }
+
+  function stableJson(value){
+    if(Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+    if(value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
+  }
+
+  function appendDestination(parent, destination){
+    const section = document.createElement('details');
+    section.className = 'json-tree-branch json-main-section';
+    section.open = true;
+    const summary = document.createElement('summary');
+    summary.textContent = 'Destination';
+    section.appendChild(summary);
+    const children = document.createElement('div');
+    children.className = 'json-tree-children';
+    const groups = new Map();
+    safeArr(destination?.channels).filter(channel => String(channel?.enabled).toLowerCase() === 'true').forEach(channel => {
+      const config = Object.fromEntries(Object.entries(channel).filter(([key]) => key !== 'enabled' && key !== 'channel_type'));
+      const signature = stableJson(config);
+      if(!groups.has(signature)) groups.set(signature, { names: [], config });
+      groups.get(signature).names.push(channel.channel_type || 'Unnamed Channel');
+    });
+    groups.forEach(group => {
+      const branch = document.createElement('details');
+      branch.className = 'json-tree-branch json-channel-group';
+      const branchSummary = document.createElement('summary');
+      branchSummary.textContent = group.names.join(', ');
+      branch.appendChild(branchSummary);
+      const config = document.createElement('div');
+      config.className = 'json-tree-children';
+      Object.entries(group.config).forEach(([key, value]) => key === 'resources'
+        ? appendResources(config, value)
+        : appendJsonTree(config, value, key));
+      branch.appendChild(config);
+      children.appendChild(branch);
+    });
+    Object.entries(destination || {}).filter(([key]) => key !== 'channels').forEach(([key, value]) => appendJsonTree(children, value, key));
+    section.appendChild(children);
+    parent.appendChild(section);
+  }
+
+  function appendSection(parent, label, value, open = true){
+    appendJsonTree(parent, value, label, { open });
+    parent.lastElementChild?.classList.add('json-main-section');
+  }
+
+  function appendClassifiers(parent, classifiers){
+    const list = safeArr(classifiers);
+    appendJsonTree(parent, list, `Classifiers (${list.length})`);
+  }
+
+  function buildReadableJsonTree(parent, data){
+    const isNormalizedRule = data && ('policy_rule' in data || 'source_destination' in data);
+    const rule = isNormalizedRule ? (data.policy_rule || {}) : data;
+    const severity = isNormalizedRule ? data.severity_action : rule?.severity_action;
+    const source = isNormalizedRule ? data.source_destination?.rule_source : rule?.rule_source;
+    const destination = isNormalizedRule ? data.source_destination?.rule_destination : rule?.rule_destination;
+    const exceptions = isNormalizedRule ? data.exception_rules : rule?.exception_rules?.exception_rules;
+    const omitted = new Set(['classifiers', 'exception_rules', 'severity_action', 'rule_source', 'rule_destination']);
+    appendSection(parent, 'Rule', Object.fromEntries(Object.entries(rule || {}).filter(([key]) => !omitted.has(key))));
+    appendClassifiers(parent, rule?.classifiers);
+    if(severity != null) appendSection(parent, 'Severity / Action', severity);
+    if(source != null){
+      const sourceSection = document.createElement('details');
+      sourceSection.className = 'json-tree-branch json-main-section';
+      sourceSection.open = true;
+      const summary = document.createElement('summary');
+      summary.textContent = 'Source';
+      sourceSection.appendChild(summary);
+      const sourceChildren = document.createElement('div');
+      sourceChildren.className = 'json-tree-children';
+      Object.entries(source).forEach(([key, value]) => key === 'resources' ? appendResources(sourceChildren, value) : appendJsonTree(sourceChildren, value, key));
+      sourceSection.appendChild(sourceChildren);
+      parent.appendChild(sourceSection);
+    }
+    if(destination != null) appendDestination(parent, destination);
+    if(exceptions != null){
+      const list = safeArr(exceptions);
+      const exceptionSection = document.createElement('details');
+      exceptionSection.className = 'json-tree-branch json-exceptions';
+      const exceptionSummary = document.createElement('summary');
+      exceptionSummary.textContent = `Exceptions (${list.length})`;
+      exceptionSection.appendChild(exceptionSummary);
+      const exceptionChildren = document.createElement('div');
+      exceptionChildren.className = 'json-tree-children';
+      list.forEach((exception, index) => {
+        const exceptionBranch = document.createElement('details');
+        exceptionBranch.className = 'json-tree-branch json-exception';
+        const summary = document.createElement('summary');
+        summary.textContent = exception?.exception_rule_name || `Exception ${index + 1}`;
+        exceptionBranch.appendChild(summary);
+        const detail = document.createElement('div');
+        detail.className = 'json-tree-children';
+        buildReadableJsonTree(detail, exception);
+        exceptionBranch.appendChild(detail);
+        exceptionChildren.appendChild(exceptionBranch);
+      });
+      exceptionSection.appendChild(exceptionChildren);
+      parent.appendChild(exceptionSection);
+    }
   }
 
   function showJsonViewer(data, title){
@@ -221,11 +357,35 @@
     close.setAttribute('aria-label', 'Close JSON viewer');
     close.textContent = '×';
     close.addEventListener('click', () => viewer.remove());
-    header.append(heading, close);
+    const controls = document.createElement('div');
+    controls.className = 'json-viewer-controls';
     const tree = document.createElement('div');
     tree.className = 'json-tree';
-    appendJsonTree(tree, data);
-    viewer.append(header, tree);
+    const raw = document.createElement('pre');
+    raw.className = 'json-raw';
+    raw.hidden = true;
+    raw.textContent = JSON.stringify(data, null, 2);
+    const control = (text, handler) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn json-viewer-control';
+      button.textContent = text;
+      button.addEventListener('click', handler);
+      controls.appendChild(button);
+      return button;
+    };
+    control('Expand All', () => tree.querySelectorAll('details').forEach(details => { details.open = true; }));
+    control('Collapse All', () => tree.querySelectorAll('details').forEach(details => { details.open = false; }));
+    const rawButton = control('Raw JSON', () => {
+      const showingRaw = raw.hidden;
+      raw.hidden = !showingRaw;
+      tree.hidden = showingRaw;
+      rawButton.setAttribute('aria-pressed', String(showingRaw));
+    });
+    rawButton.setAttribute('aria-pressed', 'false');
+    header.append(heading, controls, close);
+    buildReadableJsonTree(tree, data);
+    viewer.append(header, tree, raw);
     document.body.appendChild(viewer);
   }
 
