@@ -132,7 +132,27 @@ body.tool-page .icon-copy:hover { background: var(--color-surface-active); }
 .copy-preview-close:hover { background:var(--color-surface-hover); }
 .copy-preview table { width:100%;table-layout:auto;border-collapse:collapse; }
 .copy-preview th,.copy-preview td { position:static;min-width:0;padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;vertical-align:top; }
-.copy-preview th { width:34%;color:var(--muted); }
+.copy-preview th { width:140px;max-width:140px;color:var(--muted); }
+
+/* Shared replacement for browser-native title tooltips. */
+.dlp-tooltip {
+  position:fixed;
+  z-index:100001;
+  width:max-content;
+  max-width:min(420px, calc(100vw - 24px));
+  padding:var(--space-2) var(--space-3);
+  border:1px solid var(--color-accent);
+  border-radius:var(--radius-control);
+  background:var(--panel);
+  color:var(--text);
+  box-shadow:0 0 0 2px var(--color-accent-soft), 0 12px 32px var(--shadow-color);
+  font-size:12px;
+  line-height:1.45;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  pointer-events:none;
+}
+.dlp-tooltip[hidden] { display:none; }
 
 .processing-overlay { position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:var(--color-overlay);backdrop-filter:blur(2px); }
 .processing-overlay[hidden] { display:none; }
@@ -141,6 +161,7 @@ body.tool-page .icon-copy:hover { background: var(--color-surface-active); }
 @keyframes processing-spin { to { transform:rotate(360deg); } }
 
 @media (max-width: 700px) {
+  .copy-preview th { width:110px;max-width:110px; }
   body.tool-page .split-header {
     grid-template-columns: 1fr;
   }

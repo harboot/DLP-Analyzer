@@ -75,7 +75,8 @@ test('destination is removed while channel remains filterable and exportable', (
   assert.doesNotMatch(page, /data-col="destination"/);
   assert.doesNotMatch(page, /<th[^>]*>Destination(?: Resources)?<\/th>/);
   assert.doesNotMatch(page, /\['Destination(?: Resources)?'/);
-  assert.match(page, /data-col="channel"[^>]*title="Filter Channel"/);
+  assert.match(page, /Destination \(Channel\) <span class="filter-ico" data-col="channel"[^>]*title="Filter Destination \(Channel\)"/);
+  assert.match(page, /<th title="Enabled destination channels for this exception">Destination \(Channel\)<\/th>/);
   assert.match(page, /\['Channel', row\.channel \?\? ''\]/);
   assert.match(page, /\['Channel', values\.chTxt\]/);
 });
@@ -102,8 +103,34 @@ test('relations remain in classifier tooltips and copied information', () => {
   assert.match(page, /copyCellsAsRichText\(getExceptionRowCells/);
 });
 
+test('rule and exception action columns reserve room for Copy and JSON controls', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'docs', 'styles.css'), 'utf8');
+  assert.match(styles, /rules-cols[^\n]+nth-child\(1\)[^\n]+width:\s*84px;\s*min-width:84px/);
+  assert.match(styles, /exc-cols[^\n]+nth-child\(1\)[^\n]+width:\s*84px;\s*min-width:84px/);
+  assert.match(styles, /\.copy-column\{white-space:nowrap;overflow:visible;text-overflow:clip\}/);
+});
+
+test('global tooltip is viewport-safe and preserves grouped channel lines', () => {
+  const offline = fs.readFileSync(path.join(__dirname, '..', 'docs', 'offline.js'), 'utf8');
+  const components = fs.readFileSync(path.join(__dirname, '..', 'docs', 'components.css'), 'utf8');
+  assert.match(offline, /text\.replace\(\/; \(\?=\(\?:Any\|Has Resources\|Has Exclude\):\)\/g, '\\n'\)/);
+  assert.match(offline, /window\.innerWidth/);
+  assert.match(offline, /window\.innerHeight/);
+  assert.match(components, /\.dlp-tooltip[\s\S]+white-space:pre-wrap/);
+});
+
 test('policy level remains hidden data used by the ascending default sort', () => {
   assert.match(page, /const policyLevel = Number\(policy\.policy_level\?\.level \?\? 0\)/);
   assert.match(page, /if\(a\.policyLevel !== b\.policyLevel\) return a\.policyLevel - b\.policyLevel/);
   assert.doesNotMatch(page, /<th[^>]*>Policy Level(?:\s|<)/);
+});
+
+test('visible policy groups receive separators without adding table rows', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'docs', 'styles.css'), 'utf8');
+  assert.match(page, /let previousShownPolicyName;/);
+  assert.match(page, /if\(shown > 1 && row\.policyName !== previousShownPolicyName\)/);
+  assert.match(page, /tr\.classList\.add\('policy-group-start'\)/);
+  assert.match(page, /previousShownPolicyName = row\.policyName/);
+  assert.doesNotMatch(page, /createElement\('tr'\)[\s\S]{0,120}policy-group-header/);
+  assert.match(styles, /#rulesBody>tr\.policy-group-start>td\{[\s\S]*border-top:3px solid var\(--color-border-strong\);[\s\S]*padding-top:var\(--space-3\)/);
 });
