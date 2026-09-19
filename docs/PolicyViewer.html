@@ -151,6 +151,30 @@
     return uniq(included).join(', ');
   }
 
+  function resourceSummaryTooltip(resourceContainer){
+    const summary = summarizeResources(resourceContainer);
+    const excluded = uniq(safeArr(resourceContainer?.resources)
+      .filter(resource => String(resource.include).toLowerCase() === 'false')
+      .map(resource => resource.resource_name)
+      .filter(Boolean));
+    return excluded.length ? `${summary}\nExcluded resources: ${excluded.join(', ')}` : summary;
+  }
+
+  function destinationResourceContainer(ruleDestination){
+    return {
+      resources: safeArr(ruleDestination?.channels)
+        .flatMap(channel => safeArr(channel?.resources))
+    };
+  }
+
+  function summarizeDestinationResources(ruleDestination){
+    return summarizeResources(destinationResourceContainer(ruleDestination));
+  }
+
+  function destinationResourceSummaryTooltip(ruleDestination){
+    return resourceSummaryTooltip(destinationResourceContainer(ruleDestination));
+  }
+
   function listActiveChannels(ruleDestination){
     if(!ruleDestination) return [];
     const channels = safeArr(ruleDestination.channels).filter(ch => String(ch.enabled).toLowerCase() === 'true');
@@ -190,7 +214,9 @@
 
       const sdEntry = sdMap.get(ruleName) || {};
       const srcTxt = summarizeResources(sdEntry.rule_source);
-      const destTxt = summarizeResources(sdEntry.rule_destination);
+      const destTxt = summarizeDestinationResources(sdEntry.rule_destination);
+      const srcTooltip = resourceSummaryTooltip(sdEntry.rule_source);
+      const destTooltip = destinationResourceSummaryTooltip(sdEntry.rule_destination);
       const chan = listActiveChannels(sdEntry.rule_destination);
 
       // Exceptions (array if present)
@@ -200,7 +226,7 @@
       rows.push({
         fileName, policyName, policyEnabled, policyLevel,
         ruleName, ruleEnabled, relation, classifiers,
-        severity, action, source: srcTxt, destination: destTxt, channel: chan,
+        severity, action, source: srcTxt, destination: destTxt, sourceTooltip: srcTooltip, destinationTooltip: destTooltip, channel: chan,
         exceptions: excArr
       });
     }
@@ -413,13 +439,13 @@
       // (7) Source
       const tdSrc = document.createElement('td');
       tdSrc.textContent = row.source;
-      tdSrc.title = row.source || '(no source summary)';
+      tdSrc.title = row.sourceTooltip || '(no source summary)';
       tr.appendChild(tdSrc);
 
       // (8) Destination resources
       const tdDest = document.createElement('td');
       tdDest.textContent = row.destination;
-      tdDest.title = row.destination || '(no destination resources)';
+      tdDest.title = row.destinationTooltip || '(no destination resources)';
       tr.appendChild(tdDest);
 
       // (9) Channel (active only)
@@ -486,7 +512,7 @@
         <th title="Classifiers included in this exception">Classifiers</th>
         <th title="Source resources">Source Resources</th>
         <th title="Destination resources">Destination Resources</th>
-        <th title="Enabled channels for this exception">Channel (enabled)</th>
+        <th title="Enabled channels for this exception">Channel</th>
         <th title="Severity (H/M/L)">Severity</th>
         <th title="Action Plan">Action</th>
       </tr>`;
@@ -514,7 +540,9 @@
       const exCls = safeArr(ex?.classifiers).map(c=> c?.classifier_name).filter(Boolean).join(', ');
 
       const srcTxt = summarizeResources(ex?.rule_source);
-      const destTxt = summarizeResources(ex?.rule_destination);
+      const destTxt = summarizeDestinationResources(ex?.rule_destination);
+      const srcTooltip = resourceSummaryTooltip(ex?.rule_source);
+      const destTooltip = destinationResourceSummaryTooltip(ex?.rule_destination);
 
       // Channels enabled
       const ch = safeArr(ex?.rule_destination?.channels).filter(c => String(c.enabled).toLowerCase()==='true').map(c=>c.channel_type).filter(Boolean);
@@ -558,11 +586,11 @@
 
       const td5 = document.createElement('td');
       td5.textContent = srcTxt || '-';
-      td5.title = srcTxt || '-';
+      td5.title = srcTooltip || '-';
 
       const tdDest = document.createElement('td');
       tdDest.textContent = destTxt || '-';
-      tdDest.title = destTxt || '-';
+      tdDest.title = destTooltip || '-';
 
       const td6 = document.createElement('td');
       td6.textContent = chTxt || '-';
