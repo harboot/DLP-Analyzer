@@ -11,7 +11,8 @@ for (const detectorFile of [
   'short-subject.js', 'out-of-hours.js', 'attachment-no-extension.js', 'sensitive-keywords.js',
   'weird-tld.js', 'destination-competitor.js', 'destination-domain-once.js',
   'destination-email-subdomain.js', 'ransomware-attachment.js',
-  'email-subject-filename-obfuscation.js', 'filename-is-executable.js'
+  'email-subject-filename-obfuscation.js', 'filename-is-executable.js',
+  'multiple-attachments-specific-destination.js'
 ]) vm.runInContext(fs.readFileSync(`docs/js/detectors/${detectorFile}`, 'utf8'), context);
 
 const { exportRuleConfigs, normalizeWeight, scoreAlerts } = context.RiskScoring;
@@ -29,7 +30,8 @@ assert.match(riskScoringStyles, /\.list\{flex:1;min-height:0;max-height:min\(52v
 assert.match(riskScoringPage, /id="inpDescription"[^>]+rows="2"/);
 assert.match(riskScoringPage, /id="inpCode"[^>]+rows="5"/);
 assert.match(riskScoringStyles, /\.cjs-textarea\{[\s\S]*?height:124px;[\s\S]*?min-height:124px;/);
-assert.match(fs.readFileSync('docs/js/detectors/ransomware-attachment.js', 'utf8'), /Encrypted extension regular expression/);
+assert.match(fs.readFileSync('docs/js/detectors/ransomware-attachment.js', 'utf8'), /Detected filename pattern list/);
+assert.doesNotMatch(fs.readFileSync('docs/js/detectors/ransomware-attachment.js', 'utf8'), /regular expression/i);
 assert.doesNotMatch(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), /builtin-|matchesBuiltIn|RiskDetectors/);
 
 assert.equal(normalizeWeight(undefined), 1);
@@ -55,7 +57,7 @@ assert.deepEqual(Array.from(result, (alert) => alert.score), [13, 8, 6]);
 assert.deepEqual(Array.from(result[0].matchedRules, (rule) => rule.name), ['External destination', 'Large transfer']);
 
 const builtIns = context.RiskDetectors.builtInRules();
-assert.equal(builtIns.length, 14);
+assert.equal(builtIns.length, 15);
 assert.equal(builtIns.find(item => item.key === 'shortSubject').settingFields[0].key, 'subjectLength');
 assert.equal(builtIns.every(rule => rule.type === 'file' && rule.builtIn), true);
 assert.deepEqual(Array.from(builtIns, rule => rule.name), [
@@ -65,21 +67,22 @@ assert.deepEqual(Array.from(builtIns, rule => rule.name), [
   'Destination Domain appears Once in Dataset', 'Destination Email using Subdomain',
   'Attachment Looks Like Ransomware Notes or Encryption',
   'Email Subject or Filename Obfuscation',
-  'Filename is Executable'
+  'Filename is Executable',
+  'Multiple Attachment specific Destination'
 ]);
 const rule = key => builtIns.find(item => item.key === key);
-assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6]);
+assert.deepEqual(Array.from(builtIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6, 7]);
 const exported = exportRuleConfigs([...builtIns, { id: 'disabled-custom', name: 'Disabled custom', type: 'file', code: 'return true;', enabled: false, weight: 2 }]);
-assert.equal(exported.length, 15);
+assert.equal(exported.length, 16);
 assert.equal(exported.every(item => item.type === 'file'), true);
-assert.equal(exported.filter(item => item.builtIn).length, 14);
+assert.equal(exported.filter(item => item.builtIn).length, 15);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settings.subjectLength, 15);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').description, rule('shortSubject').description);
 assert.equal(exported.find(item => item.id === 'builtin-short-subject').settingFields[0].key, 'subjectLength');
 assert.equal(exported.find(item => item.id === 'disabled-custom').enabled, false);
 assert.equal(rule('weirdTld').settings.tlds, 'cc, tk, ml, ga, cf, gq, pw, xyz, loan, review, click, win, men, trade, bid, date, party');
 const migratedBuiltIns = context.RiskDetectors.migrateRules(builtIns.map(item => ({ ...item, weight: 1 })), true);
-assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6]);
+assert.deepEqual(Array.from(migratedBuiltIns, item => item.weight), [6, 6, 6, 3, 5, 4, 7, 5, 7, 5, 5, 8, 7, 6, 7]);
 assert.equal(context.RiskDetectors.migrateRules([{ id: 'custom', type: 'file', weight: 9 }], true)[0].weight, 9);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('self'), { Source: 'alice@example.com', Destination: 'alice@example.net' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('selfByCharacter'), { Channel: 'Email', Source: 'alexander@example.com', Destination: 'alexandra@outside.test' }), true);
@@ -113,11 +116,14 @@ assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationEmailSubdomai
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationEmailSubdomain'), { Size: '12', Destination: 'person@a.example.com' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationEmailSubdomain'), { Size: '12', Destination: 'person@tenant.onmicrosoft.com' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('destinationEmailSubdomain'), { Size: '', Destination: 'person@regional.company.example' }), false);
+const subdomain = rule('destinationEmailSubdomain');
+subdomain.settings.domainExceptions = 'company.example';
+assert.equal(context.RiskDetectors.matchesBuiltIn(subdomain, { Size: '12', Destination: 'person@regional.company.example' }), false);
 const ransomwareAttachment = rule('ransomwareAttachment');
 assert.equal(context.RiskDetectors.matchesBuiltIn(ransomwareAttachment, { FileName: 'invoice.pdf; HOW_TO_DECRYPT.txt' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf.locked' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf' }), false);
-ransomwareAttachment.settings.encExtRegex = String.raw`\.companylocked$`;
+ransomwareAttachment.settings.patterns = '.companylocked';
 assert.equal(context.RiskDetectors.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.pdf.companylocked' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(ransomwareAttachment, { FileName: 'quarterly-report.foo' }), false);
 const obfuscation = rule('emailSubjectFilenameObfuscation');
@@ -126,6 +132,8 @@ assert.equal(context.RiskDetectors.matchesBuiltIn(obfuscation, { Size: '1E+3', F
 assert.equal(context.RiskDetectors.matchesBuiltIn(obfuscation, { Size: '8', Details: 'Quarterly report', FileName: 'agenda.pdf' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(obfuscation, { Size: '8', Details: 'Private conference credentials' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(obfuscation, { Size: '', Details: 'p@ssword', FileName: 'credentials.txt' }), false);
+obfuscation.settings.patterns = 's3ns1t1ve';
+assert.equal(context.RiskDetectors.matchesBuiltIn(obfuscation, { Size: '8', Details: 's3ns1t1ve project' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 03:20:11 AM GMT+0800' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 05:00:00 AM GMT+0800' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(rule('outOfHours'), { IncidentTime: '26 Aug. 2025, 11:30:00 PM GMT+0800' }), true);
@@ -134,6 +142,18 @@ assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'invoi
 assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'deploy.ps1 (blocked); notes.txt' }), true);
 assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'report.pdf; archive.tar.gz' }), false);
 assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'proposal.exe.pdf' }), false);
+executable.settings.extensions = 'foo, bar';
+assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'payload.foo' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(executable, { FileName: 'setup.exe' }), false);
+const multipleAttachments = rule('multipleAttachmentsSpecificDestination');
+const tenFiles = Array.from({ length: 10 }, (_, index) => `document-${index}.pdf`).join(';');
+assert.equal(context.RiskDetectors.matchesBuiltIn(multipleAttachments, { FileName: tenFiles, Destination: 'person@gmail.com' }), true);
+assert.equal(context.RiskDetectors.matchesBuiltIn(multipleAttachments, { FileName: tenFiles, Destination: 'person@company.test' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(multipleAttachments, { FileName: `${tenFiles};image.png`, Destination: 'person@yahoo.co.id' }), true);
+multipleAttachments.settings.minimumAttachments = 11;
+multipleAttachments.settings.domains = 'company.test';
+assert.equal(context.RiskDetectors.matchesBuiltIn(multipleAttachments, { FileName: tenFiles, Destination: 'person@company.test' }), false);
+assert.equal(context.RiskDetectors.matchesBuiltIn(multipleAttachments, { FileName: `${tenFiles};extra.pdf`, Destination: 'person@company.test' }), true);
 const sensitive = rule('sensitiveKeywords');
 sensitive.settings.detectSubject = false;
 assert.equal(context.RiskDetectors.matchesBuiltIn(sensitive, { Details: 'Confidential payroll', FileName: 'agenda.pdf' }), false);

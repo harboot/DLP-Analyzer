@@ -29,8 +29,9 @@
     name: 'Email Subject or Filename Obfuscation',
     description: 'Matches leetspeak and punctuation-obfuscated sensitive terms in email subjects or attachment filenames.',
     weight: 7,
-    settings: {},
-    match(row) {
+    settings: { patterns: CUES.join(', ') },
+    settingFields: [{ key: 'patterns', label: 'Obfuscation pattern list', type: 'textarea' }],
+    match(row, settings) {
       const sizeRaw = String(row.Size || '');
       const sizeMatch = sizeRaw.match(/\d+(?:\.\d+)?(?:E\+?\d+)?/);
       if (!sizeMatch || !Number.isFinite(Number(sizeMatch[0]))) return false;
@@ -38,7 +39,8 @@
       const subject = String(row.Details || '').toLowerCase();
       const fileName = String(row.FileName || '').toLowerCase();
       const text = `${subject} ${fileName}`.normalize('NFKC');
-      if (CUES.some(cue => text.includes(cue))) return true;
+      const cues = String(settings.patterns ?? CUES.join(', ')).split(/[\n,;]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+      if (cues.some(cue => text.includes(cue))) return true;
       return OBFUSCATED_TERMS.some(pattern => {
         const match = pattern.exec(text);
         return !!match && /[@$013458]|[\W_]/.test(match[0]);
