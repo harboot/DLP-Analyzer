@@ -934,28 +934,26 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   td[title],th[title],a[title]{cursor:help}
 
   /* Column widths using % so you can adjust later */
-  /* Main rules table: 10 columns (Policy Level remains data-only for sorting) */
-  table.rules-cols th:nth-child(1), table.rules-cols td:nth-child(1) { width: 3% }   /* Copy icon */
+  /* Main rules table: 9 columns (Policy Level remains data-only for sorting) */
+  table.rules-cols th:nth-child(1), table.rules-cols td:nth-child(1) { width: 6% }   /* Actions */
   table.rules-cols th:nth-child(2), table.rules-cols td:nth-child(2) { width: 10% }  /* Policy Name */
   table.rules-cols th:nth-child(3), table.rules-cols td:nth-child(3) { width: 17% }  /* Rule Name */
   table.rules-cols th:nth-child(4), table.rules-cols td:nth-child(4) { width: 12% }  /* Classifiers */
   table.rules-cols th:nth-child(5), table.rules-cols td:nth-child(5) { width: 8% }   /* Severity */
   table.rules-cols th:nth-child(6), table.rules-cols td:nth-child(6) { width: 10% }  /* Action */
   table.rules-cols th:nth-child(7), table.rules-cols td:nth-child(7) { width: 10% }  /* Source */
-  table.rules-cols th:nth-child(8), table.rules-cols td:nth-child(8) { width: 10% }  /* Destination */
-  table.rules-cols th:nth-child(9), table.rules-cols td:nth-child(9) { width: 10% }  /* Channel */
-  table.rules-cols th:nth-child(10),table.rules-cols td:nth-child(10){ width: 10% }  /* Exception */
+  table.rules-cols th:nth-child(8), table.rules-cols td:nth-child(8) { width: 17% }  /* Channel */
+  table.rules-cols th:nth-child(9),table.rules-cols td:nth-child(9){ width: 10% }  /* Exception */
 
-  /* Exception detail table (9 columns) */
-  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 3% }  /* Copy */
+  /* Exception detail table (8 columns) */
+  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 6% }  /* Actions */
   table.exc-cols th:nth-child(2), table.exc-cols td:nth-child(2) { width: 20% } /* Exception Name */
   table.exc-cols th:nth-child(3), table.exc-cols td:nth-child(3) { width: 10% } /* Override */
   table.exc-cols th:nth-child(4), table.exc-cols td:nth-child(4) { width: 14% } /* Classifiers */
-  table.exc-cols th:nth-child(5), table.exc-cols td:nth-child(5) { width: 11% } /* Source */
-  table.exc-cols th:nth-child(6), table.exc-cols td:nth-child(6) { width: 11% } /* Destination */
-  table.exc-cols th:nth-child(7), table.exc-cols td:nth-child(7) { width: 11% } /* Channel */
-  table.exc-cols th:nth-child(8), table.exc-cols td:nth-child(8) { width: 9% }  /* Severity */
-  table.exc-cols th:nth-child(9), table.exc-cols td:nth-child(9) { width: 11% } /* Action */
+  table.exc-cols th:nth-child(5), table.exc-cols td:nth-child(5) { width: 10% } /* Source */
+  table.exc-cols th:nth-child(6), table.exc-cols td:nth-child(6) { width: 20% } /* Channel */
+  table.exc-cols th:nth-child(7), table.exc-cols td:nth-child(7) { width: 9% }  /* Severity */
+  table.exc-cols th:nth-child(8), table.exc-cols td:nth-child(8) { width: 11% } /* Action */
 
   /* Pills & accents */
   .soft{color:var(--color-text-soft)}
@@ -1013,6 +1011,19 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   /* Copy icon button */
   .icon-copy{all:unset;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:var(--radius-control);border:1px solid var(--color-border-interactive)}
   .icon-copy:hover{background:var(--color-surface-active)}
+  .copy-column{white-space:nowrap}
+  .icon-json{all:unset;cursor:pointer;margin-left:4px;padding:1px 3px;border-radius:var(--radius-control);border:1px solid var(--color-border-interactive);font-size:9px;font-weight:700;line-height:16px;vertical-align:top}
+  .icon-json:hover{background:var(--color-surface-active)}
+  .json-viewer{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  .json-viewer .copy-preview-header{font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+  .json-tree{padding:var(--space-3);white-space:pre-wrap;overflow-wrap:anywhere}
+  .json-tree-branch>summary{cursor:pointer;color:var(--color-text-info)}
+  .json-tree-children{margin-left:18px;border-left:1px solid var(--color-border);padding-left:10px}
+  .json-tree-line{min-height:1.5em}
+  .json-tree-key{color:var(--color-text-info)}
+  .json-tree-string{color:var(--color-success)}
+  .json-tree-number,.json-tree-boolean{color:var(--color-warning)}
+  .json-tree-null{color:var(--color-text-muted)}
 }
 
 /* ==========================================================================
