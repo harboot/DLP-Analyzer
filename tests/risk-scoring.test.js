@@ -6,20 +6,36 @@ const context = {};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('docs/js/risk-scoring.js', 'utf8'), context);
 vm.runInContext(fs.readFileSync('docs/js/detectors/index.js', 'utf8'), context);
-for (const detectorFile of [
-  'email-sent-to-self.js', 'email-sent-to-self-by-character.js', 'email-broadcast-domains.js',
-  'short-subject.js', 'out-of-hours.js', 'attachment-no-extension.js', 'sensitive-keywords.js',
-  'weird-tld.js', 'destination-competitor.js', 'destination-domain-once.js',
-  'destination-email-subdomain.js', 'ransomware-attachment.js',
-  'email-subject-filename-obfuscation.js', 'filename-is-executable.js',
-  'multiple-attachments-specific-destination.js'
-]) vm.runInContext(fs.readFileSync(`docs/js/detectors/${detectorFile}`, 'utf8'), context);
+const detectorFiles = fs.readdirSync('docs/js/detectors')
+  .filter(file => file.endsWith('.js') && file !== 'index.js')
+  .sort();
+assert.deepEqual(Array.from(context.RiskDetectors.files).sort(), detectorFiles);
+for (const detectorFile of context.RiskDetectors.files) {
+  vm.runInContext(fs.readFileSync(`docs/js/detectors/${detectorFile}`, 'utf8'), context);
+}
+
+const writtenScripts = [];
+const loaderContext = {
+  document: {
+    currentScript: { src: 'file:///tmp/DLP Analyzer/docs/js/detectors/index.js' },
+    write(markup) { writtenScripts.push(markup); }
+  },
+  console: { error() {} }
+};
+vm.createContext(loaderContext);
+vm.runInContext(fs.readFileSync('docs/js/detectors/index.js', 'utf8'), loaderContext);
+assert.equal(writtenScripts.length, detectorFiles.length);
+assert.match(writtenScripts[0], /^<script src="file:\/\/\/tmp\/DLP Analyzer\/docs\/js\/detectors\/email-sent-to-self\.js"/);
+assert.match(writtenScripts[0], /onerror="RiskDetectors\.reportLoadError\('email-sent-to-self\.js'\)"/);
+loaderContext.RiskDetectors.reportLoadError('broken.js');
+assert.deepEqual(Array.from(loaderContext.RiskDetectors.loadErrors), ['broken.js']);
 
 const { exportRuleConfigs, normalizeWeight, scoreAlerts } = context.RiskScoring;
 
 const riskScoringPage = fs.readFileSync('docs/CardManager.html', 'utf8');
 const riskScoringStyles = fs.readFileSync('docs/styles.css', 'utf8');
 assert.match(riskScoringPage, /Built-in detectors/);
+assert.equal((riskScoringPage.match(/js\/detectors\//g) || []).length, 1);
 assert.match(riskScoringPage, /Custom detectors/);
 assert.match(riskScoringPage, /aria-expanded="\$\{!builtInCollapsed\}"/);
 assert.doesNotMatch(riskScoringPage, /data-column="(?:name|weight|matches)"/);

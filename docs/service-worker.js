@@ -1,7 +1,9 @@
 'use strict';
 
+importScripts('./js/detectors/index.js');
+
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v76';
+const CACHE_VERSION = 'dlp-analyzer-v77';
 const CACHE_CONCURRENCY = 6;
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
@@ -28,21 +30,6 @@ const APPLICATION_FILES = [
   './js/csv.js',
   './js/dlp-utils.js',
   './js/detectors/index.js',
-  './js/detectors/email-sent-to-self.js',
-  './js/detectors/email-sent-to-self-by-character.js',
-  './js/detectors/email-broadcast-domains.js',
-  './js/detectors/short-subject.js',
-  './js/detectors/out-of-hours.js',
-  './js/detectors/attachment-no-extension.js',
-  './js/detectors/sensitive-keywords.js',
-  './js/detectors/weird-tld.js',
-  './js/detectors/destination-competitor.js',
-  './js/detectors/destination-domain-once.js',
-  './js/detectors/destination-email-subdomain.js',
-  './js/detectors/ransomware-attachment.js',
-  './js/detectors/email-subject-filename-obfuscation.js',
-  './js/detectors/filename-is-executable.js',
-  './js/detectors/multiple-attachments-specific-destination.js',
   './js/doc-viewer.js',
   './js/policy-tuning-ui.js',
   './js/policy-tuning.js',
@@ -69,7 +56,8 @@ const APPLICATION_FILES = [
   './worker/AlertAnalyzer.worker.js',
   './worker/DataIngest.worker.js',
   './worker/PolicyTuning.worker.js',
-  './worker/RuleIdentifier.worker.js'
+  './worker/RuleIdentifier.worker.js',
+  ...RiskDetectors.files.map(file => `./js/detectors/${file}`)
 ];
 
 async function notifyClients(message) {

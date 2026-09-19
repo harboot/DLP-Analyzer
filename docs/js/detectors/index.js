@@ -1,8 +1,28 @@
 (function (root) {
   'use strict';
 
+  // Keep this as the single manifest of built-in detector files. The browser,
+  // service worker, and tests all consume this list.
+  const files = Object.freeze([
+    'email-sent-to-self.js',
+    'email-sent-to-self-by-character.js',
+    'email-broadcast-domains.js',
+    'short-subject.js',
+    'out-of-hours.js',
+    'attachment-no-extension.js',
+    'sensitive-keywords.js',
+    'weird-tld.js',
+    'destination-competitor.js',
+    'destination-domain-once.js',
+    'destination-email-subdomain.js',
+    'ransomware-attachment.js',
+    'email-subject-filename-obfuscation.js',
+    'filename-is-executable.js',
+    'multiple-attachments-specific-destination.js'
+  ]);
   const detectors = [];
   const byKey = new Map();
+  const loadErrors = [];
 
   function register(detector) {
     if (!detector || !detector.id || !detector.key || typeof detector.match !== 'function') {
@@ -44,5 +64,24 @@
     return detector ? !!detector.match(row || {}, rule.settings || {}, rows) : false;
   }
 
-  root.RiskDetectors = { register, builtInRules, migrateRules, matchesBuiltIn };
+  function reportLoadError(file) {
+    loadErrors.push(file);
+    if (root.console && typeof root.console.error === 'function') {
+      root.console.error(`Unable to load built-in detector: ${file}`);
+    }
+  }
+
+  root.RiskDetectors = { files, loadErrors, register, builtInRules, migrateRules, matchesBuiltIn, reportLoadError };
+
+  // Parser-inserted scripts remain blocking, so every detector is registered
+  // before the page's Risk Scoring code runs. This also works for file:// URLs.
+  const document = root.document;
+  const loaderScript = document && document.currentScript;
+  if (loaderScript) {
+    const baseUrl = loaderScript.src.slice(0, loaderScript.src.lastIndexOf('/') + 1);
+    files.forEach(file => {
+      const source = `${baseUrl}${file}`.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      document.write(`<script src="${source}" onerror="RiskDetectors.reportLoadError('${file}')"><\/script>`);
+    });
+  }
 })(typeof globalThis === 'undefined' ? window : globalThis);
