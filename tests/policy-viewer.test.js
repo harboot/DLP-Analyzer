@@ -102,6 +102,22 @@ test('relations remain in classifier tooltips and copied information', () => {
   assert.match(page, /copyCellsAsRichText\(getExceptionRowCells/);
 });
 
+test('rule and exception action columns reserve room for Copy and JSON controls', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'docs', 'styles.css'), 'utf8');
+  assert.match(styles, /rules-cols[^\n]+nth-child\(1\)[^\n]+width:\s*84px;\s*min-width:84px/);
+  assert.match(styles, /exc-cols[^\n]+nth-child\(1\)[^\n]+width:\s*84px;\s*min-width:84px/);
+  assert.match(styles, /\.copy-column\{white-space:nowrap;overflow:visible;text-overflow:clip\}/);
+});
+
+test('global tooltip is viewport-safe and preserves grouped channel lines', () => {
+  const offline = fs.readFileSync(path.join(__dirname, '..', 'docs', 'offline.js'), 'utf8');
+  const components = fs.readFileSync(path.join(__dirname, '..', 'docs', 'components.css'), 'utf8');
+  assert.match(offline, /text\.replace\(\/; \(\?=\(\?:Any\|Has Resources\|Has Exclude\):\)\/g, '\\n'\)/);
+  assert.match(offline, /window\.innerWidth/);
+  assert.match(offline, /window\.innerHeight/);
+  assert.match(components, /\.dlp-tooltip[\s\S]+white-space:pre-wrap/);
+});
+
 test('policy level remains hidden data used by the ascending default sort', () => {
   assert.match(page, /const policyLevel = Number\(policy\.policy_level\?\.level \?\? 0\)/);
   assert.match(page, /if\(a\.policyLevel !== b\.policyLevel\) return a\.policyLevel - b\.policyLevel/);

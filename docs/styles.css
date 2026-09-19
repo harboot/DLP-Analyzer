@@ -935,7 +935,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 
   /* Column widths using % so you can adjust later */
   /* Main rules table: 9 columns (Policy Level remains data-only for sorting) */
-  table.rules-cols th:nth-child(1), table.rules-cols td:nth-child(1) { width: 6% }   /* Actions */
+  table.rules-cols th:nth-child(1), table.rules-cols td:nth-child(1) { width: 84px; min-width:84px } /* Actions */
   table.rules-cols th:nth-child(2), table.rules-cols td:nth-child(2) { width: 10% }  /* Policy Name */
   table.rules-cols th:nth-child(3), table.rules-cols td:nth-child(3) { width: 17% }  /* Rule Name */
   table.rules-cols th:nth-child(4), table.rules-cols td:nth-child(4) { width: 12% }  /* Classifiers */
@@ -946,7 +946,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   table.rules-cols th:nth-child(9),table.rules-cols td:nth-child(9){ width: 10% }  /* Exception */
 
   /* Exception detail table (8 columns) */
-  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 6% }  /* Actions */
+  table.exc-cols th:nth-child(1), table.exc-cols td:nth-child(1) { width: 84px; min-width:84px } /* Actions */
   table.exc-cols th:nth-child(2), table.exc-cols td:nth-child(2) { width: 20% } /* Exception Name */
   table.exc-cols th:nth-child(3), table.exc-cols td:nth-child(3) { width: 10% } /* Override */
   table.exc-cols th:nth-child(4), table.exc-cols td:nth-child(4) { width: 14% } /* Classifiers */
@@ -1011,7 +1011,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   /* Copy icon button */
   .icon-copy{all:unset;cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:var(--radius-control);border:1px solid var(--color-border-interactive)}
   .icon-copy:hover{background:var(--color-surface-active)}
-  .copy-column{white-space:nowrap}
+  .copy-column{white-space:nowrap;overflow:visible;text-overflow:clip}
   .icon-json{all:unset;cursor:pointer;margin-left:4px;padding:1px 3px;border-radius:var(--radius-control);border:1px solid var(--color-border-interactive);font-size:9px;font-weight:700;line-height:16px;vertical-align:top}
   .icon-json:hover{background:var(--color-surface-active)}
   .json-viewer{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
