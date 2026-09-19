@@ -75,7 +75,8 @@ test('destination is removed while channel remains filterable and exportable', (
   assert.doesNotMatch(page, /data-col="destination"/);
   assert.doesNotMatch(page, /<th[^>]*>Destination(?: Resources)?<\/th>/);
   assert.doesNotMatch(page, /\['Destination(?: Resources)?'/);
-  assert.match(page, /data-col="channel"[^>]*title="Filter Channel"/);
+  assert.match(page, /Destination \(Channel\) <span class="filter-ico" data-col="channel"[^>]*title="Filter Destination \(Channel\)"/);
+  assert.match(page, /<th title="Enabled destination channels for this exception">Destination \(Channel\)<\/th>/);
   assert.match(page, /\['Channel', row\.channel \?\? ''\]/);
   assert.match(page, /\['Channel', values\.chTxt\]/);
 });
