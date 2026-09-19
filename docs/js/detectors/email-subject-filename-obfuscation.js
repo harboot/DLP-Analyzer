@@ -29,19 +29,19 @@
     name: 'Email Subject or Filename Obfuscation',
     description: 'Matches leetspeak and punctuation-obfuscated sensitive terms in email subjects or attachment filenames.',
     weight: 7,
-    settings: { patterns: CUES.join(', ') },
-    settingFields: [{ key: 'patterns', label: 'Obfuscation pattern list', type: 'textarea' }],
+    settings: { patterns: CUES.join(', '), detectSubject: true, detectFileName: true, useBuiltInPatterns: true },
+    settingFields: [{ key: 'patterns', label: 'Obfuscation pattern list', type: 'textarea' }, { key: 'detectSubject', label: 'Detect in email subject', type: 'checkbox' }, { key: 'detectFileName', label: 'Detect in attachment filename', type: 'checkbox' }, { key: 'useBuiltInPatterns', label: 'Use built-in obfuscation patterns', type: 'checkbox' }],
     match(row, settings) {
       const sizeRaw = String(row.Size || '');
       const sizeMatch = sizeRaw.match(/\d+(?:\.\d+)?(?:E\+?\d+)?/);
       if (!sizeMatch || !Number.isFinite(Number(sizeMatch[0]))) return false;
 
-      const subject = String(row.Details || '').toLowerCase();
-      const fileName = String(row.FileName || '').toLowerCase();
+      const subject = settings.detectSubject !== false ? String(row.Details || '').toLowerCase() : '';
+      const fileName = settings.detectFileName !== false ? String(row.FileName || '').toLowerCase() : '';
       const text = `${subject} ${fileName}`.normalize('NFKC');
       const cues = String(settings.patterns ?? CUES.join(', ')).split(/[\n,;]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
       if (cues.some(cue => text.includes(cue))) return true;
-      return OBFUSCATED_TERMS.some(pattern => {
+      return settings.useBuiltInPatterns !== false && OBFUSCATED_TERMS.some(pattern => {
         const match = pattern.exec(text);
         return !!match && /[@$013458]|[\W_]/.test(match[0]);
       });

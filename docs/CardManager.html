@@ -614,7 +614,7 @@ function renderBuiltInSettings(file) {
     const label = document.createElement('label');
     label.className = field.type === 'textarea' ? 'setting-wide' : '';
     label.innerHTML = `<span class="muted-sm">${field.label}</span>`;
-    const input = document.createElement(field.type === 'textarea' ? 'textarea' : field.type === 'time' ? 'select' : 'input');
+    const input = document.createElement(field.type === 'textarea' ? 'textarea' : (field.type === 'time' || field.type === 'select') ? 'select' : 'input');
     input.className = field.type === 'checkbox' ? 'setting-checkbox' : 'textinput';
     if (field.type === 'time') {
       for (let hour = 0; hour < 24; hour++) {
@@ -624,6 +624,13 @@ function renderBuiltInSettings(file) {
         option.textContent = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }).format(new Date(Date.UTC(2020, 0, 1, hour)));
         input.appendChild(option);
       }
+    } else if (field.type === 'select') {
+      (field.options || []).forEach(item => {
+        const option = document.createElement('option');
+        option.value = typeof item === 'object' ? item.value : item;
+        option.textContent = typeof item === 'object' ? item.label : item;
+        input.appendChild(option);
+      });
     } else if (field.type !== 'textarea') input.type = field.type;
     if (field.type === 'textarea') input.rows = 5;
     if (field.min !== undefined) input.min = field.min;

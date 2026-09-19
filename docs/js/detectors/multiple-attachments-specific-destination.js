@@ -18,14 +18,19 @@
     name: 'Multiple Attachment specific Destination',
     description: 'Matches alerts with at least the configured number of attachments sent to a monitored destination domain. Outlook artifacts, image.png, and _payroll filenames are ignored.',
     weight: 7,
-    settings: { minimumAttachments: 10, domains: DEFAULT_DOMAINS },
+    settings: { minimumAttachments: 10, domains: DEFAULT_DOMAINS, ignoredAttachments: IGNORED_ATTACHMENTS.join(', '), countUniqueFiles: false },
     settingFields: [
       { key: 'minimumAttachments', label: 'Minimum number of attachments', type: 'number', min: 1, max: 1000 },
-      { key: 'domains', label: 'Monitored destination domain list', type: 'textarea' }
+      { key: 'domains', label: 'Monitored destination domain list', type: 'textarea' },
+      { key: 'ignoredAttachments', label: 'Ignored attachment list', type: 'textarea' },
+      { key: 'countUniqueFiles', label: 'Count unique filenames only', type: 'checkbox' }
     ],
     match(row, settings) {
       const minimum = Math.max(1, Math.floor(Number(settings.minimumAttachments) || 10));
-      const attachmentCount = String(row.FileName || '').split(';').map(value => value.trim()).filter(value => value && !IGNORED_ATTACHMENTS.some(ignored => value.toLowerCase().includes(ignored))).length;
+      const ignored = String(settings.ignoredAttachments ?? IGNORED_ATTACHMENTS.join(', ')).split(/[\n,;|]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+      let attachments = String(row.FileName || '').split(';').map(value => value.trim()).filter(value => value && !ignored.some(item => value.toLowerCase().includes(item)));
+      if (settings.countUniqueFiles === true) attachments = [...new Set(attachments.map(value => value.toLowerCase()))];
+      const attachmentCount = attachments.length;
       if (attachmentCount < minimum) return false;
       const patterns = String(settings.domains ?? DEFAULT_DOMAINS).split(/[\n,;\s]+/).map(value => value.trim()).filter(Boolean);
       if (!patterns.length) return false;
