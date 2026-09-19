@@ -9,6 +9,10 @@ const workerSource = fs.readFileSync(path.join(root, 'service-worker.js'), 'utf8
 
 test('the offline cache lists every application file', () => {
   const listed = new Set([...workerSource.matchAll(/'\.\/([^']+)'/g)].map(match => match[1]));
+  const manifestContext = {};
+  vm.createContext(manifestContext);
+  vm.runInContext(fs.readFileSync(path.join(root, 'js/detectors/index.js'), 'utf8'), manifestContext);
+  manifestContext.RiskDetectors.files.forEach(file => listed.add(`js/detectors/${file}`));
   const files = [];
   function visit(directory) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
