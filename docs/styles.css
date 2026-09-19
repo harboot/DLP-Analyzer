@@ -932,6 +932,10 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   tbody tr:hover{background:var(--color-surface-inset)}
   td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   td[title],th[title],a[title]{cursor:help}
+  #rulesBody>tr.policy-group-start>td{
+    border-top:3px solid var(--color-border-strong);
+    padding-top:var(--space-3);
+  }
 
   /* Column widths using % so you can adjust later */
   /* Main rules table: 9 columns (Policy Level remains data-only for sorting) */

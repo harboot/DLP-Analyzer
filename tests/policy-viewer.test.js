@@ -124,3 +124,13 @@ test('policy level remains hidden data used by the ascending default sort', () =
   assert.match(page, /if\(a\.policyLevel !== b\.policyLevel\) return a\.policyLevel - b\.policyLevel/);
   assert.doesNotMatch(page, /<th[^>]*>Policy Level(?:\s|<)/);
 });
+
+test('visible policy groups receive separators without adding table rows', () => {
+  const styles = fs.readFileSync(path.join(__dirname, '..', 'docs', 'styles.css'), 'utf8');
+  assert.match(page, /let previousShownPolicyName;/);
+  assert.match(page, /if\(shown > 1 && row\.policyName !== previousShownPolicyName\)/);
+  assert.match(page, /tr\.classList\.add\('policy-group-start'\)/);
+  assert.match(page, /previousShownPolicyName = row\.policyName/);
+  assert.doesNotMatch(page, /createElement\('tr'\)[\s\S]{0,120}policy-group-header/);
+  assert.match(styles, /#rulesBody>tr\.policy-group-start>td\{[\s\S]*border-top:3px solid var\(--color-border-strong\);[\s\S]*padding-top:var\(--space-3\)/);
+});

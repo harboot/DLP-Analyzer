@@ -422,6 +422,7 @@
   function render(){
     rulesBody.innerHTML = '';
     let shown = 0;
+    let previousShownPolicyName;
     const frag = document.createDocumentFragment();
 
     const policySet = new Set(flatRows.map(r=>r.policyName));
@@ -433,6 +434,10 @@
 
       const tr = document.createElement('tr');
       tr.dataset.rowid = `r${idx}`;
+      if(shown > 1 && row.policyName !== previousShownPolicyName){
+        tr.classList.add('policy-group-start');
+      }
+      previousShownPolicyName = row.policyName;
 
       // (1) Copy icon column
       const tdCopy = document.createElement('td');
