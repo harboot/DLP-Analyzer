@@ -27,4 +27,11 @@ assert.deepEqual(JSON.parse(JSON.stringify(hits.detail)), {value: 'salary', coun
 const filtered = context.computeMostHitsForTest(rows.slice(2));
 assert.equal(filtered.domain.value, 'example.com', 'the result must be computed from only the supplied filtered rows');
 assert.equal(filtered.filename.count, 1, 'ALPO must not count as the whole token PO');
+
+const minimumLength = context.computeMostHitsForTest([
+  {Details: 're quarterly'},
+  {Details: 're quarterly'},
+  {Details: 're review'}
+]);
+assert.equal(minimumLength.detail.value, 'quarterly', 'two-character Detail words must be excluded from Most Hits');
 console.log('Most Hits tests passed.');

@@ -57,11 +57,23 @@ function initializeIgnoredValuesSettings() {
   const sourceInput = document.getElementById('ignoredSources');
   const destinationInput = document.getElementById('ignoredDestinations');
   const filenameInput = document.getElementById('ignoredFilenames');
+  const sourceEnabled = document.getElementById('ignoredSourcesEnabled');
+  const destinationEnabled = document.getElementById('ignoredDestinationsEnabled');
+  const filenameEnabled = document.getElementById('ignoredFilenamesEnabled');
+  const enabledControls = [
+    [sourceEnabled, sourceInput, 'sourcesEnabled'],
+    [destinationEnabled, destinationInput, 'destinationsEnabled'],
+    [filenameEnabled, filenameInput, 'filenamesEnabled']
+  ];
+  const syncEnabledControls = () => enabledControls.forEach(([checkbox, input]) => { input.disabled = !checkbox.checked; });
+  enabledControls.forEach(([checkbox]) => checkbox.addEventListener('change', syncEnabledControls));
   const close = () => { dialog.hidden = true; };
   document.getElementById('settingsBtn').addEventListener('click', () => {
     sourceInput.value = ignoredValues.sources.join('\n');
     destinationInput.value = ignoredValues.destinations.join('\n');
     filenameInput.value = (ignoredValues.filenames || []).join('\n');
+    enabledControls.forEach(([checkbox, , key]) => { checkbox.checked = ignoredValues[key] !== false; });
+    syncEnabledControls();
     dialog.hidden = false;
     sourceInput.focus();
   });
@@ -73,7 +85,10 @@ function initializeIgnoredValuesSettings() {
     ignoredValues = {
       sources: parseIgnoredValues(sourceInput.value),
       destinations: parseIgnoredValues(destinationInput.value),
-      filenames: parseIgnoredValues(filenameInput.value)
+      filenames: parseIgnoredValues(filenameInput.value),
+      sourcesEnabled: sourceEnabled.checked,
+      destinationsEnabled: destinationEnabled.checked,
+      filenamesEnabled: filenameEnabled.checked
     };
     try { localStorage.setItem(IGNORED_VALUES_KEY, JSON.stringify(ignoredValues)); } catch (_) {}
     state.tabs = state.tabs.filter(tab => !tab.closable);

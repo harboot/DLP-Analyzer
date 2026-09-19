@@ -838,8 +838,8 @@ function applyIgnoredValues(rows) {
   try { saved = JSON.parse(localStorage.getItem('dlpAnalyzerIgnoredValues') || '{}'); } catch (_) {}
   const sources = Array.isArray(saved.sources) ? saved.sources : String(saved.sources || '').split(/[,\n]+/);
   const destinations = Array.isArray(saved.destinations) ? saved.destinations : String(saved.destinations || '').split(/[,\n]+/);
-  const sourcePatterns = sources.map(value => String(value).trim().toLowerCase()).filter(Boolean);
-  const destinationPatterns = destinations.map(value => String(value).trim().toLowerCase()).filter(Boolean);
+  const sourcePatterns = saved.sourcesEnabled === false ? [] : sources.map(value => String(value).trim().toLowerCase()).filter(Boolean);
+  const destinationPatterns = saved.destinationsEnabled === false ? [] : destinations.map(value => String(value).trim().toLowerCase()).filter(Boolean);
   return rows.filter(row => {
     const source = String(row.Source || '').trim().toLowerCase();
     const destinationValues = String(row.Destination || '').split(/[;,\n]+/).map(value => value.trim().toLowerCase()).filter(Boolean);

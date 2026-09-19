@@ -64,9 +64,12 @@ const ICON_COL = '__Copy';
       return {
         sources: parseIgnoredValues(saved.sources),
         destinations: parseIgnoredValues(saved.destinations),
-        filenames: parseIgnoredValues(saved.filenames)
+        filenames: parseIgnoredValues(saved.filenames),
+        sourcesEnabled: saved.sourcesEnabled !== false,
+        destinationsEnabled: saved.destinationsEnabled !== false,
+        filenamesEnabled: saved.filenamesEnabled !== false
       };
-    } catch (_) { return { sources: [], destinations: [], filenames: [] }; }
+    } catch (_) { return { sources: [], destinations: [], filenames: [], sourcesEnabled: true, destinationsEnabled: true, filenamesEnabled: true }; }
   }
 
   function isIgnoredAlert(row) {
@@ -75,9 +78,9 @@ const ICON_COL = '__Copy';
     const filenames = (Array.isArray(row.fileTokens) ? row.fileTokens : smartSplit(row['File Name']))
       .map(value => stripSizeSuffix(value).trim().toLowerCase())
       .filter(Boolean);
-    return ignoredValues.sources.some(pattern => matchesIgnoredValue(source, pattern))
-      || destinations.some(value => ignoredValues.destinations.some(pattern => matchesIgnoredValue(value, pattern)))
-      || filenames.some(value => (ignoredValues.filenames || []).some(pattern => matchesIgnoredValue(value, pattern)));
+    return (ignoredValues.sourcesEnabled !== false && ignoredValues.sources.some(pattern => matchesIgnoredValue(source, pattern)))
+      || (ignoredValues.destinationsEnabled !== false && destinations.some(value => ignoredValues.destinations.some(pattern => matchesIgnoredValue(value, pattern))))
+      || (ignoredValues.filenamesEnabled !== false && filenames.some(value => (ignoredValues.filenames || []).some(pattern => matchesIgnoredValue(value, pattern))));
   }
 
   function getVolumeSeries(rows) {
@@ -330,7 +333,7 @@ const ICON_COL = '__Copy';
       for (let start = 0; start < words.length; start++) {
         for (let length = 1; length <= 3 && start + length <= words.length; length++) {
           const phraseWords = words.slice(start, start + length);
-          if (phraseWords.some(word => DETAIL_STOP_WORDS.has(word) || /^\d+$/.test(word))) continue;
+          if (phraseWords.some(word => Array.from(word).length < 3 || DETAIL_STOP_WORDS.has(word) || /^\d+$/.test(word))) continue;
           phrases.push(phraseWords.join(' '));
         }
       }
