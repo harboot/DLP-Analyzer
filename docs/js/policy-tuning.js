@@ -92,6 +92,62 @@
     return burstIds;
   }
 
+  const findingGroupFields = type => {
+    const normalizedType = normalized(type);
+    if (normalizedType === 'duplicate/repeated alert bursts' || normalizedType === 'repeated alert signature') return ['source', 'destination', 'filename'];
+    if (normalizedType === 'destination concentration') return ['destination'];
+    if (normalizedType === 'source concentration') return ['source'];
+    if (normalizedType === 'source + destination concentration' || normalizedType === 'internal destination pattern') return ['source', 'destination'];
+    if (normalizedType === 'repeated filename/document template') return ['filename'];
+    if (normalizedType === 'trigger concentration') return ['trigger'];
+    return ['source', 'destination', 'filename'];
+  };
+
+  const groupField = (row, field) => {
+    if (field === 'source') return { label: 'Source', key: row.__source, value: row.__sourceRaw || row.__source };
+    if (field === 'destination') return { label: 'Destination', key: row.__destination, value: row.__destination };
+    if (field === 'filename') {
+      const value = templateName(row.__fileName);
+      return { label: 'Filename template', key: value, value };
+    }
+    return { label: 'Trigger', key: row.__trigger, value: row.__trigger };
+  };
+
+  function countBursts(rows) {
+    const burstIds = findBurstIds(rows);
+    const times = rows.filter(row => burstIds.has(row.__advisorId)).map(row => row.__time).filter(Boolean).sort((a, b) => a - b);
+    if (!times.length) return 0;
+    let bursts = 0;
+    let start = 0;
+    for (let index = 1; index <= times.length; index++) {
+      if (index < times.length && times[index] - times[index - 1] <= 10 * 60 * 1000) continue;
+      if (index - start >= 3) bursts++;
+      start = index;
+    }
+    return bursts;
+  }
+
+  function groupContributingAlerts(type, rows) {
+    const fields = findingGroupFields(type);
+    const groups = new Map();
+    rows.forEach(row => {
+      const pattern = fields.map(field => groupField(row, field));
+      const key = JSON.stringify(pattern.map(item => item.key));
+      if (!groups.has(key)) groups.set(key, { pattern, alerts: [] });
+      groups.get(key).alerts.push(row);
+    });
+    const includeBursts = normalized(type) === 'duplicate/repeated alert bursts';
+    return [...groups.values()].map(group => ({
+      ...group,
+      counts: {
+        sources: new Set(group.alerts.map(row => row.__source).filter(Boolean)).size,
+        destinations: new Set(group.alerts.map(row => row.__destination).filter(Boolean)).size,
+        filenamePatterns: new Set(group.alerts.map(row => templateName(row.__fileName)).filter(Boolean)).size,
+        bursts: includeBursts ? countBursts(group.alerts) : 0
+      }
+    })).sort((left, right) => right.alerts.length - left.alerts.length || JSON.stringify(left.pattern).localeCompare(JSON.stringify(right.pattern)));
+  }
+
   function analyzePolicy(name, rows) {
     const total = rows.length;
     const findings = [];
@@ -209,5 +265,5 @@
     return { alerts: rows, policies: policyResults.sort((a, b) => b.score - a.score || b.alertCount - a.alertCount) };
   }
 
-  global.PolicyTuning = Object.freeze({ analyze, analyzeAsync, findBurstIds, normalized, templateName, genericName });
+  global.PolicyTuning = Object.freeze({ analyze, analyzeAsync, findBurstIds, groupContributingAlerts, normalized, templateName, genericName });
 })(typeof window === 'undefined' ? globalThis : window);

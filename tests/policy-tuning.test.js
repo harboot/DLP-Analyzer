@@ -7,7 +7,7 @@ const test = require('node:test');
 const source = fs.readFileSync(path.join(__dirname, '..', 'docs', 'js', 'policy-tuning.js'), 'utf8');
 const context = {};
 vm.runInNewContext(source, context);
-const { analyze, findBurstIds, normalized, templateName, genericName } = context.PolicyTuning;
+const { analyze, findBurstIds, groupContributingAlerts, normalized, templateName, genericName } = context.PolicyTuning;
 
 const row = (id, overrides = {}) => ({
   ID: String(id), Policies: 'Customer PII', Source: 'alex@corp.example', Destination: 'crm.example.com',
@@ -51,6 +51,40 @@ test('burst rule requires three matching signatures in ten minutes', () => {
   const opportunity = analyze(rows).policies[0].opportunities[0];
   assert.ok(opportunity.signals.some(item => item.type === 'Duplicate/repeated alert bursts'));
   assert.equal(opportunity.alertIds.length, 3);
+});
+
+test('contributing alerts are grouped using the dimensions for each finding type', () => {
+  const report = analyze([
+    row(1, { Source: 'alex@corp.example', Destination: 'one.example', 'File Name': 'Report_100.pdf' }),
+    row(2, { Source: 'alex@corp.example', Destination: 'one.example', 'File Name': 'Report_200.pdf' }),
+    row(3, { Source: 'blair@corp.example', Destination: 'one.example', 'File Name': 'Other_300.pdf' }),
+    row(4, { Source: 'blair@corp.example', Destination: 'two.example', 'File Name': 'Other_400.pdf' })
+  ]);
+  const rows = report.alerts;
+  const signatureGroups = groupContributingAlerts('Repeated alert signature', rows);
+  assert.equal(signatureGroups.length, 3);
+  assert.equal(signatureGroups[0].alerts.length, 2);
+  assert.deepEqual(Array.from(signatureGroups[0].pattern, part => part.label), ['Source', 'Destination', 'Filename template']);
+  assert.equal(signatureGroups[0].pattern[2].value, 'report #.pdf');
+
+  const destinationGroups = groupContributingAlerts('Destination concentration', rows);
+  assert.equal(destinationGroups.length, 2);
+  assert.deepEqual(Array.from(destinationGroups[0].pattern, part => part.label), ['Destination']);
+  assert.equal(destinationGroups[0].counts.sources, 2);
+});
+
+test('burst pattern summaries count separate contributing burst episodes', () => {
+  const rows = analyze([
+    row(1, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:00:00Z' }),
+    row(2, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:01:00Z' }),
+    row(3, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T10:02:00Z' }),
+    row(4, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T11:00:00Z' }),
+    row(5, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T11:01:00Z' }),
+    row(6, { 'File Name': 'same.pdf', 'Incident Time': '2026-01-01T11:02:00Z' })
+  ]).alerts;
+  const groups = groupContributingAlerts('Duplicate/repeated alert bursts', rows);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].counts.bursts, 2);
 });
 
 function legacyBurstIds(rows) {

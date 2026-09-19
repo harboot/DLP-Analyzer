@@ -19,6 +19,23 @@
     const key = Object.keys(row).find(candidate => candidate.trim().toLowerCase() === name.toLowerCase());
     return key ? String(row[key] ?? '') : '';
   };
+  const quantity = (count, singular, plural = `${singular}s`) => `${count} ${count === 1 ? singular : plural}`;
+  const renderAlertTable = rows => `<div class="alert-table-wrap"><table><thead><tr>${displayed.map(column => `<th>${esc(column)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${displayed.map(column => `<td title="${esc(get(row, column))}">${esc(get(row, column) || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  function renderAlertGroups(item) {
+    const rows = item.alertIds.map(id => report.alerts[id]).filter(Boolean);
+    const groups = PolicyTuning.groupContributingAlerts(item.type, rows);
+    return `<section class="finding-patterns" aria-label="Contributing alert patterns"><h3>Contributing alert patterns</h3>${groups.map(group => {
+      const counts = group.counts;
+      const summaryParts = [
+        quantity(group.alerts.length, 'alert'),
+        quantity(counts.sources, 'source'),
+        quantity(counts.destinations, 'destination'),
+        quantity(counts.filenamePatterns, 'filename pattern')
+      ];
+      if (counts.bursts) summaryParts.push(quantity(counts.bursts, 'burst'));
+      return `<article class="alert-pattern-group"><div class="alert-pattern-heading"><div class="alert-pattern-values">${group.pattern.map(part => `<span><small>${esc(part.label)}</small><strong title="${esc(part.value || 'Not specified')}">${esc(part.value || 'Not specified')}</strong></span>`).join('')}</div><p>${summaryParts.join(' · ')}</p></div><details class="group-alerts"><summary>Show alerts</summary>${renderAlertTable(group.alerts)}</details></article>`;
+    }).join('')}</section>`;
+  }
   function render() {
     if (!report) return;
     const policies = report.policies;
@@ -32,7 +49,7 @@
           <details class="advisor-finding" data-policy="${policyIndex}" data-finding="${findingIndex}">
             <summary><span class="finding-level ${item.level.toLowerCase()}">${item.level}</span><strong>${esc(item.type)}</strong><span>${item.signals.length} signals · ${item.alertIds.length} contributing alerts</span></summary>
             <div class="finding-body"><div class="finding-explanation"><div class="finding-signals"><b>Supporting signals</b><ul>${item.signals.map((signal, index) => `<li><strong>${esc(signal.type)}</strong><span>${esc(signal.reason)}</span><small>${esc(signal.evidence)} · ${index ? `+${Math.min(2, Math.max(1, Math.round(signal.points * .15)))} supporting bonus` : `+${signal.points} primary score`}</small></li>`).join('')}</ul></div><div><b>Score contribution</b><p>${item.primaryPoints} primary points${item.supportingBonus ? ` + ${item.supportingBonus} supporting-signal bonus` : ''}. Correlated signals are not scored at full value.</p></div><div><b>Suggested areas to review</b><p>${esc(item.review)}</p></div></div>
-              <div class="alert-table-wrap"><table><thead><tr>${displayed.map(column => `<th>${esc(column)}</th>`).join('')}</tr></thead><tbody>${item.alertIds.map(id => report.alerts[id]).filter(Boolean).map(row => `<tr>${displayed.map(column => `<td title="${esc(get(row, column))}">${esc(get(row, column) || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+              ${renderAlertGroups(item)}
             </div>
           </details>`).join('')}</div>` : '<p class="no-findings">No tuning pattern crossed the deterministic thresholds for this policy.</p>'}
       </article>`).join('') : '<div class="advisor-empty"><strong>No policies match these filters.</strong><span>Change the policy text or opportunity level.</span></div>';

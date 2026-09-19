@@ -3,7 +3,7 @@
 importScripts('./js/detectors/index.js');
 
 // Increment this value whenever any cached application file changes.
-const CACHE_VERSION = 'dlp-analyzer-v79';
+const CACHE_VERSION = 'dlp-analyzer-v80';
 const CACHE_CONCURRENCY = 6;
 const APPLICATION_FILES = [
   './AlertAnalyzer.html',
