@@ -6,117 +6,100 @@ const vm = require('node:vm');
 
 const page = fs.readFileSync(path.join(__dirname, '..', 'docs', 'PolicyViewer.html'), 'utf8');
 
-function resourceSummarizer() {
-  const match = page.match(/  function summarizeResources\(resourceContainer\)\{[\s\S]*?\n  \}/);
-  assert.ok(match, 'resource summarizer should be present');
-  const context = { input: null };
+function extractFunction(name) {
+  const start = page.indexOf(`  function ${name}(`);
+  assert.notEqual(start, -1, `${name} should be present`);
+  const bodyStart = page.indexOf('{', start);
+  let depth = 0;
+  for (let index = bodyStart; index < page.length; index += 1) {
+    if (page[index] === '{') depth += 1;
+    if (page[index] === '}') depth -= 1;
+    if (depth === 0) return page.slice(start, index + 1);
+  }
+  throw new Error(`Unable to extract ${name}`);
+}
+
+function buildSummarizer(name) {
+  const context = { input: null, result: null };
   vm.runInNewContext(`
     const safeArr = value => Array.isArray(value) ? value : [];
     const uniq = values => Array.from(new Set(values));
-    ${match[0]}
-    result = summarizeResources(input);
+    ${extractFunction(name)}
   `, context, { filename: 'PolicyViewer.html' });
   return input => {
     context.input = input;
-    vm.runInNewContext('result = summarizeResources(input);', context);
+    vm.runInNewContext(`result = ${name}(input);`, context);
     return context.result;
   };
 }
 
-function destinationResourceSummarizer() {
-  const resourceMatch = page.match(/  function summarizeResources\(resourceContainer\)\{[\s\S]*?\n  \}/);
-  const containerMatch = page.match(/  function destinationResourceContainer\(ruleDestination\)\{[\s\S]*?\n  \}/);
-  const destinationMatch = page.match(/  function summarizeDestinationResources\(ruleDestination\)\{[\s\S]*?\n  \}/);
-  assert.ok(resourceMatch, 'resource summarizer should be present');
-  assert.ok(containerMatch, 'destination resource collector should be present');
-  assert.ok(destinationMatch, 'destination resource summarizer should be present');
-  const context = { input: null };
-  vm.runInNewContext(`
-    const safeArr = value => Array.isArray(value) ? value : [];
-    const uniq = values => Array.from(new Set(values));
-    ${resourceMatch[0]}
-    ${containerMatch[0]}
-    ${destinationMatch[0]}
-    result = summarizeDestinationResources(input);
-  `, context, { filename: 'PolicyViewer.html' });
-  return input => {
-    context.input = input;
-    vm.runInNewContext('result = summarizeDestinationResources(input);', context);
-    return context.result;
-  };
-}
+test('source summary reports machine and resource statuses without resource names', () => {
+  const summarize = buildSummarizer('summarizeResources');
+  const result = summarize({
+    endpoint_channel_machine_type: 'ALL_MACHINES',
+    resources: [
+      { include: 'true', resource_name: 'Included secret' },
+      { include: false, resource_name: 'Excluded secret' }
+    ]
+  });
 
-test('resource summaries prefix included resources and conceal excluded names', () => {
-  const summarize = resourceSummarizer();
-  const result = summarize({ resources: [
-    { include: 'true', resource_name: 'Included A' },
-    { include: true, resource_name: 'Included B' },
-    { include: 'false', resource_name: 'Secret exclusion' }
-  ] });
-
-  assert.equal(result, '+Included A, +Included B, Has Exclude');
-  assert.doesNotMatch(result, /Secret exclusion/);
+  assert.equal(result, 'All Machines, Has Resources, Has Exclude');
+  assert.doesNotMatch(result, /secret/i);
 });
 
-test('destination summaries combine and deduplicate resources from every channel', () => {
-  const summarize = destinationResourceSummarizer();
+test('channel summary groups only enabled channels by resource status', () => {
+  const summarize = buildSummarizer('summarizeChannels');
   const result = summarize({ channels: [
-    { enabled: 'true', resources: [
-      { include: 'true', resource_name: 'Shared destination' },
-      { include: 'false', resource_name: 'Hidden exclusion one' }
+    { enabled: true, channel_type: 'EMAIL' },
+    { enabled: 'true', channel_type: 'HTTPS', resources: [
+      { include: true, resource_name: 'Private domain' },
+      { include: false, resource_name: 'Excluded domain' }
     ] },
-    { enabled: 'false', resources: [
-      { include: true, resource_name: 'Shared destination' },
-      { include: true, resource_name: 'Second destination' },
-      { include: false, resource_name: 'Hidden exclusion two' }
-    ] }
+    { enabled: 'false', channel_type: 'FTP' }
   ] });
 
-  assert.equal(result, '+Shared destination, +Second destination, Has Exclude');
-  assert.doesNotMatch(result, /Hidden exclusion/);
+  assert.equal(result, 'Any: EMAIL; Has Resources: HTTPS; Has Exclude: HTTPS');
+  assert.doesNotMatch(result, /domain|FTP/);
 });
 
-test('main and exception rows use their correct source and destination resource locations', () => {
+test('main and exception rows use the same safe source and channel summaries', () => {
   assert.match(page, /const srcTxt = summarizeResources\(sdEntry\.rule_source\)/);
-  assert.match(page, /const destTxt = summarizeDestinationResources\(sdEntry\.rule_destination\)/);
+  assert.match(page, /const chan = summarizeChannels\(sdEntry\.rule_destination\)/);
   assert.match(page, /const srcTxt = summarizeResources\(ex\?\.rule_source\)/);
-  assert.match(page, /const destTxt = summarizeDestinationResources\(ex\?\.rule_destination\)/);
-  assert.match(page, /<th title="Enabled channels for this exception">Channel<\/th>/);
-  assert.doesNotMatch(page, /Channel \(enabled\)/);
+  assert.match(page, /const chTxt = summarizeChannels\(ex\?\.rule_destination \|\| \{\}\)/);
+  assert.match(page, /tdSrc\.title = row\.source \|\| '\(no source summary\)'/);
+  assert.match(page, /td5\.title = srcTxt \|\| '-'/);
 });
 
-test('excluded resource names appear only in cell tooltips', () => {
-  assert.match(page, /return excluded\.length \? `\$\{summary\}\\nExcluded resources: \$\{excluded\.join\(', '\)\}` : summary/);
-  assert.match(page, /tdSrc\.title = row\.sourceTooltip/);
-  assert.match(page, /tdDest\.title = row\.destinationTooltip/);
-  assert.match(page, /td5\.title = srcTooltip/);
-  assert.match(page, /tdDest\.title = destTooltip/);
+test('destination is removed while channel remains filterable and exportable', () => {
+  assert.doesNotMatch(page, /data-col="destination"/);
+  assert.doesNotMatch(page, /<th[^>]*>Destination(?: Resources)?<\/th>/);
+  assert.doesNotMatch(page, /\['Destination(?: Resources)?'/);
+  assert.match(page, /data-col="channel"[^>]*title="Filter Channel"/);
+  assert.match(page, /\['Channel', row\.channel \?\? ''\]/);
+  assert.match(page, /\['Channel', values\.chTxt\]/);
+});
+
+test('copy previews contain the same untruncated source and channel summaries as cells', () => {
   assert.match(page, /\['Source', row\.source \?\? ''\]/);
-  assert.match(page, /\['Destination', row\.destination \?\? ''\]/);
-  assert.match(page, /\['Source Resources', values\.srcTxt\]/);
-  assert.match(page, /\['Destination Resources', values\.destTxt\]/);
-  assert.doesNotMatch(page, /\['(?:Source|Destination)(?: Resources)?', [^\]]*Tooltip/);
+  assert.match(page, /\['Source', values\.srcTxt\]/);
+  assert.match(page, /tdCh\.title = chText \|\| '\(no active channels\)'/);
+  assert.doesNotMatch(page, /resource_name/);
 });
 
-test('policy and exception tables expose destination resources without relation columns', () => {
-  assert.match(page, /data-col="destination"[^>]*title="Filter Destination"/);
-  assert.match(page, /<th title="Destination resources">Destination Resources<\/th>/);
-  assert.doesNotMatch(page, /<th[^>]*>Relation(?:\s|<)/);
-  assert.doesNotMatch(page, /data-col="relation"/);
+test('main and exception actions include collapsible JSON viewers', () => {
+  assert.match(page, /createJsonButton\(row\.json, `JSON for \$\{row\.ruleName\}`\)/);
+  assert.match(page, /createJsonButton\(ex, `JSON for \$\{exName\}`\)/);
+  assert.match(page, /document\.createElement\('details'\)/);
+  assert.match(page, /json: \{ policy_rule: r, severity_action: sevEntry \|\| null, source_destination: sdEntry, exception_rules: excArr \}/);
+  assert.match(page, /button\.textContent = 'JSON'/);
 });
 
-test('relations appear in classifier tooltips and exception rows have copy actions', () => {
+test('relations remain in classifier tooltips and copied information', () => {
   assert.match(page, /tdCls\.title = formatClassifiers\(row\.classifiers, row\.relation\)/);
   assert.match(page, /td4\.title = formatClassifiers\(exCls \? exCls\.split\(', '\) : \[\], rel\)/);
-  assert.match(page, /aria-label="Copy exception"/);
-  assert.match(page, /copyCellsAsRichText\(getExceptionRowCells/);
-  assert.doesNotMatch(page, /title\.innerHTML = `<b>Exceptions/);
-});
-
-test('copied policy and exception classifiers include their condition relation', () => {
   assert.match(page, /\['Classifiers', formatClassifiers\(row\.classifiers, row\.relation\)\]/);
-  assert.match(page, /\['Classifiers', formatClassifiers\(values\.exCls \? values\.exCls\.split\(', '\) : \[\], values\.rel\)\]/);
-  assert.match(page, /return `\$\{names\}\$\{relation \? ` \[relation: \$\{relation\}\]` : ''\}`/);
+  assert.match(page, /copyCellsAsRichText\(getExceptionRowCells/);
 });
 
 test('policy level remains hidden data used by the ascending default sort', () => {
