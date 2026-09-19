@@ -25,14 +25,17 @@ function resourceSummarizer() {
 
 function destinationResourceSummarizer() {
   const resourceMatch = page.match(/  function summarizeResources\(resourceContainer\)\{[\s\S]*?\n  \}/);
+  const containerMatch = page.match(/  function destinationResourceContainer\(ruleDestination\)\{[\s\S]*?\n  \}/);
   const destinationMatch = page.match(/  function summarizeDestinationResources\(ruleDestination\)\{[\s\S]*?\n  \}/);
   assert.ok(resourceMatch, 'resource summarizer should be present');
+  assert.ok(containerMatch, 'destination resource collector should be present');
   assert.ok(destinationMatch, 'destination resource summarizer should be present');
   const context = { input: null };
   vm.runInNewContext(`
     const safeArr = value => Array.isArray(value) ? value : [];
     const uniq = values => Array.from(new Set(values));
     ${resourceMatch[0]}
+    ${containerMatch[0]}
     ${destinationMatch[0]}
     result = summarizeDestinationResources(input);
   `, context, { filename: 'PolicyViewer.html' });
@@ -80,6 +83,19 @@ test('main and exception rows use their correct source and destination resource 
   assert.match(page, /const destTxt = summarizeDestinationResources\(ex\?\.rule_destination\)/);
   assert.match(page, /<th title="Enabled channels for this exception">Channel<\/th>/);
   assert.doesNotMatch(page, /Channel \(enabled\)/);
+});
+
+test('excluded resource names appear only in cell tooltips', () => {
+  assert.match(page, /return excluded\.length \? `\$\{summary\}\\nExcluded resources: \$\{excluded\.join\(', '\)\}` : summary/);
+  assert.match(page, /tdSrc\.title = row\.sourceTooltip/);
+  assert.match(page, /tdDest\.title = row\.destinationTooltip/);
+  assert.match(page, /td5\.title = srcTooltip/);
+  assert.match(page, /tdDest\.title = destTooltip/);
+  assert.match(page, /\['Source', row\.source \?\? ''\]/);
+  assert.match(page, /\['Destination', row\.destination \?\? ''\]/);
+  assert.match(page, /\['Source Resources', values\.srcTxt\]/);
+  assert.match(page, /\['Destination Resources', values\.destTxt\]/);
+  assert.doesNotMatch(page, /\['(?:Source|Destination)(?: Resources)?', [^\]]*Tooltip/);
 });
 
 test('policy and exception tables expose destination resources without relation columns', () => {

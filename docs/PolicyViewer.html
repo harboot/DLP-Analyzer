@@ -151,10 +151,28 @@
     return uniq(included).join(', ');
   }
 
+  function resourceSummaryTooltip(resourceContainer){
+    const summary = summarizeResources(resourceContainer);
+    const excluded = uniq(safeArr(resourceContainer?.resources)
+      .filter(resource => String(resource.include).toLowerCase() === 'false')
+      .map(resource => resource.resource_name)
+      .filter(Boolean));
+    return excluded.length ? `${summary}\nExcluded resources: ${excluded.join(', ')}` : summary;
+  }
+
+  function destinationResourceContainer(ruleDestination){
+    return {
+      resources: safeArr(ruleDestination?.channels)
+        .flatMap(channel => safeArr(channel?.resources))
+    };
+  }
+
   function summarizeDestinationResources(ruleDestination){
-    const resources = safeArr(ruleDestination?.channels)
-      .flatMap(channel => safeArr(channel?.resources));
-    return summarizeResources({ resources });
+    return summarizeResources(destinationResourceContainer(ruleDestination));
+  }
+
+  function destinationResourceSummaryTooltip(ruleDestination){
+    return resourceSummaryTooltip(destinationResourceContainer(ruleDestination));
   }
 
   function listActiveChannels(ruleDestination){
@@ -197,6 +215,8 @@
       const sdEntry = sdMap.get(ruleName) || {};
       const srcTxt = summarizeResources(sdEntry.rule_source);
       const destTxt = summarizeDestinationResources(sdEntry.rule_destination);
+      const srcTooltip = resourceSummaryTooltip(sdEntry.rule_source);
+      const destTooltip = destinationResourceSummaryTooltip(sdEntry.rule_destination);
       const chan = listActiveChannels(sdEntry.rule_destination);
 
       // Exceptions (array if present)
@@ -206,7 +226,7 @@
       rows.push({
         fileName, policyName, policyEnabled, policyLevel,
         ruleName, ruleEnabled, relation, classifiers,
-        severity, action, source: srcTxt, destination: destTxt, channel: chan,
+        severity, action, source: srcTxt, destination: destTxt, sourceTooltip: srcTooltip, destinationTooltip: destTooltip, channel: chan,
         exceptions: excArr
       });
     }
@@ -419,13 +439,13 @@
       // (7) Source
       const tdSrc = document.createElement('td');
       tdSrc.textContent = row.source;
-      tdSrc.title = row.source || '(no source summary)';
+      tdSrc.title = row.sourceTooltip || '(no source summary)';
       tr.appendChild(tdSrc);
 
       // (8) Destination resources
       const tdDest = document.createElement('td');
       tdDest.textContent = row.destination;
-      tdDest.title = row.destination || '(no destination resources)';
+      tdDest.title = row.destinationTooltip || '(no destination resources)';
       tr.appendChild(tdDest);
 
       // (9) Channel (active only)
@@ -521,6 +541,8 @@
 
       const srcTxt = summarizeResources(ex?.rule_source);
       const destTxt = summarizeDestinationResources(ex?.rule_destination);
+      const srcTooltip = resourceSummaryTooltip(ex?.rule_source);
+      const destTooltip = destinationResourceSummaryTooltip(ex?.rule_destination);
 
       // Channels enabled
       const ch = safeArr(ex?.rule_destination?.channels).filter(c => String(c.enabled).toLowerCase()==='true').map(c=>c.channel_type).filter(Boolean);
@@ -564,11 +586,11 @@
 
       const td5 = document.createElement('td');
       td5.textContent = srcTxt || '-';
-      td5.title = srcTxt || '-';
+      td5.title = srcTooltip || '-';
 
       const tdDest = document.createElement('td');
       tdDest.textContent = destTxt || '-';
-      tdDest.title = destTxt || '-';
+      tdDest.title = destTooltip || '-';
 
       const td6 = document.createElement('td');
       td6.textContent = chTxt || '-';
