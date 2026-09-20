@@ -162,12 +162,13 @@ function renderOverview(rows){
   };
 
   const ruleDefs = [];
+  const hiddenOverviewRules = new Set(['noext', 'outofhours', 'weirdtld', 'sensitive']);
 
   let ruleHtml = '';
 
   (async () => {
     const loadedRules = await getRuleDefinitions();
-    ruleDefs.push(...loadedRules);
+    ruleDefs.push(...loadedRules.filter(rule => !hiddenOverviewRules.has(rule.key)));
     for (const def of ruleDefs) {
     ruleHtml += `
       <div class="card" title="${escapeHtml(cardTooltips[def.key] || def.label)}">

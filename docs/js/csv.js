@@ -51,6 +51,11 @@ function buildTabs(){
 const fileInput = $('#file');
 const EXPECTED_ALERT_COLUMNS = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
 const uploadWarning = document.getElementById('uploadWarning');
+const loadLog = document.getElementById('loadLog');
+
+function logFileLoad(message) {
+  loadLog.textContent += `${message}\n`;
+}
 
 function initializeIgnoredValuesSettings() {
   const dialog = document.getElementById('settingsDialog');
@@ -111,7 +116,11 @@ async function ingestFiles(files) {
       setProcessingMessage(`Processing alerts… ${percent}% (${message.rowCount.toLocaleString()} rows)`);
     }
     if (message.type === 'warning') warnings.push({ message: message.message });
-    if (message.type === 'file-complete') warnings.push({ fileName: files[message.fileIndex].name, missing: DLPUtils.findMissingColumns(Object.assign([], { headers: message.headers }), EXPECTED_ALERT_COLUMNS) });
+    if (message.type === 'file-complete') {
+      const fileName = files[message.fileIndex].name;
+      warnings.push({ fileName, missing: DLPUtils.findMissingColumns(Object.assign([], { headers: message.headers }), EXPECTED_ALERT_COLUMNS) });
+      logFileLoad(`OK: ${fileName} (${message.rowCount} rows)`);
+    }
   } });
   activeIngest = task;
   await task.promise;
@@ -138,6 +147,7 @@ async function processUploadedFiles(files) {
     await ingestFiles(files);
   } catch (error) {
     if (error.message === 'Ingestion cancelled.') return;
+    logFileLoad(`ERROR: ${error.message}`);
     uploadWarning.hidden = false;
     uploadWarning.textContent = `Unable to process the selected files: ${error.message}`;
   } finally {
@@ -161,7 +171,7 @@ fileInput.addEventListener('change', async (e)=>{
   state.tabs = [];
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
-  currentFilename = Array.from(files).map(f => f.name).join(', ');
+  currentFilename = `${files.length} alert file${files.length === 1 ? '' : 's'}`;
   await processUploadedFiles(Array.from(files));
 });
 
@@ -181,7 +191,7 @@ drop.addEventListener('drop', async (e)=>{
   state.tabs = [];
   state.activeTab = null;
   if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
-  currentFilename = Array.from(files).map(f => f.name).join(', ');
+  currentFilename = `${files.length} alert file${files.length === 1 ? '' : 's'}`;
   await processUploadedFiles(Array.from(files));
 });
 
@@ -198,10 +208,12 @@ document.getElementById('demoBtn').addEventListener('click', async () => {
     state.tabs = [];
     state.activeTab = null;
     if (state.tabState && typeof state.tabState.clear === 'function') state.tabState.clear();
-    currentFilename = 'alerts.csv';
     DLPUtils.showUploadWarning(uploadWarning, [{ fileName: 'alerts.csv', missing: DLPUtils.findMissingColumns(demo, EXPECTED_ALERT_COLUMNS) }]);
+    currentFilename = '1 alert file';
+    logFileLoad(`OK: alerts.csv (${demo.length} rows)`);
     ingest(demo);
   } catch (error) {
+    logFileLoad(`ERROR: ${error.message}`);
     alert(`Unable to load the sample data: ${error.message}`);
   } finally {
     button.disabled = false;

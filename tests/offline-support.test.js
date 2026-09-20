@@ -61,6 +61,21 @@ test('alert ingestion accepts only CSV through the cached worker', () => {
   assert.doesNotMatch(workerSource, /xlsx\.full/);
 });
 
+test('alert uploads show a file count and retain per-file row details in the load log', () => {
+  const page = fs.readFileSync(path.join(root, 'AlertAnalyzer.html'), 'utf8');
+  const client = fs.readFileSync(path.join(root, 'js/csv.js'), 'utf8');
+  assert.match(page, /<summary>Load log<\/summary>/);
+  assert.match(client, /OK: \$\{fileName\} \(\$\{message\.rowCount\} rows\)/);
+  assert.match(client, /currentFilename = `\$\{files\.length\} alert file/);
+  assert.doesNotMatch(client, /currentFilename = Array\.from\(files\)\.map/);
+});
+
+test('alert overview omits retired risk cards', () => {
+  const ui = fs.readFileSync(path.join(root, 'js/ui.js'), 'utf8');
+  assert.match(ui, /new Set\(\['noext', 'outofhours', 'weirdtld', 'sensitive'\]\)/);
+  assert.match(ui, /loadedRules\.filter\(rule => !hiddenOverviewRules\.has\(rule\.key\)\)/);
+});
+
 test('Document Viewer retains XLSX detection and text extraction without the XLSX library', () => {
   const source = fs.readFileSync(path.join(root, 'js/doc-viewer.js'), 'utf8');
   assert.equal(source.includes("name.startsWith('xl/'))) return 'XLSX'"), true);

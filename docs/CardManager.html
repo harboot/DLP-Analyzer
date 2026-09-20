@@ -51,6 +51,11 @@
     </div>
     <div id="uploadWarning" class="upload-warning" role="alert" hidden></div>
 
+    <details class="log-details" id="loadLogPanel">
+      <summary>Load log</summary>
+      <pre id="loadLog"></pre>
+    </details>
+
     <div class="layout">
       <section class="section" aria-label="Items">
         <header>
@@ -808,7 +813,12 @@ const csvInput = $('#csvInput');
 const btnUpload = $('#btnUpload');
 const btnRunAll = $('#btnRunAll');
 const csvNameEl = $('#csvName');
+const loadLogEl = $('#loadLog');
 if (csvInput) csvInput.style.display = 'none';
+
+function logCsvLoad(message) {
+  loadLogEl.textContent += `${message}\n`;
+}
 
 let lastCSVRows = null;
 let uploadedCSVRows = null;
@@ -876,20 +886,18 @@ async function loadCsvFiles(files) {
     const merged = [];
     const warnings = [];
     const expectedColumns = ['ID', 'Incident Time', 'Event Time', 'Source', 'Policies', 'Destination', 'File Name', 'Transaction Size (KB)', 'Details', 'Status', 'Channel', 'Action', 'Severity'];
-    let totalRows = 0;
     for (const f of files) {
       const rows = await parseCSVFile(f);
       warnings.push({ fileName: f.name, missing: DLPUtils.findMissingColumns(rows, expectedColumns) });
       merged.push(...rows);
-      totalRows += rows.length;
+      logCsvLoad(`OK: ${f.name} (${rows.length} rows)`);
     }
     uploadedCSVRows = merged;
     DLPUtils.showUploadWarning(document.getElementById('uploadWarning'), warnings);
     // Normalization is intentionally done once per upload. Every snippet reuses
     // this array instead of rebuilding the same row objects for every run.
     setActiveAlertRows(merged);
-    const names = files.map((f) => f.name).join(', ');
-    csvNameEl.textContent = `${names} (${totalRows} rows total)`;
+    csvNameEl.textContent = `${files.length} alert file${files.length === 1 ? '' : 's'}`;
     matchesCache.clear();
     $$('#tbody .matches').forEach((c) => (c.innerHTML = `<span class="badge">—</span>`));
     out.textContent = lastCSVRows.length ?
@@ -897,6 +905,7 @@ async function loadCsvFiles(files) {
       'No alerts remain after parsing and applying settings.';
   } catch (err) {
     csvNameEl.textContent = '';
+    logCsvLoad(`ERROR: ${err?.message || String(err)}`);
     out.textContent = 'Alert file error: ' + (err?.message || String(err));
   }
 }
