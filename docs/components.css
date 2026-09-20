@@ -48,6 +48,32 @@ body.tool-page .split-header .input-guide {
   margin-top: 0;
 }
 
+/* Collapsible load output shared by tools that ingest policy or alert files. */
+body.tool-page .log-details {
+  margin-top: var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--panel);
+}
+
+body.tool-page .log-details summary {
+  padding: var(--space-3);
+  background: var(--color-surface-raised);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.tool-page .log-details pre {
+  max-height: 220px;
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  color: var(--color-text-info);
+  white-space: pre-wrap;
+}
+
 body.tool-page .input-guide {
   display: grid;
   grid-template-columns: minmax(180px, 0.65fr) minmax(0, 1.35fr);

@@ -165,7 +165,7 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  table.cols-10 th:nth-child(10),table.cols-10 td:nth-child(10){width:6%}
 
 	  .grid{display:grid;gap:var(--space-3)}
-	  .grid.cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+	  .grid.cards{grid-template-columns:repeat(5,minmax(0,1fr))}
 	  .card{background:var(--color-surface-subtle);border:1px solid var(--color-border-subtle);padding:var(--space-3) var(--space-3);border-radius:var(--radius-card)}
 	  .card h3{margin:0 0 var(--space-2);font-size:13px;color:var(--color-text-soft)}
 	  .card b{font-size:18px}
@@ -173,7 +173,9 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
 	  .grid.cols-3{grid-template-columns:repeat(3,minmax(320px,1fr))}
 	  .grid.cols-3>.section{display:flex;flex-direction:column}
 	  @media (max-width:1400px){.grid.cols-3{grid-template-columns:repeat(2,minmax(320px,1fr))}}
+	  @media (max-width:900px){.grid.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 	  @media (max-width:800px){.grid.cols-3{grid-template-columns:1fr}}
+	  @media (max-width:520px){.grid.cards{grid-template-columns:1fr}}
 
 	  .table-actions{display:flex;justify-content:space-between;align-items:center;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-raised)}
 	  .most-hit-summary{margin-top:auto;padding:var(--space-3);border-top:1px solid var(--line);background:var(--color-surface-inset);font-size:13px;color:var(--color-text-soft)}
@@ -1003,10 +1005,6 @@ body.page-doc-viewer footer{width:90vw;margin:var(--space-6) auto;text-align:cen
   /* Log panel */
   .log-panel{display:none;margin-top:var(--space-3)}
   .log-panel pre{background:var(--color-surface-subtle);border:1px solid var(--line);border-radius:var(--radius-control);padding:var(--space-3);max-height:220px;overflow:auto;color:var(--color-text-info)}
-  .log-details{margin-top:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-card);background:var(--panel);overflow:hidden}
-  .log-details summary{padding:var(--space-3) var(--space-3);background:var(--color-surface-raised);font-weight:700;cursor:pointer}
-  .log-details pre{margin:0;padding:var(--space-3) var(--space-3);max-height:220px;overflow:auto;border-top:1px solid var(--line);color:var(--color-text-info);white-space:pre-wrap}
-
   /* Exception detail row */
   .exp-row{background:var(--color-surface-inset)}
   .exp-cell{overflow:visible;padding:var(--space-3) var(--space-3) var(--space-3);border-bottom:1px solid var(--color-border)}
